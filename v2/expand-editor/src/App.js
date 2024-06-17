@@ -2,78 +2,166 @@
 // https://reactjs.org/docs/create-a-new-react-app.html
 import "./App.css";
 import React, { useState, useCallback , useRef, useEffect } from "react";
-import { tokenize } from "./smarts";
-import { mergeNodesInRange, printChildren } from "./editorTools";
 
-/* 
-The debounce function will delay the processing of the keydown event until the user has stopped typing for a specified period (e.g., 1 second). Here's how you can implement this in JavaScript:
-*/ 
-function debounce(func, delay) {
-  let timer;
-  return function (...args) {
-      const context = this;
-      clearTimeout(timer);
-      timer = setTimeout(() => func.apply(context, args), delay);
-  };
+// a library for saving and restoring selections (cursor positions / ranges) in a document
+// it uses hidden elements to store the selection data
+import rangy from 'rangy';
+import 'rangy/lib/rangy-selectionsaverestore';
+
+class TokenManager {
+  constructor(tokens) {
+    this.lenses = {}; // the types of possible labels
+  }
+
+  tokensAt(type, start, end=start) {
+    let spans = this.lenses[type];
+    if (!spans) {
+      console.error("No label of lense type", type);
+      return;
+    }
+
+    let tokensSpanned = [];
+    for (let spanIndex = 0; spanIndex < spans.length; spanIndex++) {
+      let token = spans[spanIndex];
+      let [labelStart, labelEnd] = [token.start, token.end];
+      if (labelStart > end) {
+        break;
+      }
+
+      if (labelEnd < start) {
+        continue;
+      }
+
+      tokensSpanned.push(token);
+    }
+  }
+
+  static tokenize(text, data={}) { // -> Token[]
+    console.log("tokenizing", text)
+    let type = "default";
+    const delim = " ";
+    let tokens = [];
+    let tokenStart = 0;
+    let curToken = ""
+    for(let i = 0; i < text.length; i++) {
+      let c = text[i];
+      curToken += c;
+      if (c === delim || i === text.length - 1) {
+        // TODO handle c == 0 case
+        // '  ' case (two spaces)
+        tokens.push({
+          'start': tokenStart,
+          'end': i - 1,
+          "text": curToken
+        });
+        curToken = "";
+        continue; // TODO I think we want to save these as special ' ' tokens?
+      }
+    }
+
+    console.log('tokens', tokens)
+    
+    return {
+      type: type,
+      tokens: tokens
+    }
+  }
+
+  static retokenize(tokens, data={}) {
+    // given a list of tokens, use tokenize() to re-tokenize the text, preserving the data in the tokens
+    // we will go the tokens and split each token into a list of tokens
+    let newTokens = [];
+    for (let token of tokens) {
+      let newToken = TokenManager.tokenize(token.text);
+      newTokens.push(newToken);
+    }
+    console.log('newTokens', newTokens);
+  }
 }
 
-function tokenizeAndHighlight(editor, selection) {
-  // const path = Editor.path(editor, selection);
-                    
-  // // select everything
-  // let context = Editor.node(editor, []);
-  // // from the selection anchor to the end of the document
-  // let end = Editor.last(editor, []);
-
-  // let tokenizeRange = {
-  //   anchor: selection.anchor,
-  //   focus: {
-  //     offset: 0,
-  //     path: end[1],
-  //   }
-  // };
-  // tokenize(context, tokenizeRange, editor, path);
-}
-
-// let delayedTokenizeAndHighlight = debounce(tokenizeAndHighlight, 1000);
-
+// ALMOST WORKING ....
 
 const Editor = () => {
-  const originalText = `figgling the first`
+  const originalText = `<span>first </span> <span>wasp</span> <span>here</span`;
+  const tokenManager = new TokenManager();
   const [content, setContent] = useState(originalText);
   const contentRef = useRef(null);
+  const [tokens, setTokens] = useState([]);
+
+  let isProcessing = false;
+  let eventQueue = [];
 
   const saveSelection = () => {
-    const range = document.createRange();
-    const sel = window.getSelection();
-    console.log(sel, sel.getRangeAt(0));
-    if (sel.rangeCount > 0) {
-      return sel.getRangeAt(0);
-    }
-    return null;
+    return rangy.saveSelection();
+  }
+
+  const restoreSelection = (saved) => {
+    return rangy.restoreSelection(saved);
+  }
+
+  const handleInput = (event) => {
+    processInput(event);
+    // if (isProcessing) {
+    //     // Push to queue if processing is underway
+    //     eventQueue.push(event);
+    // } else {
+    //     processInput(event);
+    // }
   };
 
-  const restoreSelection = (range) => {
-    if (range) {
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-    }
-  };
+  const processInput = (event) => {
+    console.log('already is processing', isProcessing)
+    isProcessing = true;
+    const selectionRange = saveSelection();
 
-  const handleInput = () => {
-    const currentRange = saveSelection();
-    setContent(contentRef.current.innerHTML);
+    //log the charater that is being input
+    console.log('input character', event.data, event);
+    setContent(contentRef.current.innerHTML); 
+    // https://stackoverflow.com/questions/54069253/the-usestate-set-method-is-not-reflecting-a-change-immediately
+
+    // get the change from the event
+    const change = event.data;
+    // get the location using rangy
+    const selection = rangy.getSelection();
+    console.log('selection', selection, change);
+
+    // 1. need to get the new change from the user
+    // 2 need to take the old tokens and update the tokens with the new change
+    // 3. need to retokenize the old tokens
+
+    let tokens = TokenManager.tokenize(content);
+    console.log('token', tokens);
+    setTokens(tokens);
+
+    // // wrap the tokens in spans
+    let newContent = content;
+    for (let token of tokens.tokens) {
+      let span = `<span style="background-color: ${probToColor(0.5)}">${token.text}</span>`;
+      newContent = newContent.replace(token.text, span);
+    }
+
+    // // set the new content
+    // setContent(newContent);
+
     setTimeout(() => {
-      restoreSelection(currentRange);
+      restoreSelection(selectionRange);
+      checkQueue();
     }, 0);
-  };
+  }
 
 
+  const checkQueue = () => {
+    if (eventQueue.length > 0 && !isProcessing) {
+        const nextEvent = eventQueue.shift();  // Get the next event from the queue
+        processInput(nextEvent);
+    }
+  }
   useEffect(() => {
-    contentRef.current.addEventListener('onChange', handleInput);
+    contentRef.current.addEventListener('input', handleInput);
+    //onclick
+    // contentRef.current.addEventListener('click', onClick);
     return () => {
-      contentRef.current.removeEventListener('onChange', handleInput);
+      contentRef.current.removeEventListener('input', handleInput);
     };
   }, []);
 
@@ -88,19 +176,9 @@ const Editor = () => {
 };
 
 const App = () => {
-  // const [editor] = useState(() => withCustomInLine(withReact(createEditor())));
-  // window.editor = editor; // for debugging
-
-  let originalText = `figgling the first
-of the last waspicating hornet`;
-
-  //make a 2d array of lines by words, add a space to each word
-  originalText = originalText.split("\n").map((line) => line.split(" ").map((word) => word + " "));
-
-  // on mount callback
   React.useEffect(() => {
     // tokenize the full document
-    // tokenizeAndHighlight(editor, Editr.range(editor, [0, 0], [0, 0]));
+    // TODO
   }, []);
 
 
@@ -118,8 +196,9 @@ const probToColor = (prob) => {
   if (!prob || prob <= 0) {
     return 'white';
   }
-  prob *= 255;
-  return "rgba(0, 255, 0, " + prob + ")";
+  // set prob to a random value between 0 and 1
+  prob = Math.random();
+  return "rgba(" + Math.random() * 255 + ", " + Math.random() * 255 + ", " + Math.random() * 255 +  ", " + prob + ")";
 };
 
 
