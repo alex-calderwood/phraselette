@@ -90,7 +90,7 @@ class TokenManager {
   static tokenize(text, data={}) { // -> Token[]
     console.log("tokenizing", text)
     let type = "default";
-    const delim = "|";
+    // const delim = " ";
     let tokens = [];
     let tokenStart = 0;
     let curToken = ""
@@ -98,7 +98,7 @@ class TokenManager {
     for(let i = 0; i < text.length; i++) {
       let c = text[i];
       curToken += c;
-      if (c === delim || i === text.length - 1) {
+      if (c.match(/\s+/g) || i === text.length - 1) {
         // TODO handle c == 0 case
         // '  ' case (two spaces)
         tokens.push({
@@ -111,7 +111,8 @@ class TokenManager {
         });
         curToken = "";
         tokenStart = i + 1;
-         nextProb += 0.1
+
+        nextProb = (nextProb + 0.08) % 1;
 
         continue; // TODO I think we want to save these as special ' ' tokens?
       }
@@ -135,7 +136,6 @@ class TokenManager {
     return TokenManager.curTokenID++;
   }
 }
-
 
 class Editor extends Component {cha
   constructor(props) {
@@ -174,11 +174,11 @@ class Editor extends Component {cha
     }
   }
 
-  updateStylingBasedOnContent = () => {
-    for(let token of this.tokenManager.lenses.default) {
-      let color = probToColor(token.prob);
-    }
-  }
+  // updateStylingBasedOnContent = () => {
+  //   for(let token of this.tokenManager.lenses.default) {
+  //     let color = probToColor(token.prob);
+  //   }
+  // }
 
   saveSelection = () => {
     let selection = rangy.getSelection();
@@ -202,7 +202,6 @@ class Editor extends Component {cha
       this.restoreSelectionFromCharId(this.charId, this.offset, event);
     }
   }
-
 
   handleInput = (event) => {
     this.processInput(event);
@@ -262,9 +261,10 @@ class Editor extends Component {cha
   }
 
   handleClick = (event) => {
+    // we don't use this after it gets saved but it is nice as a debug tool
+    // we save directly in the handleInput
     this.saveSelection();
   };
-
 
   splitSpan(span, c) {
     // don't delete any spans, just add new ones and remove characters from the old span
@@ -303,21 +303,24 @@ class Editor extends Component {cha
   }
 
   styleChild(child, c) {
-
     child.setAttribute('c', c);
 
     this.setIdIfNotPresent(child); // need to put a lock on this so ids cant duplicate
 
     if (child.tagName === 'SPAN') {
       if (this.tokenManager) {
+        if (c == 17) {
+          console.log('stpo')
+        }
+
         let tokensAt = this.tokenManager.tokensAt('default', c);
+
+        
 
         if (tokensAt && tokensAt.length > 0) {
           let prob = tokensAt[0].prob;
 
           console.log('AT', c, tokensAt, prob, this.tokenManager.lenses.default);
-
-          console.log(prob)
           let color = probToColor(prob);
           child.style.backgroundColor = color;
         }
@@ -326,10 +329,10 @@ class Editor extends Component {cha
     }
   }
 
-  processInput = (event) => {
-    // Save the current selection to restore later after processing input
-    this.saveSelection();
-
+  /* 
+    TODO document
+  */
+  splitIntoCharactersAndStyle(content) {
     function* traverseDOM(node) {
       if (
         (node.tagName === 'DIV' || node.tagName === 'SPAN' || node.tagName === 'BR')
@@ -346,16 +349,11 @@ class Editor extends Component {cha
       }
     }
 
-
-    // iterate through all children spans
-    let spans = this.contentRef.current.children;
-    // let children = this.contentRef.current.childNodes; // doesn't get children of children
-    let children = [...traverseDOM(this.contentRef.current)];
+    let children = [...traverseDOM(content)];
     let i = 0;
     let c = 0;
     let child = children[i];
     while (child) {
-
       if (child.tagName == "BR") {
         i++;
         child = children[i];
@@ -377,20 +375,26 @@ class Editor extends Component {cha
       c++;
       child = children[i];
     }
+  }
+
+  processInput = (event) => {
+    // Save the current selection to restore later after processing input
+    this.saveSelection();
 
     // update the state text
-    let newText = this.contentRef.current.textContent; // this loses \n TODO
-    console.log('new text', newText)
+    let newText = this.contentRef.current.textContent.replace('&nbsp', ' '); // this loses \n TODO
 
-    this.setState({text: newText})
-  
     if (this.tokenManager) {
-    //   // const didEdit = this.tokenManager.editToken('default', event, this.selectionStart);
-      let newTokens = TokenManager.tokenize(newText);
-      this.tokenManager.lenses.default = newTokens;
-      console.log('new tokens', newTokens);
-    }
-  
+      //   // const didEdit = this.tokenManager.editToken('default', event, this.selectionStart);
+        let newTokens = TokenManager.tokenize(newText);
+        this.tokenManager.lenses.default = newTokens;
+        console.log('new tokens', newTokens);
+      }
+
+    // this.setState({text: newText}) // right now we have no use fo rthis
+
+    this.splitIntoCharactersAndStyle(this.contentRef.current);
+
     // Use a timeout to delay execution of restoring the selection
     // This ensures that the DOM updates have completed before the selection is restored
     setTimeout(() => {
@@ -399,7 +403,7 @@ class Editor extends Component {cha
 
       // Perform any additional actions following the update
       // Example: Update styling or re-compute dependent values
-      this.updateStylingBasedOnContent();
+      // this.updateStylingBasedOnContent();
   };
 
   render() {
@@ -436,7 +440,6 @@ const probToColorRandom = (prob) => {
   return "rgba(" + prevColor + ", " + prevColor2 + ", 0, " + prevColor / 255 + ")";
 };
 
-
 const probToColor = (prob) => {
   if (!prob || prob <= 0) {
     return 'white';
@@ -446,7 +449,6 @@ const probToColor = (prob) => {
   // set prob to a random value between 0 and 1
   return "rgba(" + 0 + ", " + g + ", 0, " + prob + ")";
 };
-
 
 
 export default App;
