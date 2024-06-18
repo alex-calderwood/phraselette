@@ -11,8 +11,7 @@ import rangy from 'rangy';
 // import 'rangy/lib/rangy-serializer';
 
 function getUniqueUUID() {
-    var id = "id" + Math.random().toString(16).slice(2);
-    // console.log('making id', id);
+    var id =  'id' + Math.random().toString(16).slice(2);
     return id; // TODO small chance of collision, 
 }
 
@@ -141,7 +140,7 @@ class Editor extends Component {cha
     super(props);
     console.log("editor props", props)
     this.originalText = 'this is some text';
-    this.originalText = this.originalText.split('').map((c) => `<span>${c}</span>`).join('');
+    this.originalText = this.originalText.split('').map((c) => `<span id=${getUniqueUUID()}>${c}</span>`).join('');
     console.log('original text', this.originalText)
     this.state = { content: this.originalText };
     this.contentRef = React.createRef();
@@ -160,7 +159,7 @@ class Editor extends Component {cha
     console.log('default tokens', this.tokenManager.lenses.default);
 
     this.contentRef.current.addEventListener('input', this.handleInput);
-    this.contentRef.current.addEventListener('click', this.handleKey);
+    this.contentRef.current.addEventListener('click', this.handleClick);
 
     this.selectionStart = 0;
     this.selectionEnd = 0;
@@ -168,7 +167,7 @@ class Editor extends Component {cha
 
   componentWillUnmount() {
     this.contentRef.current.removeEventListener('input', this.handleInput);
-    this.contentRef.current.removeEventListener('click', this.handleKey);
+    this.contentRef.current.removeEventListener('click', this.handleClick);
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -178,7 +177,6 @@ class Editor extends Component {cha
   }
 
   updateStylingBasedOnContent = () => {
-
     for(let token of this.tokenManager.lenses.default) {
       let color = probToColor(token.prob);
     }
@@ -190,28 +188,27 @@ class Editor extends Component {cha
       let parent = selection.anchorNode.parentNode;
       let offset = selection.focusOffset;
       
-      let indexPath = this.getNodeIndexPath(selection.anchorNode, this.editorNode);
-      let totalOffset = this.absoluteOffset(indexPath, offset, this.editorNode);
+      // let indexPath = this.getNodeIndexPath(selection.anchorNode, this.editorNode);
+      // let totalOffset = this.absoluteOffset(indexPath, offset, this.editorNode);
+      // this.totalOffset = totalOffset;
+      // this.indexPath = indexPath;
 
       this.selection = selection;
-      this.indexPath = indexPath;
       this.offset = offset;
-      this.totalOffset = totalOffset;
       this.charId = parent.id;
       
-      console.log('saved selection', parent.textContent, {indexPath, offset, totalOffset, charId: parent.id})
+      console.log('saved selection', parent.textContent, {offset, charId: parent.id})
     }
     else {
       console.error('No selection');
     }
   }
 
-  restoreSelection = () => {
+  restoreSelection = (event) => {
     if (this.selection) {
       // this.restoreSelectionFromIndexPath(this.indexPath, this.offset, this.editorNode);
       // get the node with the id
-      this.restoreSelectionFromCharId(this.charId, 0);
-
+      this.restoreSelectionFromCharId(this.charId, this.offset, event);
     }
   }
 
@@ -236,82 +233,65 @@ class Editor extends Component {cha
     return path;
   };
 
-  absoluteOffset(indexPath, offset, editorNode) {
-    // console.log('editor', editorNode);
-    let node = editorNode;
-    let totalOffset = 0;
-    for (let i = 0; i < indexPath.length; i++) {
-      let index = indexPath[i];
-      node = node.childNodes[index];
-      let text = node.textContent.replace(/\uFEFF/g, '');
+  // absoluteOffset(indexPath, offset, editorNode) {
+  //   // console.log('editor', editorNode);
+  //   let node = editorNode;
+  //   let totalOffset = 0;
+  //   for (let i = 0; i < indexPath.length; i++) {
+  //     let index = indexPath[i];
+  //     node = node.childNodes[index];
+  //     let text = node.textContent.replace(/\uFEFF/g, '');
 
-      if (text) {
-        let length = text.length;
-        // console.log('node', {node, text, length, index, offset})
+  //     if (text) {
+  //       let length = text.length;
+  //       // console.log('node', {node, text, length, index, offset})
 
-        totalOffset += length;
-      }
-    }
-    return totalOffset + offset;
-  }
+  //       totalOffset += length;
+  //     }
+  //   }
+  //   return totalOffset + offset;
+  // }
 
-  restoreSelectionFromIndexPath = (path, offset, editorNode) => {
-    console.log('restoring selection from path', path)
-    // let node = editorNode;
-    // for (let i = 0; i < path.length; i++) {
-    //   let index = path[i];
-    //   node = node.childNodes[index];
-    // }
-    // let range = document.createRange();
-    // range.selectNodeContents(node);
-    // let selection = window.getSelection();
-    // selection.removeAllRanges();
-    // selection.addRange(range);
-    let node = editorNode;
-    for (let i = 0; i < path.length; i++) {
-      let index = path[i];
-      node = node.childNodes[index];
-    }
-    let range = document.createRange();
-    range.setStart(node, offset);
-    range.setEnd(node, offset);
-    let selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
-
-  };
-
-  restoreSelectionFromCharId = (charId, offset) => {
+  restoreSelectionFromCharId = (charId, givenOffset, event) => {
     let node = document.getElementById(charId);
     if (!node) {
       console.error('No node found with id', charId);
       return;
     }
 
-    let nextNode = node.nextSibling.nextSibling;
-
-
-    if (node.textContent) {
-      console.log('node', node.textContent);
+    let editLength = event.data ? event.data.length : 0;
+    let charsToOffset = givenOffset - editLength;
+    let tokensToOffset = givenOffset - charsToOffset;
+    let restoreTo = node;
+    for (let i = 0; i < tokensToOffset; i++) {
+      restoreTo = restoreTo.nextSibling; 
+      // for some reason when this gives an error, it actually breaks and allows it to work okay?
     }
-    if (nextNode.textContent) {
-      console.log('next node', nextNode.textContent);
+
+    let restoring = {
+      text: node ? node.textContent : null,
+      nextText: restoreTo ? restoreTo.textContent : null,
+      givenOffset: givenOffset,
+      eventDataLength: editLength,
+      tokensToOffset: tokensToOffset,
+      charsToOffset: charsToOffset,
+      charId: charId,
+      node: node,
+      restoreTo: restoreTo,
     }
     
-
-    console.log('restoring charId', charId)
+    console.log('restoring', restoring);
 
     let range = document.createRange();
-    range.setStart(nextNode, offset);
-    range.setEnd(nextNode, offset);
+    range.setStart(restoreTo, charsToOffset);
+    range.setEnd(restoreTo, charsToOffset);
     let selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
-  
   }
 
-  handleKey = (event) => {
-    // this.saveSelection();
+  handleClick = (event) => {
+    this.saveSelection();
   };
 
   processInput = (event) => {
@@ -321,7 +301,7 @@ class Editor extends Component {cha
 
     // Save the current selection to restore later after processing input
     this.saveSelection();
-  
+
     // Process the input data
     // Example: Update the content state to reflect changes made by the input
     // const newContent = this.state.content.substring(0, this.selectionStart) + 
@@ -368,14 +348,22 @@ class Editor extends Component {cha
       }
     }
 
+    // If the node does not have an id, assign it a unique id
+    // also, react's content editable sometimes copies divs, leading to duplicate ids
+    // if the id is not unique, assign a new id
     function setIdIfNotPresent(node) {
-      // if(node.tagName !== 'SPAN') { // TODO fix unique ID thing
-      //   console.log('trying to create id for', node.id, !node.id, node)
-      // }
-      if (!node.id) {
-        node.id = getUniqueUUID();
-        // console.log('creating id for', node, node.id);
+      let shouldSetId = !node.id;
+      if (node.id) {
+        let elements = document.querySelectorAll(`#${node.id}`);
+        if (elements.length > 1) {
+          shouldSetId = true;
+        }
       }
+
+      if (shouldSetId) {
+        node.id = getUniqueUUID();
+      }
+      
     }
 
     function styleChild(child, c) {
@@ -424,7 +412,7 @@ class Editor extends Component {cha
     // Use a timeout to delay execution of restoring the selection
     // This ensures that the DOM updates have completed before the selection is restored
     setTimeout(() => {
-      this.restoreSelection();
+      this.restoreSelection(event);
     }, 0);
 
       // Perform any additional actions following the update
@@ -457,13 +445,15 @@ class App extends Component {
 }
 
 let prevColor = 100;
+let prevColor2 = 138;
 const probToColor = (prob) => {
   if (!prob || prob <= 0) {
     return 'white';
   }
   // set prob to a random value between 0 and 1
   prevColor = (prevColor + 5) % 255;
-  return "rgba(" + prevColor + ", 0, 0, " + prevColor / 255 + ")";
+  prevColor2 = (prevColor2 + 3) % 255
+  return "rgba(" + prevColor + ", " + prevColor2 + ", 0, " + prevColor / 255 + ")";
 };
 
 
