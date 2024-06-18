@@ -1,39 +1,122 @@
 // https://docs.slatejs.org/
 // https://reactjs.org/docs/create-a-new-react-app.html
 import "./App.css";
-import React, { useState, useCallback , useRef, useEffect } from "react";
+import React, { useState, useCallback , useRef, Component } from "react";
+import styled from 'styled-components';
 
 // a library for saving and restoring selections (cursor positions / ranges) in a document
 // it uses hidden elements to store the selection data
 import rangy from 'rangy';
 import 'rangy/lib/rangy-selectionsaverestore';
+import 'rangy/lib/rangy-serializer';
+
+
+function highlightCharacterWithBox(elem, startIndex, endIndex, color) {
+  const range = document.createRange();
+  
+  try {
+    // Initialize the range to encompass the target character
+    range.setStart(elem.childNodes[0], startIndex);
+    range.setEnd(elem.childNodes[0], endIndex);
+
+    // Create a rectangle based on the range
+    const rect = range.getBoundingClientRect();
+
+    // Create the background box element
+    const box = document.createElement('div');
+    box.className = 'highlight';
+    box.style.backgroundColor = color;
+    box.style.width = `${rect.width}px`;
+    box.style.height = `${rect.height}px`;
+    box.style.top = `${rect.top + window.scrollY}px`; // Account for scrolling
+    box.style.left = `${rect.left + window.scrollX}px`; // Account for scrolling
+
+    // Append the box to the container
+    elem.appendChild(box);
+
+  } catch (e) {
+    console.error("Failed to highlight character: ", e);
+  } finally {
+    // Clean up the range without disturbing any existing selections
+    range.detach(); // Detach the range from the document
+  }
+}
+
+// window.highlight = highlightCharacterWithBox;
+
 
 class TokenManager {
+  static curTokenID = 0;
+
   constructor(tokens) {
-    this.lenses = {}; // the types of possible labels
+    this.lenses = {'default': []}; // the types of possible labels
+    this.lenseTokenIDtoIndex = {'default': {}}; // token id to lenses array index
+  }
+
+  updateToken(lense, id, text) {
+    let view = this.lenses[lense];
+    console.log('updating', id, text);
+    let token = view.find((token) => token.id === parseInt(id));
+    console.log('this one', token);
+    let newTokens = TokenManager.tokenize(text);
+    console.log('new tokens', newTokens);
+    return newTokens;
   }
 
   tokensAt(type, start, end=start) {
-    let spans = this.lenses[type];
-    if (!spans) {
+    let tokens = this.lenses[type];
+    console.log('tokensAt of type', type, 'at', start, tokens);
+    if (!tokens) {
       console.error("No label of lense type", type);
       return;
     }
 
     let tokensSpanned = [];
-    for (let spanIndex = 0; spanIndex < spans.length; spanIndex++) {
-      let token = spans[spanIndex];
+    for (let spanIndex = 0; spanIndex < tokens.length; spanIndex++) {
+      let token = tokens[spanIndex];
       let [labelStart, labelEnd] = [token.start, token.end];
-      if (labelStart > end) {
-        break;
+      if (start >= labelStart && end <= labelEnd) { // todo double check the bounds
+        tokensSpanned.push(token);
+        // console.log('spanned', token);
       }
 
-      if (labelEnd < start) {
-        continue;
-      }
-
-      tokensSpanned.push(token);
     }
+
+    return tokensSpanned;
+  }
+
+  editToken(type, event, editLocation) {
+    let tokens = this.tokensAt(type, editLocation); 
+    let token = tokens[0]; // TODO allow mulpitle tokens to be edited at once
+    console.log('tokens at', editLocation, tokens);
+
+    let didEdit = false;
+    let relativeEditLocation = editLocation - token.start;
+
+    switch(event.inputType) {
+      case "insertText":
+        token.text = token.text.slice(0, relativeEditLocation) + event.data + token.text.slice(relativeEditLocation);
+        // let subsequentTokens = this.tokensAt(type, token.end, ); // TODO update the token indices after the edit
+        didEdit = true;
+        break;
+      case "deleteContentBackward":
+        token.text = token.text.slice(0, relativeEditLocation - 1) + token.text.slice(relativeEditLocation);
+        // let subsequentTokens = this.tokensAt(type, token.end, ); // TODO update the token indices after the edit
+        didEdit = true;
+        break;
+      case "insertParagraph":
+        // token.text = token.text.slice(0, editLocation - 1) + " " + token.text.slice(editLocation);
+        didEdit = false;
+        break;
+    }
+
+    // tokenize again
+    if (this.tokenManager) {
+      let newTokens = TokenManager.tokenize(token.text); // TODO get this working
+      this.tokenManager.lenses.default = newTokens;
+    }
+
+    return didEdit;
   }
 
   static tokenize(text, data={}) { // -> Token[]
@@ -51,20 +134,19 @@ class TokenManager {
         // '  ' case (two spaces)
         tokens.push({
           'start': tokenStart,
-          'end': i - 1,
-          "text": curToken
+          'end': i,
+          "text": curToken,
+          "type": type,
+          "id": TokenManager.createTokenID(),
+          "prob": Math.random(),
         });
         curToken = "";
+        tokenStart = i + 1;
         continue; // TODO I think we want to save these as special ' ' tokens?
       }
     }
-
-    console.log('tokens', tokens)
     
-    return {
-      type: type,
-      tokens: tokens
-    }
+    return tokens;
   }
 
   static retokenize(tokens, data={}) {
@@ -77,120 +159,260 @@ class TokenManager {
     }
     console.log('newTokens', newTokens);
   }
+
+  static createTokenID() {
+    return TokenManager.curTokenID++;
+  }
 }
 
-// ALMOST WORKING ....
 
-const Editor = () => {
-  const originalText = `<span>first </span> <span>wasp</span> <span>here</span`;
-  const tokenManager = new TokenManager();
-  const [content, setContent] = useState(originalText);
-  const contentRef = useRef(null);
-  const [tokens, setTokens] = useState([]);
+class Editor extends Component {
+  constructor(props) {
+    super(props);
+    console.log("editor props", props)
+    this.originalText = `<span>t</span><span>o</span><span>k</span><span>e</span><span>n</span><span>i</span><span>z</span><span>e</span><span> </span><span>t</span><span>h</span><span>i</span><span>s</span><span> </span><span>t</span><span>e</span><span>x</span><span>t</span>`;
+    this.state = { content: this.originalText };
+    this.contentRef = React.createRef();
+    this.editorNode = null;
+    this.tokenManager = null;
+    this.selectionStart = null;
+    this.selectionEnd = null;
+  }
 
-  let isProcessing = false;
-  let eventQueue = [];
+  componentDidMount() {
+    this.editorNode = this.contentRef.current;
+    window.editor = this.editorNode;
 
-  const saveSelection = () => {
+    this.tokenManager = new TokenManager();
+    this.tokenManager.lenses.default = TokenManager.tokenize(this.originalText);
+    console.log('default tokens', this.tokenManager.lenses.default);
+
+    this.contentRef.current.addEventListener('input', this.handleInput);
+    this.contentRef.current.addEventListener('keydown', this.handleKey);
+
+    this.selectionStart = 0;
+    this.selectionEnd = 0;
+  }
+
+  componentWillUnmount() {
+    this.contentRef.current.removeEventListener('input', this.handleInput);
+    this.contentRef.current.removeEventListener('keydown', this.handleKey);
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (this.state.content !== prevState.content) {
+      console.log('content updated', this.state.content);
+    }
+  }
+
+  updateStylingBasedOnContent = () => {
+
+    for(let token of this.tokenManager.lenses.default) {
+      let color = probToColor(token.prob);
+    }
+  }
+
+  saveSelection = () => {
     return rangy.saveSelection();
   }
 
-  const restoreSelection = (saved) => {
+  restoreSelection = (saved) => {
     return rangy.restoreSelection(saved);
   }
 
-  const handleInput = (event) => {
-    processInput(event);
-    // if (isProcessing) {
-    //     // Push to queue if processing is underway
-    //     eventQueue.push(event);
-    // } else {
-    //     processInput(event);
-    // }
+  handleInput = (event) => {
+    this.processInput(event);
   };
 
-  const processInput = (event) => {
-    console.log('already is processing', isProcessing)
-    isProcessing = true;
-    const selectionRange = saveSelection();
 
-    //log the charater that is being input
-    console.log('input character', event.data, event);
-    setContent(contentRef.current.innerHTML); 
-    // https://stackoverflow.com/questions/54069253/the-usestate-set-method-is-not-reflecting-a-change-immediately
+  // Helper function to find the index path from a node up to the editorNode
+  getNodeIndexPath = (node, editorNode) => {
+    let path = [];
+    console.log('orignial node', node, node.textContent)
+    while (node && node !== editorNode) {
+      let parent = node.parentNode;
+      if (!parent) {
+        console.error('Node has no parent', node, node.textContent);
+        return [];
+      }
+      let index = Array.prototype.indexOf.call(parent.childNodes, node);
+      path.unshift(index);  // Add index to the beginning of the path array
+      node = parent;  // Move up in the DOM tree
+    }
+    return path;
+  };
 
-    // get the change from the event
-    const change = event.data;
-    // get the location using rangy
-    const selection = rangy.getSelection();
-    console.log('selection', selection, change);
+  restoreSelectionFromIndexPath = (path, editorNode) => {
+    console.log('restoring selection from path', path)
+    let node = editorNode;
+    for (let i = 0; i < path.length; i++) {
+      let index = path[i];
+      node = node.childNodes[index];
+    }
+    let range = document.createRange();
+    range.selectNodeContents(node);
+    let selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
 
-    // 1. need to get the new change from the user
-    // 2 need to take the old tokens and update the tokens with the new change
-    // 3. need to retokenize the old tokens
+  handleKey = (event) => {
+    let selection = this.selection = rangy.getSelection();
+    // this.selectionStart = window.getSelection().getRangeAt(0).startOffset;
+    // this.selectionEnd = window.getSelection().getRangeAt(0).endOffset;
 
-    let tokens = TokenManager.tokenize(content);
-    console.log('token', tokens);
-    setTokens(tokens);
+    if (selection.rangeCount > 0) {
+      // const range = selection.getRangeAt(0);
+      // Capture the start and end nodes and their respective offsets
+      // this.selectionStartNode = range.startContainer;
+      // this.selectionEndNode = range.endContainer;
+      // this.selectionStartOffset = range.startOffset;
+      // this.selectionEndOffset = range.endOffset;
 
-    // // wrap the tokens in spans
-    let newContent = content;
-    for (let token of tokens.tokens) {
-      let span = `<span style="background-color: ${probToColor(0.5)}">${token.text}</span>`;
-      newContent = newContent.replace(token.text, span);
+      this.indexPath = this.getNodeIndexPath(this.selection.anchorNode, this.editorNode);
+      console.log('anchor node index path', this.indexPath);
+    }
+    else {
+      console.error('No selection');
     }
 
-    // // set the new content
-    // setContent(newContent);
+  }
 
+
+  processInput = (event) => {
+    // Log the starting and ending positions of the selection before input processing
+    // console.log('selection start', this.selectionStart, this.selectionEnd, this.selection.anchorNode);
+    window.anchor = this.selection.anchorNode;
+
+    // Save the current selection to restore later after processing input
+    const savedSelection = this.saveSelection();
+  
+    // Process the input data
+    // Example: Update the content state to reflect changes made by the input
+    // const newContent = this.state.content.substring(0, this.selectionStart) + 
+                      //  event.data + 
+                      //  this.state.content.substring(this.selectionEnd);
+  
+    // Update the component state with the new content
+    // this.setState({ content: this.contentRef.current.innerHTML });
+
+    // console.log('CONTENT', this.state.content);
+
+    function splitSpan(span, c) {
+      // don't delete any spans, just add new ones and remove characters from the old span
+      let text = span.textContent.replace(/\uFEFF/g, ''); // Remove BOM
+      let newSpans = [];
+      for (let i = 1; i < text.length; i++) {
+        let newSpan = document.createElement('span');
+        newSpan.textContent = text[i];
+        newSpans.push(newSpan);
+      }
+      span.textContent = text[0];
+      for (let i = 0; i < newSpans.length; i++) {
+        let newSpan = newSpans[i];
+        span.parentNode.insertBefore(newSpan, span.nextSibling);
+        c += 1;
+        styleChild(newSpan, c);
+      }
+      return c;
+    }
+
+    function* traverseDOM(node) {
+      if (
+        (node.tagName === 'DIV' || node.tagName === 'SPAN' || node.tagName === 'BR')
+        // and its not div.editor
+        && node.className !== 'editor'
+        // and it is not a rangy selection marker (id contains the string selectionBoundary)
+        && !node.id.includes('selectionBoundary')
+      ) {
+        yield node;
+      }
+
+      for (const child of node.childNodes) {
+          yield* traverseDOM(child);
+      }
+    }
+
+    function styleChild(child, c) {
+      child.setAttribute('c', c);
+
+      if (child.tagName === 'SPAN') {
+        let color = probToColor(Math.random());
+        child.style.backgroundColor = color;
+      }
+    }
+
+    // iterate through all children spans
+    let spans = this.contentRef.current.children;
+    // let children = this.contentRef.current.childNodes; // doesn't get children of children
+    let children = [...traverseDOM(this.contentRef.current)];
+    let i = 0;
+    let c = 0;
+    let child = children[i];
+    while (child) {
+      // check that it is a span
+      styleChild(child, c); // TODO the c logic needs to be updated a bit (newline divs and brs...)
+
+      if (child.tagName === 'SPAN') {
+        let text = child.textContent;
+        if (text.length > 1) {
+          // split the span into multiple spans
+          // updating the character index
+          c = splitSpan(child, c);
+        }
+      }
+
+      i++;
+      c++;
+      child = children[i];
+    }
+  
+    // Potentially, update tokens based on the input
+    // This could involve re-tokenizing the text or adjusting tokens based on the input
+    if (this.tokenManager) {
+      const didEdit = this.tokenManager.editToken('default', event, this.selectionStart);
+      // console.log('token manager tokens', this.tokenManager.lenses.default);
+    }
+  
+    // Use a timeout to delay execution of restoring the selection
+    // This ensures that the DOM updates have completed before the selection is restored
     setTimeout(() => {
-      restoreSelection(selectionRange);
-      checkQueue();
+      // this.restoreSelection(savedSelection);
+      let restoreTo = this.indexPath;
+      // update the last index
+      // restoreTo[restoreTo.length - 1] += 1;
+      // console.log('restoring to', restoreTo);
+      this.restoreSelectionFromIndexPath(restoreTo, this.editorNode);
     }, 0);
+
+      // Perform any additional actions following the update
+      // Example: Update styling or re-compute dependent values
+      this.updateStylingBasedOnContent();
   }
 
-
-  const checkQueue = () => {
-    if (eventQueue.length > 0 && !isProcessing) {
-        const nextEvent = eventQueue.shift();  // Get the next event from the queue
-        processInput(nextEvent);
-    }
+  render() {
+    return (
+      <div
+        className="editor"
+        ref={this.contentRef}
+        contentEditable
+        dangerouslySetInnerHTML={{ __html: this.state.content }}
+      ></div>
+    );
   }
-  useEffect(() => {
-    contentRef.current.addEventListener('input', handleInput);
-    //onclick
-    // contentRef.current.addEventListener('click', onClick);
-    return () => {
-      contentRef.current.removeEventListener('input', handleInput);
-    };
-  }, []);
+}
 
-  return (
-    <div
-      className="editor"
-      ref={contentRef}
-      contentEditable
-      dangerouslySetInnerHTML={{ __html: content }}
-    ></div>
-  );
-};
-
-const App = () => {
-  React.useEffect(() => {
-    // tokenize the full document
-    // TODO
-  }, []);
-
-
-  // Render the Slate context.
-  return (
-    <div className="context-context">
-      <div className="editor-context">
-        <Editor />
+class App extends Component {
+  render() {
+    return (
+      <div className="context-context">
+        <div className="editor-context">
+          <Editor />
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
+}
 
 const probToColor = (prob) => {
   if (!prob || prob <= 0) {
