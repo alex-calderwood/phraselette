@@ -7,43 +7,14 @@ import styled from 'styled-components';
 // a library for saving and restoring selections (cursor positions / ranges) in a document
 // it uses hidden elements to store the selection data
 import rangy from 'rangy';
-import 'rangy/lib/rangy-selectionsaverestore';
-import 'rangy/lib/rangy-serializer';
+// import 'rangy/lib/rangy-selectionsaverestore';
+// import 'rangy/lib/rangy-serializer';
 
-
-function highlightCharacterWithBox(elem, startIndex, endIndex, color) {
-  const range = document.createRange();
-  
-  try {
-    // Initialize the range to encompass the target character
-    range.setStart(elem.childNodes[0], startIndex);
-    range.setEnd(elem.childNodes[0], endIndex);
-
-    // Create a rectangle based on the range
-    const rect = range.getBoundingClientRect();
-
-    // Create the background box element
-    const box = document.createElement('div');
-    box.className = 'highlight';
-    box.style.backgroundColor = color;
-    box.style.width = `${rect.width}px`;
-    box.style.height = `${rect.height}px`;
-    box.style.top = `${rect.top + window.scrollY}px`; // Account for scrolling
-    box.style.left = `${rect.left + window.scrollX}px`; // Account for scrolling
-
-    // Append the box to the container
-    elem.appendChild(box);
-
-  } catch (e) {
-    console.error("Failed to highlight character: ", e);
-  } finally {
-    // Clean up the range without disturbing any existing selections
-    range.detach(); // Detach the range from the document
-  }
+function getUniqueUUID() {
+    var id = "id" + Math.random().toString(16).slice(2);
+    // console.log('making id', id);
+    return id; // TODO small chance of collision, 
 }
-
-// window.highlight = highlightCharacterWithBox;
-
 
 class TokenManager {
   static curTokenID = 0;
@@ -88,7 +59,6 @@ class TokenManager {
   editToken(type, event, editLocation) {
     let tokens = this.tokensAt(type, editLocation); 
     let token = tokens[0]; // TODO allow mulpitle tokens to be edited at once
-    console.log('tokens at', editLocation, tokens);
 
     let didEdit = false;
     let relativeEditLocation = editLocation - token.start;
@@ -166,11 +136,13 @@ class TokenManager {
 }
 
 
-class Editor extends Component {
+class Editor extends Component {cha
   constructor(props) {
     super(props);
     console.log("editor props", props)
-    this.originalText = `<span>t</span><span>o</span><span>k</span><span>e</span><span>n</span><span>i</span><span>z</span><span>e</span><span> </span><span>t</span><span>h</span><span>i</span><span>s</span><span> </span><span>t</span><span>e</span><span>x</span><span>t</span>`;
+    this.originalText = 'this is some text';
+    this.originalText = this.originalText.split('').map((c) => `<span>${c}</span>`).join('');
+    console.log('original text', this.originalText)
     this.state = { content: this.originalText };
     this.contentRef = React.createRef();
     this.editorNode = null;
@@ -188,7 +160,7 @@ class Editor extends Component {
     console.log('default tokens', this.tokenManager.lenses.default);
 
     this.contentRef.current.addEventListener('input', this.handleInput);
-    this.contentRef.current.addEventListener('keydown', this.handleKey);
+    this.contentRef.current.addEventListener('click', this.handleKey);
 
     this.selectionStart = 0;
     this.selectionEnd = 0;
@@ -196,7 +168,7 @@ class Editor extends Component {
 
   componentWillUnmount() {
     this.contentRef.current.removeEventListener('input', this.handleInput);
-    this.contentRef.current.removeEventListener('keydown', this.handleKey);
+    this.contentRef.current.removeEventListener('click', this.handleKey);
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -213,22 +185,44 @@ class Editor extends Component {
   }
 
   saveSelection = () => {
-    return rangy.saveSelection();
+    let selection = rangy.getSelection();
+    if (selection.rangeCount > 0) {
+      let parent = selection.anchorNode.parentNode;
+      let offset = selection.focusOffset;
+      
+      let indexPath = this.getNodeIndexPath(selection.anchorNode, this.editorNode);
+      let totalOffset = this.absoluteOffset(indexPath, offset, this.editorNode);
+
+      this.selection = selection;
+      this.indexPath = indexPath;
+      this.offset = offset;
+      this.totalOffset = totalOffset;
+      this.charId = parent.id;
+      
+      console.log('saved selection', parent.textContent, {indexPath, offset, totalOffset, charId: parent.id})
+    }
+    else {
+      console.error('No selection');
+    }
   }
 
-  restoreSelection = (saved) => {
-    return rangy.restoreSelection(saved);
+  restoreSelection = () => {
+    if (this.selection) {
+      // this.restoreSelectionFromIndexPath(this.indexPath, this.offset, this.editorNode);
+      // get the node with the id
+      this.restoreSelectionFromCharId(this.charId, 0);
+
+    }
   }
+
 
   handleInput = (event) => {
     this.processInput(event);
   };
 
-
   // Helper function to find the index path from a node up to the editorNode
   getNodeIndexPath = (node, editorNode) => {
     let path = [];
-    console.log('orignial node', node, node.textContent)
     while (node && node !== editorNode) {
       let parent = node.parentNode;
       if (!parent) {
@@ -242,50 +236,91 @@ class Editor extends Component {
     return path;
   };
 
-  restoreSelectionFromIndexPath = (path, editorNode) => {
+  absoluteOffset(indexPath, offset, editorNode) {
+    // console.log('editor', editorNode);
+    let node = editorNode;
+    let totalOffset = 0;
+    for (let i = 0; i < indexPath.length; i++) {
+      let index = indexPath[i];
+      node = node.childNodes[index];
+      let text = node.textContent.replace(/\uFEFF/g, '');
+
+      if (text) {
+        let length = text.length;
+        // console.log('node', {node, text, length, index, offset})
+
+        totalOffset += length;
+      }
+    }
+    return totalOffset + offset;
+  }
+
+  restoreSelectionFromIndexPath = (path, offset, editorNode) => {
     console.log('restoring selection from path', path)
+    // let node = editorNode;
+    // for (let i = 0; i < path.length; i++) {
+    //   let index = path[i];
+    //   node = node.childNodes[index];
+    // }
+    // let range = document.createRange();
+    // range.selectNodeContents(node);
+    // let selection = window.getSelection();
+    // selection.removeAllRanges();
+    // selection.addRange(range);
     let node = editorNode;
     for (let i = 0; i < path.length; i++) {
       let index = path[i];
       node = node.childNodes[index];
     }
     let range = document.createRange();
-    range.selectNodeContents(node);
+    range.setStart(node, offset);
+    range.setEnd(node, offset);
     let selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
+
+  };
+
+  restoreSelectionFromCharId = (charId, offset) => {
+    let node = document.getElementById(charId);
+    if (!node) {
+      console.error('No node found with id', charId);
+      return;
+    }
+
+    let nextNode = node.nextSibling.nextSibling;
+
+
+    if (node.textContent) {
+      console.log('node', node.textContent);
+    }
+    if (nextNode.textContent) {
+      console.log('next node', nextNode.textContent);
+    }
+    
+
+    console.log('restoring charId', charId)
+
+    let range = document.createRange();
+    range.setStart(nextNode, offset);
+    range.setEnd(nextNode, offset);
+    let selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  
   }
 
   handleKey = (event) => {
-    let selection = this.selection = rangy.getSelection();
-    // this.selectionStart = window.getSelection().getRangeAt(0).startOffset;
-    // this.selectionEnd = window.getSelection().getRangeAt(0).endOffset;
-
-    if (selection.rangeCount > 0) {
-      // const range = selection.getRangeAt(0);
-      // Capture the start and end nodes and their respective offsets
-      // this.selectionStartNode = range.startContainer;
-      // this.selectionEndNode = range.endContainer;
-      // this.selectionStartOffset = range.startOffset;
-      // this.selectionEndOffset = range.endOffset;
-
-      this.indexPath = this.getNodeIndexPath(this.selection.anchorNode, this.editorNode);
-      console.log('anchor node index path', this.indexPath);
-    }
-    else {
-      console.error('No selection');
-    }
-
-  }
-
+    // this.saveSelection();
+  };
 
   processInput = (event) => {
     // Log the starting and ending positions of the selection before input processing
     // console.log('selection start', this.selectionStart, this.selectionEnd, this.selection.anchorNode);
-    window.anchor = this.selection.anchorNode;
+    // window.anchor = this.selection.anchorNode;
 
     // Save the current selection to restore later after processing input
-    const savedSelection = this.saveSelection();
+    this.saveSelection();
   
     // Process the input data
     // Example: Update the content state to reflect changes made by the input
@@ -333,10 +368,22 @@ class Editor extends Component {
       }
     }
 
+    function setIdIfNotPresent(node) {
+      // if(node.tagName !== 'SPAN') { // TODO fix unique ID thing
+      //   console.log('trying to create id for', node.id, !node.id, node)
+      // }
+      if (!node.id) {
+        node.id = getUniqueUUID();
+        // console.log('creating id for', node, node.id);
+      }
+    }
+
     function styleChild(child, c) {
       child.setAttribute('c', c);
 
-      if (child.tagName === 'SPAN') {
+      setIdIfNotPresent(child); // need to put a lock on this so ids cant duplicate
+
+      if (child.tagName === 'SPAN' && !child.style.backgroundColor) {
         let color = probToColor(Math.random());
         child.style.backgroundColor = color;
       }
@@ -369,26 +416,21 @@ class Editor extends Component {
   
     // Potentially, update tokens based on the input
     // This could involve re-tokenizing the text or adjusting tokens based on the input
-    if (this.tokenManager) {
-      const didEdit = this.tokenManager.editToken('default', event, this.selectionStart);
-      // console.log('token manager tokens', this.tokenManager.lenses.default);
-    }
+    // if (this.tokenManager) {
+    //   const didEdit = this.tokenManager.editToken('default', event, this.selectionStart);
+    //   // console.log('token manager tokens', this.tokenManager.lenses.default);
+    // }
   
     // Use a timeout to delay execution of restoring the selection
     // This ensures that the DOM updates have completed before the selection is restored
     setTimeout(() => {
-      // this.restoreSelection(savedSelection);
-      let restoreTo = this.indexPath;
-      // update the last index
-      // restoreTo[restoreTo.length - 1] += 1;
-      // console.log('restoring to', restoreTo);
-      this.restoreSelectionFromIndexPath(restoreTo, this.editorNode);
+      this.restoreSelection();
     }, 0);
 
       // Perform any additional actions following the update
       // Example: Update styling or re-compute dependent values
       this.updateStylingBasedOnContent();
-  }
+  };
 
   render() {
     return (
@@ -414,13 +456,14 @@ class App extends Component {
   }
 }
 
+let prevColor = 100;
 const probToColor = (prob) => {
   if (!prob || prob <= 0) {
     return 'white';
   }
   // set prob to a random value between 0 and 1
-  prob = Math.random();
-  return "rgba(" + Math.random() * 255 + ", " + Math.random() * 255 + ", " + Math.random() * 255 +  ", " + prob + ")";
+  prevColor = (prevColor + 5) % 255;
+  return "rgba(" + prevColor + ", 0, 0, " + prevColor / 255 + ")";
 };
 
 
