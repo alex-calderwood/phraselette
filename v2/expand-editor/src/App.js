@@ -35,7 +35,6 @@ class TokenManager {
 
   tokensAt(type, start, end=start) {
     let tokens = this.lenses[type];
-    console.log('tokensAt of type', type, 'at', start, tokens);
     if (!tokens) {
       console.error("No label of lense type", type);
       return;
@@ -91,10 +90,11 @@ class TokenManager {
   static tokenize(text, data={}) { // -> Token[]
     console.log("tokenizing", text)
     let type = "default";
-    const delim = " ";
+    const delim = "|";
     let tokens = [];
     let tokenStart = 0;
     let curToken = ""
+    let nextProb = 0.1;
     for(let i = 0; i < text.length; i++) {
       let c = text[i];
       curToken += c;
@@ -107,14 +107,16 @@ class TokenManager {
           "text": curToken,
           "type": type,
           "id": TokenManager.createTokenID(),
-          "prob": Math.random(),
+          "prob": nextProb,
         });
         curToken = "";
         tokenStart = i + 1;
+         nextProb += 0.1
+
         continue; // TODO I think we want to save these as special ' ' tokens?
       }
     }
-    
+    console.log('tokenized', tokens)
     return tokens;
   }
 
@@ -139,30 +141,26 @@ class Editor extends Component {cha
   constructor(props) {
     super(props);
     console.log("editor props", props)
-    this.originalText = 'this is some text';
-    this.originalText = this.originalText.split('').map((c) => `<span id=${getUniqueUUID()}>${c}</span>`).join('');
+    let originalText = 'this is some text';
+    let content = originalText.split('').map((c) => `<span id=${getUniqueUUID()}>${c}</span>`).join('');
     console.log('original text', this.originalText)
-    this.state = { content: this.originalText };
+    this.state = { content: content , text: originalText};
     this.contentRef = React.createRef();
     this.editorNode = null;
-    this.tokenManager = null;
-    this.selectionStart = null;
-    this.selectionEnd = null;
-  }
+    this.tokenManager = new TokenManager();
+    this.tokenManager.lenses.default = TokenManager.tokenize(this.state.text);
+    console.log('default tokens', this.tokenManager.lenses.default);
 
-  componentDidMount() {
     this.editorNode = this.contentRef.current;
     window.editor = this.editorNode;
 
-    this.tokenManager = new TokenManager();
-    this.tokenManager.lenses.default = TokenManager.tokenize(this.originalText);
-    console.log('default tokens', this.tokenManager.lenses.default);
-
-    this.contentRef.current.addEventListener('input', this.handleInput);
-    this.contentRef.current.addEventListener('click', this.handleClick);
-
     this.selectionStart = 0;
     this.selectionEnd = 0;
+  }
+
+  componentDidMount() {
+    this.contentRef.current.addEventListener('input', this.handleInput);
+    this.contentRef.current.addEventListener('click', this.handleClick);
   }
 
   componentWillUnmount() {
@@ -187,17 +185,11 @@ class Editor extends Component {cha
     if (selection.rangeCount > 0) {
       let parent = selection.anchorNode.parentNode;
       let offset = selection.focusOffset;
-      
-      // let indexPath = this.getNodeIndexPath(selection.anchorNode, this.editorNode);
-      // let totalOffset = this.absoluteOffset(indexPath, offset, this.editorNode);
-      // this.totalOffset = totalOffset;
-      // this.indexPath = indexPath;
 
       this.selection = selection;
       this.offset = offset;
       this.charId = parent.id;
       
-      console.log('saved selection', parent.textContent, {offset, charId: parent.id})
     }
     else {
       console.error('No selection');
@@ -206,7 +198,6 @@ class Editor extends Component {cha
 
   restoreSelection = (event) => {
     if (this.selection) {
-      // this.restoreSelectionFromIndexPath(this.indexPath, this.offset, this.editorNode);
       // get the node with the id
       this.restoreSelectionFromCharId(this.charId, this.offset, event);
     }
@@ -232,25 +223,6 @@ class Editor extends Component {cha
     }
     return path;
   };
-
-  // absoluteOffset(indexPath, offset, editorNode) {
-  //   // console.log('editor', editorNode);
-  //   let node = editorNode;
-  //   let totalOffset = 0;
-  //   for (let i = 0; i < indexPath.length; i++) {
-  //     let index = indexPath[i];
-  //     node = node.childNodes[index];
-  //     let text = node.textContent.replace(/\uFEFF/g, '');
-
-  //     if (text) {
-  //       let length = text.length;
-  //       // console.log('node', {node, text, length, index, offset})
-
-  //       totalOffset += length;
-  //     }
-  //   }
-  //   return totalOffset + offset;
-  // }
 
   restoreSelectionFromCharId = (charId, givenOffset, event) => {
     let node = document.getElementById(charId);
@@ -279,8 +251,7 @@ class Editor extends Component {cha
       node: node,
       restoreTo: restoreTo,
     }
-    
-    console.log('restoring', restoring);
+    // console.log('restoring', restoring); // for debugging
 
     let range = document.createRange();
     range.setStart(restoreTo, charsToOffset);
@@ -294,43 +265,70 @@ class Editor extends Component {cha
     this.saveSelection();
   };
 
-  processInput = (event) => {
-    // Log the starting and ending positions of the selection before input processing
-    // console.log('selection start', this.selectionStart, this.selectionEnd, this.selection.anchorNode);
-    // window.anchor = this.selection.anchorNode;
 
+  splitSpan(span, c) {
+    // don't delete any spans, just add new ones and remove characters from the old span
+    let text = span.textContent.replace(/\uFEFF/g, ''); // Remove BOM
+    let newSpans = [];
+    for (let i = 1; i < text.length; i++) {
+      let newSpan = document.createElement('span');
+      newSpan.textContent = text[i];
+      newSpans.push(newSpan);
+    }
+    span.textContent = text[0];
+    for (let i = 0; i < newSpans.length; i++) {
+      let newSpan = newSpans[i];
+      span.parentNode.insertBefore(newSpan, span.nextSibling);
+      c += 1;
+      this.styleChild(newSpan, c);
+    }
+    return c;
+  }
+
+  setIdIfNotPresent(node) {
+    // If the node does not have an id, assign it a unique id
+    // also, react's content editable sometimes copies divs, leading to duplicate ids
+    // if the id is not unique, assign a new id
+    let shouldSetId = !node.id;
+    if (node.id) {
+      let elements = document.querySelectorAll(`#${node.id}`);
+      if (elements.length > 1) {
+        shouldSetId = true;
+      }
+    }
+
+    if (shouldSetId) {
+      node.id = getUniqueUUID();
+    }
+  }
+
+  styleChild(child, c) {
+
+    child.setAttribute('c', c);
+
+    this.setIdIfNotPresent(child); // need to put a lock on this so ids cant duplicate
+
+    if (child.tagName === 'SPAN') {
+      if (this.tokenManager) {
+        let tokensAt = this.tokenManager.tokensAt('default', c);
+
+        if (tokensAt && tokensAt.length > 0) {
+          let prob = tokensAt[0].prob;
+
+          console.log('AT', c, tokensAt, prob, this.tokenManager.lenses.default);
+
+          console.log(prob)
+          let color = probToColor(prob);
+          child.style.backgroundColor = color;
+        }
+      }
+
+    }
+  }
+
+  processInput = (event) => {
     // Save the current selection to restore later after processing input
     this.saveSelection();
-
-    // Process the input data
-    // Example: Update the content state to reflect changes made by the input
-    // const newContent = this.state.content.substring(0, this.selectionStart) + 
-                      //  event.data + 
-                      //  this.state.content.substring(this.selectionEnd);
-  
-    // Update the component state with the new content
-    // this.setState({ content: this.contentRef.current.innerHTML });
-
-    // console.log('CONTENT', this.state.content);
-
-    function splitSpan(span, c) {
-      // don't delete any spans, just add new ones and remove characters from the old span
-      let text = span.textContent.replace(/\uFEFF/g, ''); // Remove BOM
-      let newSpans = [];
-      for (let i = 1; i < text.length; i++) {
-        let newSpan = document.createElement('span');
-        newSpan.textContent = text[i];
-        newSpans.push(newSpan);
-      }
-      span.textContent = text[0];
-      for (let i = 0; i < newSpans.length; i++) {
-        let newSpan = newSpans[i];
-        span.parentNode.insertBefore(newSpan, span.nextSibling);
-        c += 1;
-        styleChild(newSpan, c);
-      }
-      return c;
-    }
 
     function* traverseDOM(node) {
       if (
@@ -348,34 +346,6 @@ class Editor extends Component {cha
       }
     }
 
-    // If the node does not have an id, assign it a unique id
-    // also, react's content editable sometimes copies divs, leading to duplicate ids
-    // if the id is not unique, assign a new id
-    function setIdIfNotPresent(node) {
-      let shouldSetId = !node.id;
-      if (node.id) {
-        let elements = document.querySelectorAll(`#${node.id}`);
-        if (elements.length > 1) {
-          shouldSetId = true;
-        }
-      }
-
-      if (shouldSetId) {
-        node.id = getUniqueUUID();
-      }
-      
-    }
-
-    function styleChild(child, c) {
-      child.setAttribute('c', c);
-
-      setIdIfNotPresent(child); // need to put a lock on this so ids cant duplicate
-
-      if (child.tagName === 'SPAN' && !child.style.backgroundColor) {
-        let color = probToColor(Math.random());
-        child.style.backgroundColor = color;
-      }
-    }
 
     // iterate through all children spans
     let spans = this.contentRef.current.children;
@@ -385,15 +355,21 @@ class Editor extends Component {cha
     let c = 0;
     let child = children[i];
     while (child) {
-      // check that it is a span
-      styleChild(child, c); // TODO the c logic needs to be updated a bit (newline divs and brs...)
+
+      if (child.tagName == "BR") {
+        i++;
+        child = children[i];
+        continue;
+      }
+
+      this.styleChild(child, c); // TODO the c logic needs to be updated a bit (newline divs and brs...)
 
       if (child.tagName === 'SPAN') {
         let text = child.textContent;
         if (text.length > 1) {
           // split the span into multiple spans
           // updating the character index
-          c = splitSpan(child, c);
+          c = this.splitSpan(child, c);
         }
       }
 
@@ -401,13 +377,19 @@ class Editor extends Component {cha
       c++;
       child = children[i];
     }
+
+    // update the state text
+    let newText = this.contentRef.current.textContent; // this loses \n TODO
+    console.log('new text', newText)
+
+    this.setState({text: newText})
   
-    // Potentially, update tokens based on the input
-    // This could involve re-tokenizing the text or adjusting tokens based on the input
-    // if (this.tokenManager) {
-    //   const didEdit = this.tokenManager.editToken('default', event, this.selectionStart);
-    //   // console.log('token manager tokens', this.tokenManager.lenses.default);
-    // }
+    if (this.tokenManager) {
+    //   // const didEdit = this.tokenManager.editToken('default', event, this.selectionStart);
+      let newTokens = TokenManager.tokenize(newText);
+      this.tokenManager.lenses.default = newTokens;
+      console.log('new tokens', newTokens);
+    }
   
     // Use a timeout to delay execution of restoring the selection
     // This ensures that the DOM updates have completed before the selection is restored
@@ -446,15 +428,25 @@ class App extends Component {
 
 let prevColor = 100;
 let prevColor2 = 138;
-const probToColor = (prob) => {
+const probToColorRandom = (prob) => {
   if (!prob || prob <= 0) {
     return 'white';
   }
   // set prob to a random value between 0 and 1
-  prevColor = (prevColor + 5) % 255;
-  prevColor2 = (prevColor2 + 3) % 255
   return "rgba(" + prevColor + ", " + prevColor2 + ", 0, " + prevColor / 255 + ")";
 };
+
+
+const probToColor = (prob) => {
+  if (!prob || prob <= 0) {
+    return 'white';
+  }
+
+  let g = prob * 255;
+  // set prob to a random value between 0 and 1
+  return "rgba(" + 0 + ", " + g + ", 0, " + prob + ")";
+};
+
 
 
 export default App;
