@@ -94,13 +94,14 @@ class TokenManager {
     let tokens = [];
     let tokenStart = 0;
     let curToken = ""
-    let nextProb = 0.1;
+    // let nextProb = 0.1;
     for(let i = 0; i < text.length; i++) {
       let c = text[i];
       curToken += c;
       if (c.match(/\s+/g) || i === text.length - 1) {
         // TODO handle c == 0 case
         // '  ' case (two spaces)
+        let nextProb = Math.random();
         tokens.push({
           'start': tokenStart,
           'end': i,
@@ -112,7 +113,8 @@ class TokenManager {
         curToken = "";
         tokenStart = i + 1;
 
-        nextProb = (nextProb + 0.08) % 1;
+        // let nextProb = Math.random();
+        // nextProb = (nextProb + 0.08) % 1;
 
         continue; // TODO I think we want to save these as special ' ' tokens?
       }
@@ -173,12 +175,6 @@ class Editor extends Component {cha
       console.log('content updated', this.state.content);
     }
   }
-
-  // updateStylingBasedOnContent = () => {
-  //   for(let token of this.tokenManager.lenses.default) {
-  //     let color = probToColor(token.prob);
-  //   }
-  // }
 
   saveSelection = () => {
     let selection = rangy.getSelection();
@@ -320,7 +316,7 @@ class Editor extends Component {cha
         if (tokensAt && tokensAt.length > 0) {
           let prob = tokensAt[0].prob;
 
-          console.log('AT', c, tokensAt, prob, this.tokenManager.lenses.default);
+          // console.log('AT', c, tokensAt, prob, this.tokenManager.lenses.default);
           let color = probToColor(prob);
           child.style.backgroundColor = color;
         }
@@ -377,12 +373,63 @@ class Editor extends Component {cha
     }
   }
 
+  /**
+   * Extracts the text content from a contenteditable element, preserving explicit line breaks.
+   *
+   * This function clones the provided element to avoid altering the original content. It then
+   * replaces <br> tags and the beginnings of <div> tags with newline characters to preserve
+   * the visual representation of line breaks. The function does not modify <span> tags, as they
+   * are not typically associated with line breaks. The modified content is then returned as a
+   * single string with preserved line breaks.
+   *
+   * @param {HTMLElement} element - The contenteditable element from which to extract text.
+   * @returns {string} The text content of the element with \n characters in place of <br> and <div> tags.
+  */
+  getTextWithWhitespace(element, selection) {
+      let clone = element.cloneNode(true);
+  
+      // Replace <br> tags with \n
+      clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+  
+      // Replace block elements like <div> with \n and maintain their content
+      clone.querySelectorAll('div').forEach(div => {
+          div.replaceWith('\n', ...div.childNodes);
+      });
+  
+      // Extract the textContent from the cloned element
+      return clone.textContent;
+  }
+
+
   processInput = (event) => {
     // Save the current selection to restore later after processing input
     this.saveSelection();
 
     // update the state text
-    let newText = this.contentRef.current.textContent.replace('&nbsp', ' '); // this loses \n TODO
+    // let newText = this.contentRef.current.textContent.replace('&nbsp', ' '); // this loses \n TODO
+
+    let newText = this.getTextWithWhitespace(this.contentRef.current, this.selection.nativeSelection);
+    console.log('TEXT', {newText});
+
+    // for(let i = 0; i < newText.length; i++) {
+    //   let c = newText[i];
+    //   let elt = document.querySelector(`[c="${i}"]`);
+    //   let text = elt && elt.textContent ? elt.textContent : null;
+    //   console.log("i", i, "c", c, 'text', text, elt);
+    // }
+
+    // reverse the above, iterate through the nodes that have a 'c' attribute, and get the character in the text at that index
+    // get all nodes with a c attribute
+    let nodes = document.querySelectorAll('[c]');
+    for (let i = 0; i < nodes.length; i++) {
+      let node = nodes[i];
+      let c = node.getAttribute('c');
+      let text = node.textContent;
+      let actual = newText[parseInt(c)];
+      console.log("c", c, 'text', text, 'newText[c]', actual, node);
+    }
+
+
 
     if (this.tokenManager) {
       //   // const didEdit = this.tokenManager.editToken('default', event, this.selectionStart);
