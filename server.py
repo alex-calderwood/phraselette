@@ -114,7 +114,6 @@ def stream_probs(phrase, extra_context):
 @app.route("/probs", methods=["POST"])
 def probs():
     global working
-    print('working', working)
     
     with lock:
         if working:
@@ -125,7 +124,7 @@ def probs():
     data = request.get_json()
     text = data["text"]
     extra_context = data.get("context", tokenizer.eos_token)
-    print(data)
+    print('request', data)
 
     return Response(stream_probs(text, extra_context), content_type='application/json')
 

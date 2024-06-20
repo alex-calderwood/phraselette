@@ -10,6 +10,19 @@ import rangy from 'rangy';
 import { TokenManager } from "./TokenManager";
 import { getUniqueUUID } from "./utils";
 
+function debounce(fn, delay) {
+  let timeoutID;
+  return function (...args) {
+    if (timeoutID) {
+      clearTimeout(timeoutID);
+    }
+    timeoutID = setTimeout(() => {
+      fn(...args);
+      timeoutID = null;
+    }, delay);
+  };
+}
+
 class LenseBar extends Component {
   constructor(props) {
     super(props);
@@ -45,15 +58,23 @@ class LenseEditor extends Component {
     this.state = { content: content , text: originalText};
     this.contentRef = React.createRef();
     this.editorNode = null;
-    this.tokenManager = new TokenManager();
-    this.tokenManager.lenses.words = TokenManager.tokenize(this.state.text);
+    this.tokenManager = this.props.tokenManager;
+
+    this.tokenManager.setOnToken(this.updateUITokens.bind(this));
+    
+    this.tokenManager.tokenize(this.state.text);
     console.log('words tokens', this.tokenManager.lenses.words);
 
     this.editorNode = this.contentRef.current;
-    window.editor = this.editorNode;
 
     this.selectionStart = 0;
     this.selectionEnd = 0;
+  }
+
+  updateUITokens (token) {
+    console.log('recieved token', token);
+    // this.colorCharactersByProb();
+    this.colorTokenByProb(token);
   }
 
   componentDidMount() {
@@ -196,28 +217,54 @@ class LenseEditor extends Component {
 
   styleChild(child, c) {
     child.setAttribute('c', c);
-
-    this.setIdIfNotPresent(child); // need to put a lock on this so ids cant duplicate
-
+    this.setIdIfNotPresent(child);
     if (child.tagName === 'SPAN') {
-      if (this.tokenManager) {
-        if (c == 17) {
-          console.log('stpo')
-        }
-
-        let tokensAt = this.tokenManager.tokensAt('words', c);
-
-        
-
-        if (tokensAt && tokensAt.length > 0) {
-          let prob = tokensAt[0].prob;
-
-          // console.log('AT', c, tokensAt, prob, this.tokenManager.lenses.words);
-          let color = probToColor(prob);
-          child.style.backgroundColor = color;
-        }
+      if (this.tokenManager.currentLense === 'words') {
+      this.colorCharacterByProb(child, c);
       }
+    }
+  }
 
+  colorAllCharactersByProb() {
+    // get all spans with a c attribute
+    let spans = document.querySelectorAll('span[c]');
+    for (let i = 0; i < spans.length; i++) {
+      let span = spans[i];
+      let c = span.getAttribute('c');
+      console.log('coloring', c, span);
+      this.colorCharacterByProb(span, c);
+    }
+  }
+
+  colorTokenByProb(token) {
+    // console.log('coloring token', token.text, token.prob, token);
+    let start = token.start;
+    let end = token.end;
+    let prob = token.prob;
+    let color = getColor(this.tokenManager.currentLense, prob);
+    for (let i = start; i <= end; i++) { // [start, end] inclusive
+      let span = document.querySelector(`span[c='${i}']`);
+      console.log('span', span);
+      if (span) {
+        span.style.backgroundColor = color;
+      }
+    }
+  }
+
+  colorCharacterByProb(child, c) {
+    if (this.tokenManager) {
+      let tokensAt = this.tokenManager.tokensAt(this.tokenManager.currentLense, c);
+      let color;
+      if (tokensAt && tokensAt.length > 0) {
+        let prob = tokensAt[0].prob;
+        color = getColor(this.tokenManager.currentLense, prob);
+      } else {
+        color = getColor(this.tokenManager.currentLense, 0);
+      }
+      child.style.backgroundColor = color;
+
+    } else {
+      console.error('No token manager to color');
     }
   }
 
@@ -252,7 +299,7 @@ class LenseEditor extends Component {
         continue;
       }
 
-      this.styleChild(child, c); // TODO the c logic needs to be updated a bit (newline divs and brs...)
+      this.styleChild(child, c);
 
       if (child.tagName === 'SPAN') {
         let text = child.textContent;
@@ -307,13 +354,6 @@ class LenseEditor extends Component {
     let newText = this.getTextWithWhitespace(this.contentRef.current, this.selection.nativeSelection);
     console.log('TEXT', {newText});
 
-    // for(let i = 0; i < newText.length; i++) {
-    //   let c = newText[i];
-    //   let elt = document.querySelector(`[c="${i}"]`);
-    //   let text = elt && elt.textContent ? elt.textContent : null;
-    //   console.log("i", i, "c", c, 'text', text, elt);
-    // }
-
     // reverse the above, iterate through the nodes that have a 'c' attribute, and get the character in the text at that index
     // get all nodes with a c attribute
     let nodes = document.querySelectorAll('[c]');
@@ -322,15 +362,13 @@ class LenseEditor extends Component {
       let c = node.getAttribute('c');
       let text = node.textContent;
       let actual = newText[parseInt(c)];
-      console.log("c", c, 'text', text, 'newText[c]', actual, node);
     }
 
     if (this.tokenManager) {
-      //   // const didEdit = this.tokenManager.editToken('words', event, this.selectionStart);
-        let newTokens = TokenManager.tokenize(newText);
-        this.tokenManager.lenses.words = newTokens;
-        console.log('new tokens', newTokens);
-      }
+      let newTokens = this.tokenManager.tokenize(newText)
+      this.tokenManager.lenses.words = newTokens;
+      console.log('new tokens', newTokens);
+    }
 
     // this.setState({text: newText}) // right now we have no use fo rthis
 
@@ -341,10 +379,12 @@ class LenseEditor extends Component {
     setTimeout(() => {
       this.restoreSelection(event);
     }, 0);
-    
+
   };
 
   render() {
+    this.colorAllCharactersByProb();
+
     return (
       <div
         className="editor"
@@ -359,16 +399,22 @@ class LenseEditor extends Component {
 class App extends Component {
   constructor(props) {
     super(props);
+    this.tokenManager = new TokenManager();
+    window.tokenManager = this.tokenManager; // for debugging
     this.state = { 
-      lenses: ['words', 'gpt-2-tokens'],
+      lenses: Object.keys(this.tokenManager.lenses),
       currentLense: 'words',
      };
 
     // current lense is words, create a setter to pass to the LenseBar where it will change it
     this.setCurrentLense = (lense) => {
-      console.log('setting lense', lense);
+      console.log('setting current lense to', lense);
+      this.tokenManager.setCurrentLense(lense);
       this.setState({ currentLense: lense });
+      // recolor each character
+      // this.colorAllCharactersByProb(); // eventually this should be a state thing so it is managed by react
     };
+
   }
 
   render() {
@@ -376,10 +422,21 @@ class App extends Component {
       <div className="context-context">
           <LenseBar lenses={this.state.lenses} setCurrentLense={this.setCurrentLense} />
           <div className="editor-context">
-            <LenseEditor />
+            <LenseEditor tokenManager={this.tokenManager} lense={this.state.currentLense} />
           </div>
       </div>
     );
+  }
+}
+
+function getColor(lense, prob) {
+  // console.log('lense', lense, 'prob', prob);
+  if (lense === 'words') {
+    return probToColor(prob);
+  } else if (lense === 'gpt-2') {
+    return probToColorExponential(prob);
+  } else {
+    return probToColor(prob);
   }
 }
 
@@ -389,7 +446,6 @@ const probToColorRandom = (prob) => {
   if (!prob || prob <= 0) {
     return 'white';
   }
-  // set prob to a random value between 0 and 1
   return "rgba(" + prevColor + ", " + prevColor2 + ", 0, " + prevColor / 255 + ")";
 };
 
@@ -399,9 +455,18 @@ const probToColor = (prob) => {
   }
 
   let g = prob * 255;
-  // set prob to a random value between 0 and 1
   return "rgba(" + 0 + ", " + g + ", 0, " + prob + ")";
 };
+
+
+const probToColorExponential = (prob) => {
+  // the probabilities are very small so lets make them more visible
+  if (!prob || prob <= 0) {
+    return 'white';
+  }
+  let g = Math.min(Math.pow(prob, 1/3) * 255, 255);
+  return "rgba(" + 0 + ", " + g + ", 0, " + 0.5 + ")";
+}
 
 
 export default App;
