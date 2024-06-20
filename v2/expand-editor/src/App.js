@@ -19,8 +19,8 @@ class TokenManager {
   static curTokenID = 0;
 
   constructor(tokens) {
-    this.lenses = {'default': []}; // the types of possible labels
-    this.lenseTokenIDtoIndex = {'default': {}}; // token id to lenses array index
+    this.lenses = {'words': []}; // the types of possible labels
+    this.lenseTokenIDtoIndex = {'words': {}}; // token id to lenses array index
   }
 
   updateToken(lense, id, text) {
@@ -81,7 +81,7 @@ class TokenManager {
     // tokenize again
     if (this.tokenManager) {
       let newTokens = TokenManager.tokenize(token.text); // TODO get this working
-      this.tokenManager.lenses.default = newTokens;
+      this.tokenManager.lenses.words = newTokens;
     }
 
     return didEdit;
@@ -89,7 +89,7 @@ class TokenManager {
 
   static tokenize(text, data={}) { // -> Token[]
     console.log("tokenizing", text)
-    let type = "default";
+    let type = "words";
     // const delim = " ";
     let tokens = [];
     let tokenStart = 0;
@@ -139,7 +139,7 @@ class TokenManager {
   }
 }
 
-class Editor extends Component {cha
+class LenseEditor extends Component {cha
   constructor(props) {
     super(props);
     console.log("editor props", props)
@@ -150,8 +150,8 @@ class Editor extends Component {cha
     this.contentRef = React.createRef();
     this.editorNode = null;
     this.tokenManager = new TokenManager();
-    this.tokenManager.lenses.default = TokenManager.tokenize(this.state.text);
-    console.log('default tokens', this.tokenManager.lenses.default);
+    this.tokenManager.lenses.words = TokenManager.tokenize(this.state.text);
+    console.log('words tokens', this.tokenManager.lenses.words);
 
     this.editorNode = this.contentRef.current;
     window.editor = this.editorNode;
@@ -309,14 +309,14 @@ class Editor extends Component {cha
           console.log('stpo')
         }
 
-        let tokensAt = this.tokenManager.tokensAt('default', c);
+        let tokensAt = this.tokenManager.tokensAt('words', c);
 
         
 
         if (tokensAt && tokensAt.length > 0) {
           let prob = tokensAt[0].prob;
 
-          // console.log('AT', c, tokensAt, prob, this.tokenManager.lenses.default);
+          // console.log('AT', c, tokensAt, prob, this.tokenManager.lenses.words);
           let color = probToColor(prob);
           child.style.backgroundColor = color;
         }
@@ -432,9 +432,9 @@ class Editor extends Component {cha
 
 
     if (this.tokenManager) {
-      //   // const didEdit = this.tokenManager.editToken('default', event, this.selectionStart);
+      //   // const didEdit = this.tokenManager.editToken('words', event, this.selectionStart);
         let newTokens = TokenManager.tokenize(newText);
-        this.tokenManager.lenses.default = newTokens;
+        this.tokenManager.lenses.words = newTokens;
         console.log('new tokens', newTokens);
       }
 
@@ -469,8 +469,9 @@ class App extends Component {
   render() {
     return (
       <div className="context-context">
+        
         <div className="editor-context">
-          <Editor />
+          <LenseEditor />
         </div>
       </div>
     );
