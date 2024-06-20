@@ -9,13 +9,39 @@ import styled from 'styled-components';
 import rangy from 'rangy';
 import { TokenManager } from "./TokenManager";
 import { getUniqueUUID } from "./utils";
-class LenseEditor extends Component {cha
+
+class LenseBar extends Component {
   constructor(props) {
     super(props);
-    console.log("editor props", props)
+  }
+
+  handleChange(event) {
+    let lense = event.target.value;
+    this.props.setCurrentLense(lense);
+  }
+
+  render() {
+    return (
+      <div className="lense-bar">
+        {/* a dropdown with each lense type */}
+        <select onChange={this.handleChange.bind(this)}>
+          {
+            this.props.lenses.map((lense) => {
+              return <option key={lense} value={lense}>{lense}</option>;
+            })
+          }
+        </select>
+      </div>
+    );
+  }
+  
+}
+
+class LenseEditor extends Component {
+  constructor(props) {
+    super(props);
     let originalText = 'this is some text';
     let content = originalText.split('').map((c) => `<span id=${getUniqueUUID()}>${c}</span>`).join('');
-    console.log('original text', this.originalText)
     this.state = { content: content , text: originalText};
     this.contentRef = React.createRef();
     this.editorNode = null;
@@ -299,8 +325,6 @@ class LenseEditor extends Component {cha
       console.log("c", c, 'text', text, 'newText[c]', actual, node);
     }
 
-
-
     if (this.tokenManager) {
       //   // const didEdit = this.tokenManager.editToken('words', event, this.selectionStart);
         let newTokens = TokenManager.tokenize(newText);
@@ -317,10 +341,7 @@ class LenseEditor extends Component {cha
     setTimeout(() => {
       this.restoreSelection(event);
     }, 0);
-
-      // Perform any additional actions following the update
-      // Example: Update styling or re-compute dependent values
-      // this.updateStylingBasedOnContent();
+    
   };
 
   render() {
@@ -336,13 +357,27 @@ class LenseEditor extends Component {cha
 }
 
 class App extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { 
+      lenses: ['words', 'gpt-2-tokens'],
+      currentLense: 'words',
+     };
+
+    // current lense is words, create a setter to pass to the LenseBar where it will change it
+    this.setCurrentLense = (lense) => {
+      console.log('setting lense', lense);
+      this.setState({ currentLense: lense });
+    };
+  }
+
   render() {
     return (
       <div className="context-context">
-        
-        <div className="editor-context">
-          <LenseEditor />
-        </div>
+          <LenseBar lenses={this.state.lenses} setCurrentLense={this.setCurrentLense} />
+          <div className="editor-context">
+            <LenseEditor />
+          </div>
       </div>
     );
   }

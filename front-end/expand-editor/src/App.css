@@ -59,54 +59,31 @@ we will need to select the text children of the editor */
 .editor > * {
   z-index: 3;
 }
-.editor-context {
-  /* margin-right: 25%; */
-  position: absolute;
-  /* background-color: rgb(254, 251, 222); */
-  top: 0; left: 0; height: 300%; 
+
+
+.lense-bar {
+  z-index: 2;
   width: 100%;
-  /* height: 100%; */
+  /* the select will be in the middle */
+  display: flex;
+  justify-content: center;
 }
+
+select {
+  font-size: 20px;
+  background-color: rgb(172, 172, 172);
+  box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+  outline: none;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
 
 .context-context {
   width: 100%;
 }
 
-.side-bar {
-  width: 25%;
-  height: 100%;
-  right: 0;
-  position: absolute;
-  /* background-color: rgb(254, 254, 254); */
-  background-color: aliceblue;
-}
-
-.side-bar-item {
-  margin-top: 10px;
-  margin-bottom: 10px;
-  margin-left: 10px;
-  margin-right: 10px;
-  padding-top: 10px;
-  padding-bottom: 10px;
-  padding-left: 10px;
-  padding-right: 10px;
-  border-radius: 10px;
-  background-color: rgb(254, 254, 254);
-  cursor: pointer;
-}
-
-.highlight {
-  position: absolute;
-  z-index: 2;
-  
-  pointer-events: none;
-
-  /* change the alpha */
-  /* background-color: rgba(0, 0, 0, 0.5); */
-  /* z-index: -1; Behind the text */
-  /* box-shadow: 0 0 0 1px red; Optional: helps visualize the exact positioning */
-}
-/* hover for the highlight (don't allow clicking though) */
-.highlight:hover {
-  pointer-events: auto;
+.editor-context {
+  top: 0; left: 0; height: 300%; 
+  width: 100%;
 }
