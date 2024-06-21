@@ -64,16 +64,6 @@ export class TokenManager {
     this.lenses[type] = newLense;
   }
 
-  // updateToken(lense, id, text) {
-  //   let view = this.lenses[lense];
-  //   console.log('updating', id, text);
-  //   let token = view.find((token) => token.id === parseInt(id));
-  //   console.log('this one', token);
-  //   let newTokens = this.tokenManager.tokenize(text);
-  //   console.log('new tokens', newTokens);
-  //   return newTokens;
-  // }
-
   /**
    * Provide all tokens betweens the 'start' and 'end' range (inclusive) in the given lense.
    * In the future I may want to create a helper that is able to return multiple lense types. 
@@ -168,8 +158,6 @@ export class TokenManager {
       let c = text[i];
       curToken += c;
       if (c.match(/\s+/g) || i === text.length - 1) {
-        // TODO handle c == 0 case
-        // '  ' case (two spaces)
         let nextProb = Math.random();
         tokens.push({
           'start': tokenStart,
@@ -182,9 +170,7 @@ export class TokenManager {
         curToken = "";
         tokenStart = i + 1;
 
-        // let nextProb = Math.random();
-        // nextProb = (nextProb + 0.08) % 1;
-        continue; // TODO I think we want to save these as special ' ' tokens?
+        continue; // TODO I think we want to save spaces as special ' ' tokens?
       }
     }
     console.log('tokenized', tokens);

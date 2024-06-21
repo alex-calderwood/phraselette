@@ -69,6 +69,11 @@ we will need to select the text children of the editor */
   justify-content: center;
 }
 
+.sidebar-container {
+  width: 100%;
+  height: 2em;
+}
+
 .sidebar {
   z-index: 2;
   width: 100%;

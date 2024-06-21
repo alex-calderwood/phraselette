@@ -1,8 +1,6 @@
-// https://docs.slatejs.org/
 // https://reactjs.org/docs/create-a-new-react-app.html
 import "./App.css";
 import React, { useState, useCallback , useRef, Component } from "react";
-import styled from 'styled-components';
 
 // a library for saving and restoring selections (cursor positions / ranges) in a document
 // it uses hidden elements to store the selection data
@@ -61,10 +59,13 @@ class App extends Component {
   }
 
   render() {
+    let startChar = this.state.selection ? this.state.selection.delayedStartChar : null;
+    let endChar   = this.state.selection ? this.state.selection.delayedEndChar : null;
+
     return (
       <div className="context-context">
           <LenseBar lenses={this.state.lenses} setCurrentLense={this.setCurrentLense} attemptInitialTokenization={this.attemptInitialTokenization.bind(this)} />
-          <Sidebar tokenManager={this.tokenManager} lense={this.lense} selection={this.state.selection}/>
+          <Sidebar tokenManager={this.tokenManager} lense={this.lense} selection={this.state.selection} startChar={startChar} endChar={endChar}/>
           <div className="editor-context">
             <LenseEditor tokenManager={this.tokenManager} lense={this.state.currentLense} setSelection={this.setSelection} setText={this.setText} />
           </div>

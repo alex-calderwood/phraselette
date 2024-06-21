@@ -38,32 +38,31 @@ export class Sidebar extends Component {
   }
 
   render() {
-    let hidden = false;
-    // if (this.props.selection) {
-    //   hidden = this.props.selection.isCollapsed ? 'hidden' : '';
-    // }
+    // TODO we shouldn't actually use startChar / encChar because if you select one character it still should show something
+    let hidden = this.props.selection && this.props.selection.rangy.isCollapsed ? 'hidden' : "";
 
-    return <div></div>
+    let start = this.props.startChar;
+    let end   = this.props.endChar || null;
 
-    // console.log('bar char', startChar, endChar);
-    // this.tokensAt = this.tokenManager.tokensAt(this.tokenManager.currentLense, this.props.startChar, this.props.endChar);=
-    // console.log('bar tokens at', this.tokensAt);
+    this.tokensAt = [];
+    if (start) {
+      this.tokensAt = this.tokenManager.tokensAt(this.tokenManager.currentLense, start, end);
+    }
 
-    // return (
-    //   <div className={`sidebar ${hidden}`}>
-    //     {/* for each token show a little thing */}
-    //     <div>
-    //       {this.tokensAt && this.tokensAt.map((token) => {
-    //         return <div key={token.text}>
-    //                   <div>{token.text}</div>
-    //                   <div>Start: {token.start}</div>
-    //                   <div>End: {token.end}</div>
-    //                   <div>prob: {token.prob}</div>
-    //                </div>;
-    //       })}
-    //     </div>
-    //   </div>
-    // );
+    return (
+      <div className={`sidebar-container`}>
+        <div className={`sidebar ${hidden}`}>
+          {/* for each token show a little thing */}
+          <div>
+            {this.tokensAt && this.tokensAt.map((token) => {
+              return <div key={token.text}>
+                      {JSON.stringify(token)}
+                    </div>;
+            })}
+          </div>
+      </div>
+      </div>
+    );
   }
 
 }
@@ -83,8 +82,6 @@ export class LenseEditor extends Component {
     this.tokenManager.setOnToken(this.updateUITokens.bind(this));
     this.tokenManager.tokenize(this.state.text);
     this.editorNode = this.contentRef.current;
-    this.selectionStart = 0;
-    this.selectionEnd = 0;
   }
 
   updateUITokens(token) {
@@ -375,6 +372,11 @@ export class LenseEditor extends Component {
   }
 
 
+  /* 
+    Bugs: 
+      TODO spaces aren't being saved correctly on firefox (works on Chrome)
+      TODO pasting from an outside source puts everything in backwards
+  */
   handleInput = (event) => {
     // Save the current selection to restore later after processing input
     this.saveSelection();
