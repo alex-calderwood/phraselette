@@ -39,8 +39,6 @@ class App extends Component {
       console.log('setting current lense to', lense);
       this.tokenManager.setCurrentLense(lense);
       this.setState({ currentLense: lense });
-      // recolor each character
-      // this.colorAllCharactersByProb(); // eventually this should be a state thing so it is managed by react
     };
 
     this.setSelection = (selection) => {
@@ -66,7 +64,7 @@ class App extends Component {
     return (
       <div className="context-context">
           <LenseBar lenses={this.state.lenses} setCurrentLense={this.setCurrentLense} attemptInitialTokenization={this.attemptInitialTokenization.bind(this)} />
-          <Sidebar tokenManager={this.tokenManager} lense={this.lense} color={this.color} selection={this.state.selection}/>
+          <Sidebar tokenManager={this.tokenManager} lense={this.lense} selection={this.state.selection}/>
           <div className="editor-context">
             <LenseEditor tokenManager={this.tokenManager} lense={this.state.currentLense} setSelection={this.setSelection} setText={this.setText} />
           </div>
@@ -103,7 +101,6 @@ const probToColor = (prob) => {
   let g = prob * 255;
   return "rgba(" + 0 + ", " + g + ", 0, " + prob + ")";
 };
-
 
 const probToColorExponential = (prob) => {
   // the probabilities are very small so lets make them more visible

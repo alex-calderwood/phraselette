@@ -106,7 +106,6 @@ export class TokenManager {
         tokensSpanned.push(token);
       }
     }
-
     return tokensSpanned;
   }
 

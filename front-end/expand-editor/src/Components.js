@@ -137,8 +137,7 @@ export class LenseEditor extends Component {
         delayedStartChar: startChar,
         delayedEndChar:   endChar
       }
-      window.selection = rangySelection; // for debugging
-
+      window.selection = this.selection; // for debugging
     }
     else {
       console.error('No selection');
@@ -147,8 +146,9 @@ export class LenseEditor extends Component {
 
   restoreSelection = (event) => {
     if (this.selection) {
-      // get the node with the id
-      this.restoreSelectionFromCharId(this.selection.charId, this.selection.anchorOffset, event);
+      // TODO this really should be anchor offset which is where charID comes from 
+      // TODO figure out why it breaks when I change that
+      this.restoreSelectionFromCharId(this.selection.charId, this.selection.focusOffset, event); 
     }
   };
 

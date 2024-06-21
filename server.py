@@ -128,6 +128,5 @@ def probs():
 
     return Response(stream_probs(text, extra_context), content_type='application/json')
 
-
 if __name__ == "__main__":
     app.run()
