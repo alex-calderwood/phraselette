@@ -69,6 +69,18 @@ we will need to select the text children of the editor */
   justify-content: center;
 }
 
+.sidebar {
+  z-index: 2;
+  width: 100%;
+  /* the select will be in the middle */
+  display: flex;
+  justify-content: center;
+}
+
+.hidden {
+  display: none;
+}
+
 select {
   font-size: 20px;
   background-color: rgb(172, 172, 172);

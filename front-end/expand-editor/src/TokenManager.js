@@ -146,6 +146,11 @@ export class TokenManager {
   }
 
   static async gpt2Tokenize(text, data = {}) {
+    if (!text || text.length === 0) {
+      console.error("gpt2Tokenize passed empty text");
+      return;
+    }
+
     let onToken = data.onToken;
 
     let tokenGenerator = tokenizeWithGPT2(text, [0, text.length - 1]); // TODO debug why the whole thing isn't going through
@@ -172,9 +177,7 @@ export class TokenManager {
   }
 
   static splitWordTokenize(text, data = {}) {
-    console.log("tokenizing", text);
     let type = "words";
-    // const delim = " ";
     let tokens = [];
     let tokenStart = 0;
     let curToken = "";

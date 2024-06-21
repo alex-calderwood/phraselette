@@ -30,7 +30,12 @@ class LenseBar extends Component {
 
   handleChange(event) {
     let lense = event.target.value;
-    this.props.setCurrentLense(lense);
+    
+    if (this.props.setCurrentLense)
+      this.props.setCurrentLense(lense);
+
+    if (this.props.attemptInitialTokenization)
+      this.props.attemptInitialTokenization();
   }
 
   render() {
@@ -47,33 +52,68 @@ class LenseBar extends Component {
       </div>
     );
   }
-  
+}
+
+class Sidebar extends Component {
+  constructor(props) {
+    super(props);
+    this.tokenManager = this.props.tokenManager;
+  }
+
+  render() {
+    let hidden = false;
+    if (this.props.selection) {
+      hidden = this.props.selection.isCollapsed ? 'hidden' : '';
+    }
+
+    if (this.props.selection) {
+      console.log('bar selection', this.props.selection)
+      let span = this.props.selection.anchorNode.parentNode;
+      console.log('span', span);
+      let char = parseInt(span.getAttribute('c'));
+      console.log('char', char);
+      this.tokensAt = this.tokenManager.tokensAt(this.tokenManager.currentLense, char);
+    }
+
+    console.log('babr tokens at', this.tokensAt);
+
+
+    return (
+      <div className={`sidebar ${hidden}`}>
+        <h2>Sidebar</h2>
+        <br />
+        {/* for each token show a little thing */}
+        <div>
+          {
+            this.tokensAt && this.tokensAt.map((token) => {
+              return <div key={token.text}>{token.text}</div>;
+            })
+          }
+        </div>
+      </div>
+    );
+  }
+
 }
 
 class LenseEditor extends Component {
   constructor(props) {
     super(props);
-    let originalText = 'this is some text';
+    let originalText = 'a ';
     let content = originalText.split('').map((c) => `<span id=${getUniqueUUID()}>${c}</span>`).join('');
     this.state = { content: content , text: originalText};
     this.contentRef = React.createRef();
     this.editorNode = null;
     this.tokenManager = this.props.tokenManager;
-
     this.tokenManager.setOnToken(this.updateUITokens.bind(this));
-    
     this.tokenManager.tokenize(this.state.text);
-    console.log('words tokens', this.tokenManager.lenses.words);
-
     this.editorNode = this.contentRef.current;
-
     this.selectionStart = 0;
     this.selectionEnd = 0;
   }
 
   updateUITokens (token) {
     console.log('recieved token', token);
-    // this.colorCharactersByProb();
     this.colorTokenByProb(token);
   }
 
@@ -115,10 +155,6 @@ class LenseEditor extends Component {
       this.restoreSelectionFromCharId(this.charId, this.offset, event);
     }
   }
-
-  handleInput = (event) => {
-    this.processInput(event);
-  };
 
   // Helper function to find the index path from a node up to the editorNode
   getNodeIndexPath = (node, editorNode) => {
@@ -163,7 +199,6 @@ class LenseEditor extends Component {
       node: node,
       restoreTo: restoreTo,
     }
-    // console.log('restoring', restoring); // for debugging
 
     let range = document.createRange();
     range.setStart(restoreTo, charsToOffset);
@@ -177,6 +212,9 @@ class LenseEditor extends Component {
     // we don't use this after it gets saved but it is nice as a debug tool
     // we save directly in the handleInput
     this.saveSelection();
+
+    // show the sidebar if there is a selection of non-zero length
+    this.props.setSelection(this.selection);
   };
 
   splitSpan(span, c) {
@@ -231,7 +269,6 @@ class LenseEditor extends Component {
     for (let i = 0; i < spans.length; i++) {
       let span = spans[i];
       let c = span.getAttribute('c');
-      console.log('coloring', c, span);
       this.colorCharacterByProb(span, c);
     }
   }
@@ -344,7 +381,7 @@ class LenseEditor extends Component {
   }
 
 
-  processInput = (event) => {
+  handleInput = (event) => {
     // Save the current selection to restore later after processing input
     this.saveSelection();
 
@@ -371,6 +408,10 @@ class LenseEditor extends Component {
     }
 
     // this.setState({text: newText}) // right now we have no use fo rthis
+    if (this.props.setText) {
+      // give the new text to the parent
+      this.props.setText(newText);
+    }
 
     this.splitIntoCharactersAndStyle(this.contentRef.current);
 
@@ -379,7 +420,6 @@ class LenseEditor extends Component {
     setTimeout(() => {
       this.restoreSelection(event);
     }, 0);
-
   };
 
   render() {
@@ -403,7 +443,9 @@ class App extends Component {
     window.tokenManager = this.tokenManager; // for debugging
     this.state = { 
       lenses: Object.keys(this.tokenManager.lenses),
+      activeLenses: ['words', 'gpt-2'], // TODO for each active lense, should tokenize the text
       currentLense: 'words',
+      selection: null,
      };
 
     // current lense is words, create a setter to pass to the LenseBar where it will change it
@@ -415,14 +457,32 @@ class App extends Component {
       // this.colorAllCharactersByProb(); // eventually this should be a state thing so it is managed by react
     };
 
+    this.setSelection = (selection) => {
+      this.setState({ selection: selection });
+    }
+
+    this.setText = (text) => {
+      this.text = text;
+    }
+
+    this.attemptInitialTokenization = () => {
+      if (
+        this.tokenManager 
+        && this.tokenManager.lenses
+        && this.tokenManager.lenses[this.state.currentLense].length > 0
+      ) {
+        this.tokenManager.tokenize(this.text);
+      }
+    }
   }
 
   render() {
     return (
       <div className="context-context">
-          <LenseBar lenses={this.state.lenses} setCurrentLense={this.setCurrentLense} />
+          <LenseBar lenses={this.state.lenses} setCurrentLense={this.setCurrentLense} attemptInitialTokenization={this.attemptInitialTokenization.bind(this)} />
+          <Sidebar tokenManager={this.tokenManager} lense={this.lense} color={this.color} selection={this.state.selection} />
           <div className="editor-context">
-            <LenseEditor tokenManager={this.tokenManager} lense={this.state.currentLense} />
+            <LenseEditor tokenManager={this.tokenManager} lense={this.state.currentLense} setSelection={this.setSelection} setText={this.setText} />
           </div>
       </div>
     );
