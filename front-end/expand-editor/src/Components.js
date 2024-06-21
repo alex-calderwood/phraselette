@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import rangy from 'rangy';
 import { getUniqueUUID } from "./utils";
-import { getColor } from "./App";
+import { getColor } from "./color";
 
 export class LenseBar extends Component {
   constructor(props) {

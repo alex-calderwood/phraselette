@@ -47,9 +47,11 @@
   margin-right: 10%;
   overflow: auto;
   background-color: white;
-  box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.30), 0 10px 20px rgba(0,0,0,0.22);
   /* remove the blue outline */
   outline: none;
+  /* curve the corners*/
+  border-radius: 2px;
   
   z-index: 1;
 }
@@ -90,7 +92,6 @@ we will need to select the text children of the editor */
 select {
   font-size: 20px;
   background-color: rgb(172, 172, 172);
-  box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
   outline: none;
   margin-top: 10px;
   margin-bottom: 10px;

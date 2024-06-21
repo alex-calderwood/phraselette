@@ -1,11 +1,11 @@
 // https://reactjs.org/docs/create-a-new-react-app.html
 import "./App.css";
-import React, { useState, useCallback , useRef, Component } from "react";
+import React, { useCallback , useRef, Component } from "react";
 
 // a library for saving and restoring selections (cursor positions / ranges) in a document
 // it uses hidden elements to store the selection data
-import { TokenManager } from "./TokenManager";
-import { LenseBar, Sidebar, LenseEditor } from "./Components";
+import { TokenManager } from "./tokenManager";
+import { LenseBar, Sidebar, LenseEditor } from "./components";
 
 function debounce(fn, delay) {
   let timeoutID;
@@ -73,44 +73,5 @@ class App extends Component {
     );
   }
 }
-
-export function getColor(lense, prob) {
-  // console.log('lense', lense, 'prob', prob);
-  if (lense === 'words') {
-    return probToColor(prob);
-  } else if (lense === 'gpt-2') {
-    return probToColorExponential(prob);
-  } else {
-    return probToColor(prob);
-  }
-}
-
-let prevColor = 100;
-let prevColor2 = 138;
-const probToColorRandom = (prob) => {
-  if (!prob || prob <= 0) {
-    return 'white';
-  }
-  return "rgba(" + prevColor + ", " + prevColor2 + ", 0, " + prevColor / 255 + ")";
-};
-
-const probToColor = (prob) => {
-  if (!prob || prob <= 0) {
-    return 'white';
-  }
-
-  let g = prob * 255;
-  return "rgba(" + 0 + ", " + g + ", 0, " + prob + ")";
-};
-
-const probToColorExponential = (prob) => {
-  // the probabilities are very small so lets make them more visible
-  if (!prob || prob <= 0) {
-    return 'white';
-  }
-  let g = Math.min(Math.pow(prob, 1/3) * 255, 255);
-  return "rgba(" + 0 + ", " + g + ", 0, " + 0.5 + ")";
-}
-
 
 export default App;

@@ -1,8 +1,6 @@
-import { tokenizeWithGPT2 } from './smarts.js';
+import { splitWordTokenize, gpt2Tokenize } from './smarts.js';
 
 export class TokenManager {
-  static curTokenID = 0;
-
   constructor(tokens) {
     this.lenses = { 
       'words': [],
@@ -10,7 +8,7 @@ export class TokenManager {
     }; 
     this.currentLense = 'words';
     this.lenseTokenIDtoIndex = { 'words': {} }; // token id to lenses array index
-    this.externalOnToken = (token) => {};
+    this.externalOnToken = (token) => {}; // a callback to call when a token is created
   }
   setCurrentLense(lense) {
     if (!this.lenses[lense]) {
@@ -31,6 +29,9 @@ export class TokenManager {
     this.externalOnToken(token);
   }
 
+  /* 
+  * TODO document
+  */
   pushUpdateToken(type, token) {
     // make a copy of the current lense
     let newLense = this.lenses[type].slice();
@@ -48,7 +49,6 @@ export class TokenManager {
         }
       }
     }
-    console.log('overlapping tokens', overlappingTokens);
 
     if (overlappingTokens.length > 0) {
       // Splice from the end to the start to maintain correct indices
@@ -100,95 +100,18 @@ export class TokenManager {
   }
 
   tokenize(text, data = {}) {
-    console.log('tokenizing', text,'lense', this.currentLense);
     let tokens = [];
     switch (this.currentLense) {
       case 'words':
-        tokens = TokenManager.splitWordTokenize(text, data);
+        tokens = splitWordTokenize(text, data);
         this.lenses.words = tokens;
         break;
       case 'gpt-2':
         console.log('lenses', this.lenses);
         data = { onToken: this.internalOnToken.bind(this) };
-        TokenManager.gpt2Tokenize(text, data);
+        gpt2Tokenize(text, data);
         break;
-
     }
-    console.log('tokens', tokens);
     return tokens;
-  }
-
-  static async gpt2Tokenize(text, data = {}) {
-    if (!text || text.length === 0) {
-      console.error("gpt2Tokenize passed empty text");
-      return;
-    }
-
-    let onToken = data.onToken;
-
-    let tokenGenerator = tokenizeWithGPT2(text, [0, text.length - 1]); // TODO debug why the whole thing isn't going through
-
-    // don't wait for the generator to finish
-    // instead, call onToken for each token
-    let rawTokenPromise = await tokenGenerator.next();
-    while (!rawTokenPromise.done) {
-      let rawToken = rawTokenPromise.value;
-      let token = {
-        'start': rawToken.span[0],
-        // rawToken.span[1] is exclusive, our start and end is inclusive
-        'end': rawToken.span[1] - 1,
-        "text": rawToken.token,
-        "type": "gpt-2",
-        "id": TokenManager.createTokenID(),
-        "prob": rawToken.prob,
-      }
-      if (onToken) {
-        onToken(token);
-      }
-      rawTokenPromise = await tokenGenerator.next();
-    }
-  }
-
-  static splitWordTokenize(text, data = {}) {
-    let type = "words";
-    let tokens = [];
-    let tokenStart = 0;
-    let curToken = "";
-    for (let i = 0; i < text.length; i++) {
-      let c = text[i];
-      curToken += c;
-      if (c.match(/\s+/g) || i === text.length - 1) {
-        let nextProb = Math.random();
-        tokens.push({
-          'start': tokenStart,
-          'end': i,
-          "text": curToken,
-          "type": type,
-          "id": TokenManager.createTokenID(),
-          "prob": nextProb,
-        });
-        curToken = "";
-        tokenStart = i + 1;
-
-        continue; // TODO I think we want to save spaces as special ' ' tokens?
-      }
-    }
-    console.log('tokenized', tokens);
-    return tokens;
-  }
-
-   retokenize(tokens, data = {}) {
-    // given a list of tokens, use tokenize() to re-tokenize the text, preserving the data in the tokens
-    // we will go the tokens and split each token into a list of tokens
-    let newTokens = [];
-    for (let token of tokens) {
-      let newToken = this.tokenManager.tokenize(token.text);
-      newTokens.push(newToken);
-    }
-    console.log('newTokens', newTokens);
-  }
-
-  static createTokenID() {
-    return TokenManager.curTokenID++;
   }
 }
