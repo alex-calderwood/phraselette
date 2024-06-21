@@ -66,7 +66,7 @@ class App extends Component {
     return (
       <div className="context-context">
           <LenseBar lenses={this.state.lenses} setCurrentLense={this.setCurrentLense} attemptInitialTokenization={this.attemptInitialTokenization.bind(this)} />
-          <Sidebar tokenManager={this.tokenManager} lense={this.lense} color={this.color} selection={this.state.selection} />
+          <Sidebar tokenManager={this.tokenManager} lense={this.lense} color={this.color} selection={this.state.selection}/>
           <div className="editor-context">
             <LenseEditor tokenManager={this.tokenManager} lense={this.state.currentLense} setSelection={this.setSelection} setText={this.setText} />
           </div>

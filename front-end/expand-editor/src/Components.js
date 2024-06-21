@@ -43,42 +43,27 @@ export class Sidebar extends Component {
     //   hidden = this.props.selection.isCollapsed ? 'hidden' : '';
     // }
 
-    if (this.props.selection) {
-      console.log('bar selection', this.props.selection);
-      let anchor = this.props.selection.anchorNode;
-      let focus = this.props.selection.focusNode;
-    
-      if (anchor) {
-        let startSpan = anchor.parentNode;
-        let endSpan = focus.parentNode;
-        
-        if (startSpan) {
-          let startChar = parseInt(startSpan.getAttribute('c')); // TODO would be great if these were built into the selection...
-          let endChar = startSpan === endSpan ? startChar : parseInt(endSpan.getAttribute('c'));
-          
-          console.log('bar char', startChar, endChar);
-          this.tokensAt = this.tokenManager.tokensAt(this.tokenManager.currentLense, startChar, endChar);
-        }
-      }
-    }
+    return <div></div>
 
-    console.log('bar tokens at', this.tokensAt);
+    // console.log('bar char', startChar, endChar);
+    // this.tokensAt = this.tokenManager.tokensAt(this.tokenManager.currentLense, this.props.startChar, this.props.endChar);=
+    // console.log('bar tokens at', this.tokensAt);
 
-    return (
-      <div className={`sidebar ${hidden}`}>
-        {/* for each token show a little thing */}
-        <div>
-          {this.tokensAt && this.tokensAt.map((token) => {
-            return <div key={token.text}>
-                      <div>{token.text}</div>
-                      <div>Start: {token.start}</div>
-                      <div>End: {token.end}</div>
-                      <div>prob: {token.prob}</div>
-                   </div>;
-          })}
-        </div>
-      </div>
-    );
+    // return (
+    //   <div className={`sidebar ${hidden}`}>
+    //     {/* for each token show a little thing */}
+    //     <div>
+    //       {this.tokensAt && this.tokensAt.map((token) => {
+    //         return <div key={token.text}>
+    //                   <div>{token.text}</div>
+    //                   <div>Start: {token.start}</div>
+    //                   <div>End: {token.end}</div>
+    //                   <div>prob: {token.prob}</div>
+    //                </div>;
+    //       })}
+    //     </div>
+    //   </div>
+    // );
   }
 
 }
@@ -124,14 +109,35 @@ export class LenseEditor extends Component {
   }
 
   saveSelection = () => {
-    let selection = rangy.getSelection();
-    if (selection.rangeCount > 0) {
-      let parent = selection.anchorNode.parentNode;
-      let offset = selection.focusOffset;
+    let rangySelection = rangy.getSelection();
+    if (rangySelection.rangeCount > 0) {
+      let anchorParent = rangySelection.anchorNode.parentNode;
+      let focusParent = rangySelection.focusNode.parentNode;
+      let offset = rangySelection.focusOffset; // TODO this should be anchorOffset
 
-      this.selection = selection;
-      this.offset = offset;
-      this.charId = parent.id;
+      this.offset = offset; // TODO get rid of
+      this.charId = anchorParent.id;  // TODO get rid of
+
+      let startChar = parseInt(anchorParent.getAttribute('c')); // TODO would be great if these were built into the selection...
+      let endChar = anchorParent === focusParent ? startChar : parseInt(focusParent.getAttribute('c'));
+
+      this.selection = {
+        offset: offset,
+        charId: rangySelection.anchorNode.parentNode.id,
+        rangy:  rangySelection,
+
+        // these can be used for computing span calculations
+        anchor:       rangySelection.anchorNode,
+        anchorOffset: rangySelection.anchorOffset,
+        focus:        rangySelection.focusNode,
+        focusOffset:  rangySelection.focusOffset,
+
+        // we use the above to calculate these helper variables, and will not always be present
+        // additionally they may not be up to date if accessed during an input event
+        delayedStartChar: startChar,
+        delayedEndChar:   endChar
+      }
+      window.selection = rangySelection; // for debugging
 
     }
     else {
@@ -142,7 +148,7 @@ export class LenseEditor extends Component {
   restoreSelection = (event) => {
     if (this.selection) {
       // get the node with the id
-      this.restoreSelectionFromCharId(this.charId, this.offset, event);
+      this.restoreSelectionFromCharId(this.selection.charId, this.selection.anchorOffset, event);
     }
   };
 
