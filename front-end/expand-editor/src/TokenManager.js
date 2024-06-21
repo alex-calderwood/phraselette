@@ -74,56 +74,40 @@ export class TokenManager {
   //   return newTokens;
   // }
 
-  tokensAt(type, start, end = start) {
-    let tokens = this.lenses[type];
+  /**
+   * Provide all tokens betweens the 'start' and 'end' range (inclusive) in the given lense.
+   * In the future I may want to create a helper that is able to return multiple lense types. 
+   * 
+   * @param {string} lense - which lense to look for
+   * @param {int} start - the first location to look for tokens (inclusive)
+   * @param {int} end -  the final location to look for tokens (inclusive)
+   * @returns {list} - the spanned token objects
+  */
+  tokensAt(lense, start, end = start) {
+    let tokens = this.lenses[lense] || [];
+
+    if (start > end) {
+      let temp = start;
+      start = end;
+      end = temp;
+    }
+
     if (!tokens) {
-      console.error("No label of lense type", type);
+      console.error("No label of lense type", lense);
       return;
     }
 
     let tokensSpanned = [];
-    for (let spanIndex = 0; spanIndex < tokens.length; spanIndex++) {
-      let token = tokens[spanIndex];
-      let [labelStart, labelEnd] = [token.start, token.end];
-      if (start >= labelStart && end <= labelEnd) { // todo double check the bounds
+    for (let i = 0; i < tokens.length; i++) {
+      let token = tokens[i];
+      if ((start >= token.start && start <= token.end) 
+        || (end >= token.start && end <= token.end)
+        || (start <= token.start && end >= token.end) ) {
         tokensSpanned.push(token);
       }
-
     }
 
     return tokensSpanned;
-  }
-
-  editToken(type, event, editLocation) {
-    let tokens = this.tokensAt(type, editLocation);
-    let token = tokens[0]; // TODO allow mulpitle tokens to be edited at once
-
-    let didEdit = false;
-    let relativeEditLocation = editLocation - token.start;
-
-    switch (event.inputType) {
-      case "insertText":
-        token.text = token.text.slice(0, relativeEditLocation) + event.data + token.text.slice(relativeEditLocation);
-        // let subsequentTokens = this.tokensAt(type, token.end, ); // TODO update the token indices after the edit
-        didEdit = true;
-        break;
-      case "deleteContentBackward":
-        token.text = token.text.slice(0, relativeEditLocation - 1) + token.text.slice(relativeEditLocation);
-        // let subsequentTokens = this.tokensAt(type, token.end, ); // TODO update the token indices after the edit
-        didEdit = true;
-        break;
-      case "insertParagraph":
-        // token.text = token.text.slice(0, editLocation - 1) + " " + token.text.slice(editLocation);
-        didEdit = false;
-        break;
-    }
-
-    // tokenize again
-    if (this.tokenManager) {
-      let newTokens = this.tokenManager.tokenize(token.text); // TODO get this working
-    }
-
-    return didEdit;
   }
 
   tokenize(text, data = {}) {

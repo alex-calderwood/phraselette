@@ -81,6 +81,7 @@ we will need to select the text children of the editor */
   display: none;
 }
 
+
 select {
   font-size: 20px;
   background-color: rgb(172, 172, 172);
