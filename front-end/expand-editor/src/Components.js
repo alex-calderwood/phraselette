@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import rangy from 'rangy';
 import { getUniqueUUID } from "./utils";
+import { TokenManager } from "./tokenManager";
 import { getColor } from "./color";
 
 export class LenseBar extends Component {
@@ -274,7 +275,6 @@ export class LenseEditor extends Component {
     let color = getColor(this.tokenManager.currentLense, prob);
     for (let i = start; i <= end; i++) { // [start, end] inclusive
       let span = document.querySelector(`span[c='${i}']`);
-      console.log('span', span);
       if (span) {
         span.style.backgroundColor = color;
       }
@@ -371,6 +371,7 @@ export class LenseEditor extends Component {
     return clone.textContent;
   }
 
+  
 
   /* 
     Bugs: 
@@ -397,11 +398,13 @@ export class LenseEditor extends Component {
     }
 
     if (this.tokenManager) {
-      let tokenizatonStart = 0;
-      // TODO: compute tokenizaitonStart - should test right now as is
-      let tokenizationRange = [tokenizatonStart, newText.length - 1];
-      let data = {tokenizationRange: tokenizationRange};
-      let tokens = this.tokenManager.tokenize(newText, data);
+      let curTokens = this.tokenManager.lenses[this.tokenManager.currentLense];
+      let tokenizeRange = TokenManager.getRangeToTokenize(newText, curTokens)
+      
+      let data = {tokenizeRange: tokenizeRange};
+      console.log("COMPUTED range", tokenizeRange);
+
+      this.tokenManager.tokenize(newText, data);
     }
 
     // this.setState({text: newText}) // right now we have no use fo rthis

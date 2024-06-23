@@ -8,9 +8,9 @@ export class TokenManager {
       'spacy': [],
     }; 
     this.lenseInfo = { // TODO eventually should merge this with this.lenses
-      'words': {tokenizedRange: [null, null]},
-      'gpt-2': {tokenizedRange: [null, null]},
-      'spacy': {tokenizedRange: [null, null]},
+      'words': {tokenizedRange: {}},
+      'gpt-2': {tokenizedRange: {}},
+      'spacy': {tokenizedRange: {}},
     }; 
     this.currentLense = 'words';
     // this.lenseTokenIDtoIndex = { 'words': {} }; // token id to lenses array index
@@ -68,17 +68,9 @@ export class TokenManager {
     }
     
     this.lenses[lenseType] = newLense;
-
-    // keep track of what has been tokenized thusfar
-    let prevTokenizedRange = this.lenseInfo[lenseType].tokenizedRange;
-    let newTokenizedRange = [
-      prevTokenizedRange[0] === null ? token.start : Math.min(prevTokenizedRange[0], token.start),
-      prevTokenizedRange[1] === null ? token.end : Math.max(prevTokenizedRange[1], token.end),
-    ];
-    this.lenseInfo[lenseType].tokenizedRange = newTokenizedRange;
-
-    console.log("Tokenized range for", lenseType, "is", newTokenizedRange);
   }
+
+
 
   /**
    * Provide all tokens betweens the 'start' and 'end' range (inclusive) in the given lense.
@@ -124,7 +116,8 @@ export class TokenManager {
         break;
       case 'gpt-2':
         // TODO unpack ...data, 
-        data = {  onToken: this.internalOnToken.bind(this) };
+        data = {  ...data, onToken: this.internalOnToken.bind(this) };
+        console.log('calling in tokenmanager', data)
         gpt2Tokenize(text, data);
         break;
       case 'spacy':
@@ -134,5 +127,36 @@ export class TokenManager {
         break;
     }
     return tokens;
+  }
+
+  /* 
+  * Return a range representing the range that should be tokenized. 
+  * This is the range from the last character that hasn't yet been tokenized to the end of the text.
+  */
+  static getRangeToTokenize(text, existingTokens) {
+    let alreadyTokenizedCharacters = {}
+
+    for (let i = 0; i < text.length; i++) {
+      alreadyTokenizedCharacters[i] = false;
+    }
+    if (existingTokens && existingTokens.length > 0) {
+      for (let token of existingTokens) {
+        for (let t = token.start; t <= token.end; t++) {
+          alreadyTokenizedCharacters[t] = true;
+        }
+      }
+    }
+
+    let unTokenized = Object.keys(alreadyTokenizedCharacters)
+      .filter(key => !alreadyTokenizedCharacters[key])
+      .map(Number);  // Convert keys back to numbers
+    let minUnTokenized = unTokenized.length > 0 ? Math.min(...unTokenized) : text.length;
+
+    let tokenizeRange = [
+      minUnTokenized > 0 ? minUnTokenized - 1 : 0,
+      text.length > 0 ? text.length - 1 : 0
+    ];
+
+    return tokenizeRange;
   }
 }
