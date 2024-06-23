@@ -1,30 +1,15 @@
 
 import tensorflow as tf
-from transformers import TFGPT2LMHeadModel, GPT2Tokenizer
-from transformers import GPT2TokenizerFast
-from tqdm import tqdm
-from functools import cache
-from flask import Flask, request, jsonify, Response
+from transformers import TFGPT2LMHeadModel, GPT2TokenizerFast
 import json
-from flask_cors import CORS
 import traceback
-
-import threading
+from tqdm import tqdm
 
 tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
 
 # add the EOS token as PAD token to avoid warnings
 model = TFGPT2LMHeadModel.from_pretrained("gpt2", pad_token_id=tokenizer.eos_token_id)
 
-app = Flask(__name__)
-CORS(app)
-
-# global variable to keep track of whether the server is working on something
-working = False
-lock = threading.Lock()
-
-# something unlikely to be seen, must match the client (in smarts.js)
-BREAK_TOKEN = "&&VE*A=]"
 
 # A function that generates the probabilities of each token in the phrase
 # it also tokenizes strings using the GPT-2 tokenizer
@@ -37,9 +22,7 @@ BREAK_TOKEN = "&&VE*A=]"
 #    prob: float  # the probability of the token
 # }
 def pluck_probs(phrase, extra_context = tokenizer.eos_token):
-    global working
     try:
-        working = True
         start_token_offset = 0
         # start_token_offset = 13
         # Add the EOS token as the prefix to the phrase
@@ -76,7 +59,7 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token):
         for i in tqdm(range(context_len, total_len)):
             original_word = all_ids[0][i]
             max_length = len(all_ids[0][:i]) + 1
-            print('i', i, 'original_word', original_word, 'max_length', max_length, 'input', input_ids[:, :i])
+            # print('i', i, 'original_word', original_word, 'max_length', max_length, 'input', input_ids[:, :i])
 
             greedy_output_dict = model.generate(
                 all_ids[:, :i], max_length=max_length, output_scores=True, return_dict_in_generate=True
@@ -98,35 +81,8 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token):
             }
             print('result', result)
             yield result
-        working = False
 
     except Exception as e:
         print('Error:', e)
         print('Phrase:', phrase)
         traceback.print_exc()
-        working = False
-
-# Generator for tokenizing and calcultating probabilities of each token in a phrase
-def stream_probs(phrase, extra_context):
-    for token in pluck_probs(phrase, extra_context):
-        yield json.dumps(token) + BREAK_TOKEN
-
-@app.route("/probs", methods=["POST"])
-def probs():
-    global working
-    
-    with lock:
-        if working:
-            return Response("Still working on previous response", content_type='application/json')
-        else: 
-            working = True
-
-    data = request.get_json()
-    text = data["text"]
-    extra_context = data.get("context", tokenizer.eos_token)
-    print('request', data)
-
-    return Response(stream_probs(text, extra_context), content_type='application/json')
-
-if __name__ == "__main__":
-    app.run()

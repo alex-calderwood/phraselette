@@ -3,4 +3,7 @@ flask
 tensorflow
 tqdm
 tf-keras
+
+spacy
+
 flask_cors

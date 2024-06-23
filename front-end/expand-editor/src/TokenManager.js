@@ -1,13 +1,19 @@
-import { splitWordTokenize, gpt2Tokenize } from './smarts.js';
+import { splitWordTokenize, gpt2Tokenize, spacyTokenize } from './smarts.js';
 
 export class TokenManager {
   constructor(tokens) {
-    this.lenses = { 
+    this.lenses = {
       'words': [],
       'gpt-2': [],
+      'spacy': [],
+    }; 
+    this.lenseInfo = { // TODO eventually should merge this with this.lenses
+      'words': {tokenizedRange: [null, null]},
+      'gpt-2': {tokenizedRange: [null, null]},
+      'spacy': {tokenizedRange: [null, null]},
     }; 
     this.currentLense = 'words';
-    this.lenseTokenIDtoIndex = { 'words': {} }; // token id to lenses array index
+    // this.lenseTokenIDtoIndex = { 'words': {} }; // token id to lenses array index
     this.externalOnToken = (token) => {}; // a callback to call when a token is created
   }
   setCurrentLense(lense) {
@@ -32,9 +38,9 @@ export class TokenManager {
   /* 
   * TODO document
   */
-  pushUpdateToken(type, token) {
+  pushUpdateToken(lenseType, token) {
     // make a copy of the current lense
-    let newLense = this.lenses[type].slice();
+    let newLense = this.lenses[lenseType].slice();
 
     // find all tokens that overlap at all
     let overlappingTokens = [];
@@ -61,7 +67,17 @@ export class TokenManager {
       newLense.push(token);
     }
     
-    this.lenses[type] = newLense;
+    this.lenses[lenseType] = newLense;
+
+    // keep track of what has been tokenized thusfar
+    let prevTokenizedRange = this.lenseInfo[lenseType].tokenizedRange;
+    let newTokenizedRange = [
+      prevTokenizedRange[0] === null ? token.start : Math.min(prevTokenizedRange[0], token.start),
+      prevTokenizedRange[1] === null ? token.end : Math.max(prevTokenizedRange[1], token.end),
+    ];
+    this.lenseInfo[lenseType].tokenizedRange = newTokenizedRange;
+
+    console.log("Tokenized range for", lenseType, "is", newTokenizedRange);
   }
 
   /**
@@ -107,9 +123,14 @@ export class TokenManager {
         this.lenses.words = tokens;
         break;
       case 'gpt-2':
-        console.log('lenses', this.lenses);
-        data = { onToken: this.internalOnToken.bind(this) };
+        // TODO unpack ...data, 
+        data = {  onToken: this.internalOnToken.bind(this) };
         gpt2Tokenize(text, data);
+        break;
+      case 'spacy':
+        // TODO add ...data, 
+        data = { onToken: this.internalOnToken.bind(this) };
+        spacyTokenize(text, data);
         break;
     }
     return tokens;

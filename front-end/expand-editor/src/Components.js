@@ -397,9 +397,11 @@ export class LenseEditor extends Component {
     }
 
     if (this.tokenManager) {
-      let newTokens = this.tokenManager.tokenize(newText);
-      this.tokenManager.lenses.words = newTokens;
-      console.log('new tokens', newTokens);
+      let tokenizatonStart = 0;
+      // TODO: compute tokenizaitonStart - should test right now as is
+      let tokenizationRange = [tokenizatonStart, newText.length - 1];
+      let data = {tokenizationRange: tokenizationRange};
+      let tokens = this.tokenManager.tokenize(newText, data);
     }
 
     // this.setState({text: newText}) // right now we have no use fo rthis

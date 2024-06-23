@@ -25,11 +25,13 @@ class App extends Component {
     super(props);
     this.tokenManager = new TokenManager();
     window.tokenManager = this.tokenManager; // for debugging
+
     this.state = { 
       lenses: Object.keys(this.tokenManager.lenses),
       activeLenses: ['words', 'gpt-2'], // TODO for each active lense, should tokenize the text
       currentLense: 'words',
       selection: null,
+      info: {},
      };
 
     // current lense is words, create a setter to pass to the LenseBar where it will change it
@@ -41,6 +43,10 @@ class App extends Component {
 
     this.setSelection = (selection) => {
       this.setState({ selection: selection });
+    }
+
+    this.setInfo = (info) => {
+      this.setState({ info: info });
     }
 
     this.setText = (text) => {
@@ -64,12 +70,29 @@ class App extends Component {
 
     return (
       <div className="context-context">
-          <LenseBar lenses={this.state.lenses} setCurrentLense={this.setCurrentLense} attemptInitialTokenization={this.attemptInitialTokenization.bind(this)} />
-          <Sidebar tokenManager={this.tokenManager} lense={this.lense} selection={this.state.selection} startChar={startChar} endChar={endChar}/>
+          <LenseBar lenses={this.state.lenses} 
+            setCurrentLense={this.setCurrentLense} 
+            attemptInitialTokenization={this.attemptInitialTokenization.bind(this)} />
+          <Sidebar tokenManager={this.tokenManager} 
+            lense={this.lense} 
+            selection={this.state.selection} 
+            startChar={startChar} endChar={endChar}/>
           <div className="editor-context">
-            <LenseEditor tokenManager={this.tokenManager} lense={this.state.currentLense} setSelection={this.setSelection} setText={this.setText} />
+            <LenseEditor 
+            tokenManager={this.tokenManager} 
+            lense={this.state.currentLense} 
+            setSelection={this.setSelection} 
+            setText={this.setText} />
           </div>
+
+      {/* if errors put them in a div otherwise don't have one*/}
+      <div className="info">
+        {this.state.info.error ? <div className="error">{this.state.info.error}</div> : null}
       </div>
+
+      </div>
+
+
     );
   }
 }
