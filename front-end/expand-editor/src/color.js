@@ -3,7 +3,7 @@ export function getColor(lense, prob) {
   // console.log('lense', lense, 'prob', prob);
   if (lense === 'words') {
     return probToColor(prob);
-  } else if (lense === 'gpt-2') {
+  } else if (lense === 'basic') {
     return probToColorExponential(prob);
   } else {
     return probToColor(prob);

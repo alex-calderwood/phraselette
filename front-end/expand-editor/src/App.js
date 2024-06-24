@@ -5,7 +5,8 @@ import React, { useCallback , useRef, Component } from "react";
 // a library for saving and restoring selections (cursor positions / ranges) in a document
 // it uses hidden elements to store the selection data
 import { TokenManager } from "./tokenManager";
-import { LenseBar, Sidebar, LenseEditor } from "./components";
+import { LenseBar, Sidebar } from "./components";
+import { LenseEditor } from "./LenseEditor";
 
 function debounce(fn, delay) {
   let timeoutID;
@@ -23,13 +24,14 @@ function debounce(fn, delay) {
 class App extends Component {
   constructor(props) {
     super(props);
+    let initialLense = 'basic'; // TODO this might get recreated every time the App is created
     this.tokenManager = new TokenManager();
     window.tokenManager = this.tokenManager; // for debugging
-
+    let lenses = Object.keys(this.tokenManager.lenses)
     this.state = { 
-      lenses: Object.keys(this.tokenManager.lenses),
-      activeLenses: ['words', 'gpt-2'], // TODO for each active lense, should tokenize the text
-      currentLense: 'words',
+      activeLenses: ['basic', 'words'], // TODO for each active lense, should tokenize the text
+      currentLense: initialLense,
+      lenses: lenses,
       selection: null,
       info: {},
      };
@@ -70,26 +72,25 @@ class App extends Component {
 
     return (
       <div className="context-context">
-          <LenseBar lenses={this.state.lenses} 
-            setCurrentLense={this.setCurrentLense} 
-            attemptInitialTokenization={this.attemptInitialTokenization.bind(this)} />
-          <Sidebar tokenManager={this.tokenManager} 
-            lense={this.lense} 
-            selection={this.state.selection} 
-            startChar={startChar} endChar={endChar}/>
-          <div className="editor-context">
-            <LenseEditor 
-            tokenManager={this.tokenManager} 
-            lense={this.state.currentLense} 
-            setSelection={this.setSelection} 
-            setText={this.setText} />
-          </div>
+        <LenseBar lenses={this.state.lenses} 
+          setCurrentLense={this.setCurrentLense} 
+          attemptInitialTokenization={this.attemptInitialTokenization.bind(this)} />
+        <Sidebar tokenManager={this.tokenManager} 
+          lense={this.lense} 
+          selection={this.state.selection} 
+          startChar={startChar} endChar={endChar}/>
+        <div className="editor-context">
+          <LenseEditor 
+          tokenManager={this.tokenManager} 
+          lense={this.state.currentLense} 
+          setSelection={this.setSelection} 
+          setText={this.setText} />
+        </div>
 
-      {/* if errors put them in a div otherwise don't have one*/}
-      <div className="info">
-        {this.state.info.error ? <div className="error">{this.state.info.error}</div> : null}
-      </div>
-
+        {/* if errors put them in a div otherwise don't have one*/}
+        <div className="info">
+          {this.state.info.error ? <div className="error">{this.state.info.error}</div> : null}
+        </div>
       </div>
 
 

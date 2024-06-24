@@ -1,18 +1,18 @@
 import { splitWordTokenize, gpt2Tokenize, spacyTokenize } from './smarts.js';
 
 export class TokenManager {
-  constructor(tokens) {
+  constructor(initialLense, tokens) {
     this.lenses = {
+      'basic': [],
       'words': [],
-      'gpt-2': [],
       'spacy': [],
     }; 
     this.lenseInfo = { // TODO eventually should merge this with this.lenses
+      'basic': {tokenizedRange: {}},
       'words': {tokenizedRange: {}},
-      'gpt-2': {tokenizedRange: {}},
       'spacy': {tokenizedRange: {}},
     }; 
-    this.currentLense = 'words';
+    this.currentLense = initialLense;
     // this.lenseTokenIDtoIndex = { 'words': {} }; // token id to lenses array index
     this.externalOnToken = (token) => {}; // a callback to call when a token is created
   }
@@ -82,6 +82,10 @@ export class TokenManager {
    * @returns {list} - the spanned token objects
   */
   tokensAt(lense, start, end = start) {
+    if (typeof start !== 'number' || typeof end !== 'number' ) {
+      console.error('tokensAt called with', typeof start, typeof end);
+    } 
+
     let tokens = this.lenses[lense] || [];
 
     if (start > end) {
@@ -114,7 +118,7 @@ export class TokenManager {
         tokens = splitWordTokenize(text, data);
         this.lenses.words = tokens;
         break;
-      case 'gpt-2':
+      case 'basic':
         // TODO unpack ...data, 
         data = {  ...data, onToken: this.internalOnToken.bind(this) };
         console.log('calling in tokenmanager', data)
