@@ -57,17 +57,21 @@ export class Sidebar extends Component {
     let start = this.props.startChar;
     let end   = this.props.endChar;
 
-    let tokensAt = [];
+    let tokens = [];
     if (start !== null) {
-      tokensAt = this.tokenManager.tokensAt(this.tokenManager.currentLense, start, end);
+      tokens = this.tokenManager.tokensAt(this.tokenManager.currentLense, start, end);
     }
+
+    // filter out ' ' and &nbsp;
+    let isSpace = (text) => { return text === ' ' || text === '\u00A0' };
+    tokens = tokens.filter((token) => { return !isSpace(token.text) });
 
     return (
       <div className={`sidebar-container`}>
         <div className={`sidebar ${hidden}`}>
           {/* for each token show a little thing */}
           <div>
-            {tokensAt && tokensAt.map((token) => {
+            {tokens && tokens.map((token) => {
               return <div key={token.id} className="token">
                       {/* {JSON.stringify(token)} */}
                       <div className="item heading">{token.text}</div>

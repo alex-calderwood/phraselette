@@ -232,7 +232,7 @@ export class LenseEditor extends Component {
     let start = token.start;
     let end = token.end;
     let prob = token.prob;
-    let color = getColor(this.tokenManager.currentLense, prob);
+    let color = getColor(this.tokenManager.currentLense, token);
     for (let i = start; i <= end; i++) { // [start, end] inclusive
       let span = document.querySelector(`span[c='${i}']`);
       if (span) {
@@ -250,10 +250,10 @@ export class LenseEditor extends Component {
       let tokensAt = this.tokenManager.tokensAt(this.tokenManager.currentLense, c);
       let color;
       if (tokensAt && tokensAt.length > 0) {
-        let prob = tokensAt[0].prob;
-        color = getColor(this.tokenManager.currentLense, prob);
+        let token = tokensAt[0];
+        color = getColor(this.tokenManager.currentLense, token);
       } else {
-        color = getColor(this.tokenManager.currentLense, 0);
+        color = getColor(this.tokenManager.currentLense, {});
       }
       child.style.backgroundColor = color;
 
