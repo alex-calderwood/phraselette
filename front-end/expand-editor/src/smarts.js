@@ -111,6 +111,8 @@ export function splitWordTokenize(text, data = {}) {
   This function takes a context and a range of text to tokenize.
   It sends the context and the text to the GPT-2 server, which returns a stream of tokens.
 
+  This function will silently do nothing if the server is busy, which is intentional becuase we will detect that elsewhere.
+
   context: string - the text before the range to tokenize
   tokenizeRange: [int, int] - the range of text to tokenize (inclusive)
 */
@@ -127,8 +129,6 @@ async function* callGPT2(context, tokenizeRange) {
 
   console.log("smarts calling GPT2 with", 'context', context, 'range', tokenizeRange, 'data', data);
 
-
-
   try {
     const response = await fetch("http://127.0.0.1:5000/probs", {
       method: "POST",
@@ -138,8 +138,17 @@ async function* callGPT2(context, tokenizeRange) {
       body: JSON.stringify(data),
     });
 
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
+    // Error handling
+    if (response.status === 409) { // busy
+      // We expect a busy signal, so try again later
+      // Don't need to throw an error
+      console.log("Server busy");
+      return
+    } else {
+      if (!response.ok) {
+        // Some other error that we may need to deal with
+        throw new Error("Network response was not ok");
+      }
     }
 
     const reader = response.body.getReader();
@@ -157,7 +166,6 @@ async function* callGPT2(context, tokenizeRange) {
       for (const line of lines) {
         if (line.trim()) {
           const token = JSON.parse(line);
-          console.log("smarts token", token);
           yield token;
         }
       }

@@ -8,19 +8,6 @@ import { TokenManager } from "./tokenManager";
 import { LenseBar, Sidebar } from "./components";
 import { LenseEditor } from "./LenseEditor";
 
-function debounce(fn, delay) {
-  let timeoutID;
-  return function (...args) {
-    if (timeoutID) {
-      clearTimeout(timeoutID);
-    }
-    timeoutID = setTimeout(() => {
-      fn(...args);
-      timeoutID = null;
-    }, delay);
-  };
-}
-
 class App extends Component {
   constructor(props) {
     super(props);

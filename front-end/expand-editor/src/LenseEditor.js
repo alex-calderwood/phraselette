@@ -31,7 +31,7 @@ export class LenseEditor extends Component {
   }
 
   updateUITokens(token) {
-    console.log('recieved token', token);
+    // console.log('LenseEditor recieved token', token)
     this.colorTokenByProb(token);
   }
 
@@ -354,7 +354,6 @@ export class LenseEditor extends Component {
       let tokenizeRange = TokenManager.getRangeToTokenize(newText, curTokens);
 
       let data = { tokenizeRange: tokenizeRange };
-      console.log("COMPUTED range", tokenizeRange);
 
       this.tokenManager.tokenize(newText, data);
     }

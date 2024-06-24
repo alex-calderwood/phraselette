@@ -51,8 +51,6 @@ export class Sidebar extends Component {
       tokensAt = this.tokenManager.tokensAt(this.tokenManager.currentLense, start, end);
     }
 
-    console.log("sidebar", {start, end, tokensAt})
-
     return (
       <div className={`sidebar-container`}>
         <div className={`sidebar ${hidden}`}>

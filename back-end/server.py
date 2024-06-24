@@ -44,7 +44,8 @@ def probs():
     with lock:
         if working:
             print("Ignoring request, still working on previous response")
-            return Response("Still working on previous response", content_type='application/json')
+            return Response("Still working on previous response", content_type='application/json', status=409)
+
         working = True
 
     data = request.get_json()
