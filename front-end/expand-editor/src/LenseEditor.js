@@ -15,14 +15,13 @@ function charIndex(span) {
 export class LenseEditor extends Component {
   constructor(props) {
     super(props);
-    let originalText = 'a'.split('');
+    let originalText = "0123456789";
     let content = [];
     for (let i = 0; i < originalText.length; i++) {
       let c = originalText[i];
       content.push(`<span id=${getUniqueUUID()} c=${i}>${c}</span>`);
     }
-    originalText = originalText.join('');
-    this.state = { content: content};
+    this.state = { content: content.join("")};
     this.contentRef = React.createRef();
     this.tokenManager = this.props.tokenManager;
     this.tokenManager.setOnToken(this.updateUITokens.bind(this));
@@ -31,7 +30,6 @@ export class LenseEditor extends Component {
   }
 
   updateUITokens(token) {
-    // console.log('LenseEditor recieved token', token)
     this.colorTokenByProb(token);
   }
 
@@ -58,9 +56,6 @@ export class LenseEditor extends Component {
       let focusParent = rangySelection.focusNode.parentNode;
       let offset = rangySelection.focusOffset; // TODO this should be anchorOffset
 
-      this.offset = offset; // TODO get rid of
-      this.charId = anchorParent.id; // TODO get rid of
-
       let startChar = charIndex(anchorParent)
       let endChar = anchorParent === focusParent ? startChar : charIndex(focusParent);
 
@@ -78,9 +73,10 @@ export class LenseEditor extends Component {
         // we use the above to calculate these helper variables, and will not always be present
         // additionally they may not be up to date if accessed during an input event
         delayedStartChar: startChar,
-        delayedEndChar: endChar
+        delayedEndChar: endChar 
       };
       window.selection = this.selection; // for debugging
+      console.log("SAVING", this.selection);
     }
     else {
       console.error('No selection');
@@ -155,6 +151,8 @@ export class LenseEditor extends Component {
 
     // show the sidebar if there is a selection of non-zero length
     this.props.setSelection(this.selection);
+
+    console.log('click', this.selection);
   };
 
   splitSpan(span, c) {
@@ -300,6 +298,8 @@ export class LenseEditor extends Component {
           // updating the character index
           c = this.splitSpan(child, c);
         }
+      } else if (child.tagName === 'DIV') {
+        console.log('DIV splitting', child);
       }
 
       i++;
@@ -347,8 +347,6 @@ export class LenseEditor extends Component {
       // due to rate limiting) while typing. TODO this is a bit of a hack and could be cleaned up
       shouldTokenize = shouldTokenize && callDepth < 2; 
 
-      console.log('callTokenize', { tokenizeRange, shouldTokenize })
-
       if (!shouldTokenize) return;
 
       // Define a function to call after tokenization is complete ()
@@ -368,6 +366,40 @@ export class LenseEditor extends Component {
     }
   }
 
+  updateTokens(newText, event) {
+    let lense = this.tokenManager.currentLense;
+    let tokens = this.tokenManager.lenses[lense];
+    
+    switch (event.inputType) {
+      case 'insertText':
+        this.tokenManager.editToken(lense, this.selection, event);
+        break;
+      case 'deleteContentBackward':
+
+        break;
+      case 'deleteContentForward':
+          
+        break;
+      case 'insertParagraph':
+
+        break
+      default:
+        break;
+    }
+
+    
+
+    // let editLength = event.data ? event.data.length : 0;
+    // let charsToOffset = givenOffset - editLength;
+    // let tokensToOffset = givenOffset - charsToOffset;
+    // let restoreTo = node;
+    // for (let i = 0; i < tokensToOffset; i++) {
+    //   restoreTo = restoreTo.nextSibling;
+    //   // for some reason when this gives an error, it actually breaks and allows it to work okay?
+    // }
+
+  }
+
   /*
     Bugs:
       TODO spaces aren't being saved correctly on firefox (works on Chrome)
@@ -381,6 +413,8 @@ export class LenseEditor extends Component {
     // let newText = this.contentRef.current.textContent.replace('&nbsp', ' '); // this loses \n TODO
     let newText = this.getTextWithWhitespace(this.contentRef.current, this.selection.nativeSelection);
     console.log('TEXT', { newText });
+
+    // this.updateTokens(newText, event); // TODO
 
     // pass the new text into the tokenizer to update its token list and associated character indices
     this.callTokenize(newText);

@@ -21,6 +21,10 @@ const probToColor = (prob) => {
 
 const wordToColor = (word) => {
   // Hash function to convert word to a number between 0 and 255
+  if (!word) {
+    return 'white';
+  }
+
   let hash = 0;
   for (let i = 0; i < word.length; i++) {
     hash = (hash * 31 + word.charCodeAt(i)) % 256;

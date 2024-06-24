@@ -5,7 +5,7 @@ import React, { useCallback , useRef, Component } from "react";
 // a library for saving and restoring selections (cursor positions / ranges) in a document
 // it uses hidden elements to store the selection data
 import { TokenManager } from "./tokenManager";
-import { LenseBar, Sidebar } from "./components";
+import { LenseBar, TokenBar } from "./components";
 import { LenseEditor } from "./LenseEditor";
 
 class App extends Component {
@@ -59,15 +59,19 @@ class App extends Component {
 
     return (
       <div className="context-context">
-        <LenseBar lenses={this.state.lenses} 
-          setCurrentLense={this.setCurrentLense} 
+        <LenseBar lenses={this.state.lenses}
+          setCurrentLense={this.setCurrentLense}
           attemptInitialTokenization={this.attemptInitialTokenization.bind(this)} />
-        <Sidebar tokenManager={this.tokenManager} 
-          lense={this.lense} 
+        <TokenBar tokenManager={this.tokenManager} 
+          lense={"words"} 
+          selection={this.state.selection} 
+          startChar={startChar} endChar={endChar}/>
+        <TokenBar tokenManager={this.tokenManager}
+          lense={"basic"} 
           selection={this.state.selection} 
           startChar={startChar} endChar={endChar}/>
         <div className="editor-context">
-          <LenseEditor 
+          <LenseEditor
           tokenManager={this.tokenManager} 
           lense={this.state.currentLense} 
           setSelection={this.setSelection} 

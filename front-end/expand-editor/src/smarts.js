@@ -56,7 +56,6 @@ export async function gpt2Tokenize(text, data = {}) {
 
   let onToken = data.onToken;
   let tokenizeRange = makeTokenizationRange(text, data);
-  console.log("tokenizing", text, "with range", tokenizeRange)
   let tokenGenerator = callGPT2(text, tokenizeRange);
 
   // don't wait for the generator to finish
@@ -124,8 +123,6 @@ export function splitWordTokenize(text, data = {}) {
 */
 async function* callGPT2(context, tokenizeRange) {
 
-  console.log('call GPT2', context, tokenizeRange)
-
   // get the text to tokenize based on the inclusive range
   const text = context.substring(tokenizeRange[0], tokenizeRange[1] + 1);
   const preContext = context.substring(0, tokenizeRange[0]);
@@ -135,7 +132,7 @@ async function* callGPT2(context, tokenizeRange) {
     text: text,
   };
 
-  console.log("smarts calling GPT2 with", 'context', context, 'range', tokenizeRange, 'data', data);
+  // console.log("smarts calling GPT2 with", 'context', context, 'range', tokenizeRange, 'data', data);
 
   try {
     const response = await fetch("http://127.0.0.1:5000/probs", {
@@ -150,7 +147,7 @@ async function* callGPT2(context, tokenizeRange) {
     if (response.status === 409) { // busy
       // We expect a busy signal, so try again later
       // Don't need to throw an error
-      console.log("Server busy");
+      // console.log("Server busy");
       return
     } else {
       if (!response.ok) {

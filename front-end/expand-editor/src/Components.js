@@ -32,6 +32,7 @@ export class LenseBar extends Component {
   render() {
     return (
       <div className="lense-bar">
+        <label htmlFor="lenses">color by </label>
         {/* a dropdown with each lense type */}
         <select onChange={this.handleChange.bind(this)}>
           {this.props.lenses.map((lense) => {
@@ -42,7 +43,8 @@ export class LenseBar extends Component {
     );
   }
 }
-export class Sidebar extends Component {
+
+export class TokenBar extends Component {
   constructor(props) {
     super(props);
     this.tokenManager = this.props.tokenManager;
@@ -54,17 +56,22 @@ export class Sidebar extends Component {
     // for now we want to always show it
     let hidden = "";
 
+    let lense = this.props.lense;
+
     let start = this.props.startChar;
     let end   = this.props.endChar;
 
     let tokens = [];
     if (start !== null) {
-      tokens = this.tokenManager.tokensAt(this.tokenManager.currentLense, start, end);
+      tokens = this.tokenManager.tokensAt(lense, start, end);
     }
 
     // filter out ' ' and &nbsp;
     let isSpace = (text) => { return text === ' ' || text === '\u00A0' };
     tokens = tokens.filter((token) => { return !isSpace(token.text) });
+
+    // sort by start
+    tokens = tokens.sort((a, b) => { return a.start - b.start });
 
     return (
       <div className={`sidebar-container`}>

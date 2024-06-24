@@ -47,6 +47,28 @@ export class TokenManager {
     this.externalOnToken(token);
   }
 
+  editToken(lense, selection, event) {
+    // let newToken = {...token, text: newText};
+    // this.pushUpdateToken(token.type, newToken);
+    // get the token
+    let tokensAt = this.tokensAt(lense, selection.delayedStartChar, selection.delayedStartChar);
+    if (tokensAt.length !== 1) {
+      console.error("editToken called with", tokensAt.length, lense, "tokens at", selection.delayedStartChar);
+      return;
+    }
+
+    let token = tokensAt[0];
+
+    console.log('editing token', token, 'selection start',  selection.delayedStartChar, 'end', selection.delayedEndChar);
+
+    let cutIndex = selection.delayedEndChar - token.start;
+    let start = token.text.slice(0, cutIndex);
+    let end = token.text.slice(cutIndex + 1);
+    token.text = start + end;
+    console.log('edited token', start + end, 'cutting at index', cutIndex,  start, end, );
+    // we also have to edit all the token spans afterwards
+  }
+
   /* 
   * TODO document
   */
@@ -112,13 +134,17 @@ export class TokenManager {
     let tokensSpanned = [];
     for (let i = 0; i < tokens.length; i++) {
       let token = tokens[i];
-      if ((start >= token.start && start <= token.end) 
-        || (end >= token.start && end <= token.end)
-        || (start <= token.start && end >= token.end) ) {
+      if (TokenManager.rangeIntersectsToken(start, end, token)) {
         tokensSpanned.push(token);
       }
     }
     return tokensSpanned;
+  }
+
+  static rangeIntersectsToken(start, end = start, token) {
+    return (start >= token.start && start <= token.end) 
+        || (end >= token.start && end <= token.end)
+        || (start <= token.start && end >= token.end);
   }
 
   /**
@@ -130,7 +156,6 @@ export class TokenManager {
     *   
   */
   tokenize(text, data = {}) {
-    console.log('calling in tokenmanager', text, data, this.currentLense);
     let tokens = [];
       data = {  ...data, onToken: this.internalOnToken.bind(this) };
       switch (this.currentLense) {

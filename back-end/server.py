@@ -36,7 +36,6 @@ def stream_probs(text, extra_context, mock=False):
             working = False
 
         
-
 @app.route("/probs", methods=["POST"])
 def probs():
     global working

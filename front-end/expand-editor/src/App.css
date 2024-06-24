@@ -41,7 +41,7 @@
   height: 100%;
   font-size: 20px;
   padding: 60px;
-  margin-top: 4%;
+  /* margin-top: 4%; */
   margin-bottom: 4%;
   margin-left: 10%;
   margin-right: 10%;
@@ -72,7 +72,7 @@ we will need to select the text children of the editor */
 }
 
 .sidebar-container {
-  height: 50px;
+  height: 68px;
   margin-left: 100px;
   margin-right: 100px;
 }
@@ -118,9 +118,16 @@ we will need to select the text children of the editor */
   display: none;
 }
 
+label {
+  color:rgb(172, 172, 172);
+  font-size: 14px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding-right: 2px;
+}
 
 select {
-  font-size: 20px;
+  font-size: 14px;
   background-color: rgb(172, 172, 172);
   outline: none;
   margin-top: 10px;
