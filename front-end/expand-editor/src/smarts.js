@@ -78,9 +78,15 @@ export async function gpt2Tokenize(text, data = {}) {
     }
     rawTokenPromise = await tokenGenerator.next();
   }
+
+    // at the end we should try to check again and call it if not everything is tokenized
+    if (data.onFinished) {
+      data.onFinished();
+    }
 }
 
 export function splitWordTokenize(text, data = {}) {
+  console.log('split word', text)
   let type = "words";
   let tokens = [];
   let tokenStart = 0;
@@ -117,6 +123,8 @@ export function splitWordTokenize(text, data = {}) {
   tokenizeRange: [int, int] - the range of text to tokenize (inclusive)
 */
 async function* callGPT2(context, tokenizeRange) {
+
+  console.log('call GPT2', context, tokenizeRange)
 
   // get the text to tokenize based on the inclusive range
   const text = context.substring(tokenizeRange[0], tokenizeRange[1] + 1);

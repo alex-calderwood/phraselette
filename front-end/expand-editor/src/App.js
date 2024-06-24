@@ -12,7 +12,7 @@ class App extends Component {
   constructor(props) {
     super(props);
     let initialLense = 'basic'; // TODO this might get recreated every time the App is created
-    this.tokenManager = new TokenManager();
+    this.tokenManager = new TokenManager(initialLense);
     window.tokenManager = this.tokenManager; // for debugging
     let lenses = Object.keys(this.tokenManager.lenses)
     this.state = { 

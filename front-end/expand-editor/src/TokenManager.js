@@ -1,6 +1,9 @@
 import { splitWordTokenize, gpt2Tokenize, spacyTokenize } from './smarts.js';
 
+
 export class TokenManager {
+  // tokenizationAttempts = 0;
+
   constructor(initialLense, tokens) {
     this.lenses = {
       'basic': [],
@@ -16,6 +19,7 @@ export class TokenManager {
     // this.lenseTokenIDtoIndex = { 'words': {} }; // token id to lenses array index
     this.externalOnToken = (token) => {}; // a callback to call when a token is created
   }
+
   setCurrentLense(lense) {
     if (!this.lenses[lense]) {
       console.error("No label of lense type", lense);
@@ -29,9 +33,17 @@ export class TokenManager {
     this.externalOnToken = onToken;
   }
 
+  /*
+  * Handle an incoming token, which may be anywhere in the string
+  */
   internalOnToken(token) {
     let type = token.type;
+
+    // put the token in the right place and remove unnecessary old tokens
+    // TODO this is currently buggy
     this.pushUpdateToken(type, token);
+
+    // call any additional callbacks that have been registered
     this.externalOnToken(token);
   }
 
@@ -69,8 +81,6 @@ export class TokenManager {
     
     this.lenses[lenseType] = newLense;
   }
-
-
 
   /**
    * Provide all tokens betweens the 'start' and 'end' range (inclusive) in the given lense.
@@ -111,26 +121,31 @@ export class TokenManager {
     return tokensSpanned;
   }
 
+  /**
+    * Asynchonously turn the incoming text into a list of 'tokens' based on the current lense's tokenization strategy.
+    * 
+    * @param {string} text - the text to tokenize (should be the entire context)
+    * @param {object} data - extra arguments to the tokenizer call such as the range of 
+    *                        the text that should be processed
+    *   
+  */
   tokenize(text, data = {}) {
+    console.log('calling in tokenmanager', text, data, this.currentLense);
     let tokens = [];
-    switch (this.currentLense) {
+      data = {  ...data, onToken: this.internalOnToken.bind(this) };
+      switch (this.currentLense) {
       case 'words':
         tokens = splitWordTokenize(text, data);
-        this.lenses.words = tokens;
+        this.lenses.words = tokens; // TODO this is not currently using onToken
         break;
       case 'basic':
-        // TODO unpack ...data, 
-        data = {  ...data, onToken: this.internalOnToken.bind(this) };
-        console.log('calling in tokenmanager', data)
         gpt2Tokenize(text, data);
         break;
       case 'spacy':
-        // TODO add ...data, 
-        data = { onToken: this.internalOnToken.bind(this) };
+        data = { ...data, onToken: this.internalOnToken.bind(this) };
         spacyTokenize(text, data);
         break;
     }
-    return tokens;
   }
 
   /* 
@@ -162,5 +177,21 @@ export class TokenManager {
     ];
 
     return tokenizeRange;
+  }
+
+  /*
+  * Should the text be tokenized?
+  * Currently it looks to see if the range that is trying to be tokenized is before the end of the text.
+  * Also, it will only tokenize if 
+  */
+  static shouldTokenize(text, tokenizeRange, lense, depth) {
+    if (depth > 1) {
+      return false;
+    }
+
+    switch(lense) {
+      default:
+        return tokenizeRange[0] < text.length - 1;
+    }
   }
 }

@@ -21,12 +21,12 @@ export class LenseEditor extends Component {
       let c = originalText[i];
       content.push(`<span id=${getUniqueUUID()} c=${i}>${c}</span>`);
     }
-    this.state = { content: content, text: originalText };
+    originalText = originalText.join('');
+    this.state = { content: content};
     this.contentRef = React.createRef();
-    this.editorNode = null;
     this.tokenManager = this.props.tokenManager;
     this.tokenManager.setOnToken(this.updateUITokens.bind(this));
-    this.tokenManager.tokenize(this.state.text);
+    this.tokenManager.tokenize(originalText);
     this.editorNode = this.contentRef.current;
   }
 
@@ -36,12 +36,12 @@ export class LenseEditor extends Component {
   }
 
   componentDidMount() {
-    this.contentRef.current.addEventListener('input', this.handleInput);
+    this.contentRef.current.addEventListener('input', this.onInput);
     this.contentRef.current.addEventListener('click', this.handleClick);
   }
 
   componentWillUnmount() {
-    this.contentRef.current.removeEventListener('input', this.handleInput);
+    this.contentRef.current.removeEventListener('input', this.onInput);
     this.contentRef.current.removeEventListener('click', this.handleClick);
   }
 
@@ -127,17 +127,18 @@ export class LenseEditor extends Component {
       // for some reason when this gives an error, it actually breaks and allows it to work okay?
     }
 
-    let restoring = {
-      text: node ? node.textContent : null,
-      nextText: restoreTo ? restoreTo.textContent : null,
-      givenOffset: givenOffset,
-      eventDataLength: editLength,
-      tokensToOffset: tokensToOffset,
-      charsToOffset: charsToOffset,
-      charId: charId,
-      node: node,
-      restoreTo: restoreTo,
-    };
+    // let restoring = {
+    //   text: node ? node.textContent : null,
+    //   nextText: restoreTo ? restoreTo.textContent : null,
+    //   givenOffset: givenOffset,
+    //   eventDataLength: editLength,
+    //   tokensToOffset: tokensToOffset,
+    //   charsToOffset: charsToOffset,
+    //   charId: charId,
+    //   node: node,
+    //   restoreTo: restoreTo,
+    // };
+    // console.log('restoring', restoring);
 
     let range = document.createRange();
     range.setStart(restoreTo, charsToOffset);
@@ -334,13 +335,45 @@ export class LenseEditor extends Component {
     return clone.textContent;
   }
 
+  callTokenize(text, callDepth = 0) {
+    if (this.tokenManager) {
+      let curTokens = this.tokenManager.lenses[this.tokenManager.currentLense];
+
+      let tokenizeRange  = TokenManager.getRangeToTokenize(text, curTokens);
+      let shouldTokenize = TokenManager.shouldTokenize(text, tokenizeRange, this.tokenManager.currentLense);
+
+      // We keep track of the call depth because we want to check to see if there is more tokenization
+      // to take care of after the user has finished typing (some requests may have been denied by the server
+      // due to rate limiting) while typing. TODO this is a bit of a hack and could be cleaned up
+      shouldTokenize = shouldTokenize && callDepth < 2; 
+
+      console.log('callTokenize', { tokenizeRange, shouldTokenize })
+
+      if (!shouldTokenize) return;
+
+      // Define a function to call after tokenization is complete ()
+      let onFinished = () => {
+        // TODO there is a potential problem where the selection has been updated since the last time we saved it
+        // This could happen if the user navigates with the arrow keys for instance, so perhpas we want to save the selection during arrows
+        let newText = this.getTextWithWhitespace(this.contentRef.current, this.selection.nativeSelection);
+        this.callTokenize(newText, callDepth + 1);
+      };
+
+      let data = {
+        tokenizeRange: tokenizeRange,
+        onFinished: onFinished.bind(this),
+      };
+
+      this.tokenManager.tokenize(text, data); // TODO perhaps data should have the thing to do at the end..'[l;,,,,,l;l;']
+    }
+  }
 
   /*
     Bugs:
       TODO spaces aren't being saved correctly on firefox (works on Chrome)
       TODO pasting from an outside source puts everything in backwards
   */
-  handleInput = (event) => {
+  onInput = (event) => {
     // Save the current selection to restore later after processing input
     this.saveSelection();
 
@@ -349,18 +382,11 @@ export class LenseEditor extends Component {
     let newText = this.getTextWithWhitespace(this.contentRef.current, this.selection.nativeSelection);
     console.log('TEXT', { newText });
 
-    if (this.tokenManager) {
-      let curTokens = this.tokenManager.lenses[this.tokenManager.currentLense];
-      let tokenizeRange = TokenManager.getRangeToTokenize(newText, curTokens);
+    // pass the new text into the tokenizer to update its token list and associated character indices
+    this.callTokenize(newText);
 
-      let data = { tokenizeRange: tokenizeRange };
-
-      this.tokenManager.tokenize(newText, data);
-    }
-
-    // this.setState({text: newText}) // right now we have no use fo rthis
+    // give the new text to the parent
     if (this.props.setText) {
-      // give the new text to the parent
       this.props.setText(newText);
     }
 

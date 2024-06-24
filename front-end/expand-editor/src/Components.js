@@ -1,5 +1,16 @@
 import React, { Component } from "react";
 
+function singular(lense) {
+  switch(lense) {
+    case 'words':
+      return 'word';
+    case 'spacy':
+      return 'extraction';
+    case 'basic':
+      return 'token';
+  }
+}
+
 export class LenseBar extends Component {
   constructor(props) {
     super(props);
@@ -62,7 +73,7 @@ export class Sidebar extends Component {
                       <div className="item heading">{token.text}</div>
                       <div className="item range">[{token.start}-{token.end}]</div>
                       <div className="item">{token.prob.toPrecision(3)}</div>
-                      <div className="item">{token.type}</div>
+                      <div className="item">{singular(token.type)}</div>
                     </div>;
             })}
           </div>
