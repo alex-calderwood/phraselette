@@ -47,7 +47,89 @@ export class TokenManager {
     this.externalOnToken(token);
   }
 
-  editToken(lense, selection, event) {
+
+  /* 
+  * Logic to handle input events: synchornize the text in the tokenManager's various lenses
+  * with the edits that were made by {event} to the text in the contenteditable div (which is already updated);
+  */
+  synchronizeTokens(newText, selection, beforeEventSelection, event) {
+    let lense = this.currentLense;
+    // let tokens = this.lenses[lense];
+    
+    switch (event.inputType) {
+      case 'insertText':
+        this.addCharToToken(lense, selection, event);
+        break;
+      case 'deleteContentBackward':
+        this.removeCharsFromToken(lense, beforeEventSelection, event);
+        break;
+      case 'deleteContentForward':
+        console.error('deleteContentForward not implemented');
+        break;
+      case 'insertParagraph':
+        console.error('insertParagraph not implemented');
+        break;
+      case 'insertLineBreak':
+        console.error('insertLineBreak not implemented');
+        break;
+      case 'insertFromPaste':
+        console.error('insertFromPaste not implemented');
+        break;
+      default:
+        break;
+    }
+
+    console.log('synchronized', this.lenses[lense]);
+  }
+
+  removeCharsFromToken(lense, beforeSelection, event) {
+    let startCharIndex = Math.min(beforeSelection.startChar, beforeSelection.endChar);
+    let endCharIndex = Math.max(beforeSelection.startChar, beforeSelection.endChar);
+    let totalShift = endCharIndex - startCharIndex;
+    if(beforeSelection.startChar == beforeSelection.endChar) {
+      startCharIndex = beforeSelection.startChar - 1;
+      totalShift = 1;
+    }
+
+    console.log('removeCharFromToken', {lense, selection: beforeSelection, startChar: startCharIndex, endChar: endCharIndex, totalShift});
+
+    let selectedTokens = this.tokensAt(lense, startCharIndex, endCharIndex - 1);
+
+    console.log('tokens', {tokensAt: selectedTokens, totalShift});
+
+    if (selectedTokens.length === 0) {
+      console.error("removeCharsFromToken called with no tokens at", startCharIndex);
+      return;
+    }
+
+    // Remove selected characters from tokens overlapping the selection and mark tokens that become empty
+    let tokensToDelete = [];
+    for (let token of selectedTokens) {
+      // trim the tokens based on the selection
+      let newStart = Math.max(token.start, startCharIndex);
+      let newEnd = Math.min(token.end + 1, endCharIndex);
+      let text = token.text.slice(0, newStart - token.start) + token.text.slice(newEnd - token.start);
+      console.log('new token', {newStart, newEnd, text});
+      if(text.length === 0) {
+        tokensToDelete.push(token.id)
+      } else {
+        token.text = text;
+      }
+    }
+
+    // delete the tokens that are empty and sort by start index
+    this.lenses[lense] = this.lenses[lense].filter(t => !tokensToDelete.includes(t.id)).sort((a, b) => a.start - b.start);
+
+    // update the token indices
+    let offset = 0;
+    for (let token of this.lenses[lense]) {
+      token.start = offset;
+      token.end = offset + token.text.length - 1;
+      offset = token.end + 1;
+    }
+  }
+
+  addCharToToken(lense, selection, event) {
     if (event.data.length !== 1) {
       console.error("editToken called with event.data.length", event.data.length, "not sure what to expect");
     }
@@ -55,29 +137,51 @@ export class TokenManager {
     let startChar = selection.startChar - event.data.length; // because we added a token TODO we want to use the keydown
 
     let tokensAt = this.tokensAt(lense, startChar)
-    console.log(tokensAt)
+    console.log('addCharToToken', {lense, selection, event, startChar, tokensAt})
 
-    if (tokensAt.length === 0) {
-      // We may be at the end of the text
-      return;
-    }
     if (tokensAt.length > 1) {
       console.error("editToken called with", tokensAt.length, "tokens at", startChar);
       return;
     }
 
+    if (tokensAt.length === 0) {
+      // We may be at the end of the text so logic elsewhere will add the token (splitSpan I think)
+      return;
+    }
+
+    // add the character to the token
     let token = tokensAt[0];
     let cutIndex = startChar - token.start;
     let start = token.text.slice(0, cutIndex) + event.data;
     let end = token.text.slice(cutIndex);
     token.text = start + end;
+    token.end += event.data.length;
+
+    console.log('addedCharToToken', token, token.start, token.end)
+
     // shift all token indices after the edited token
-    let endOfLenseIndex = Math.max(this.lenses[lense].map(t => t.end)); // TODO O(n) could save this as we go
-    let tokensToShift = this.tokensAt(lense, token.end + 1, endOfLenseIndex);
+    this.shiftTokenSpans(token.end + 1, this.lenses[lense], event.data.length); // TODO think about what happens when there is a tokenization going on
+  }
+
+  shiftTokenSpans(fromChar, tokens, shiftAmount) {
+    if (shiftAmount === 0 || tokens.length === 0) {
+      return;
+    }
+
+
+    // tokens aren't necessarily in order
+    let endOfLenseChar = Math.max(...tokens.map(t => t.end));
+    console.log('shiftTokenSpans', {fromChar, tokens, endOfLenseChar, shiftAmount})
+    if (fromChar > endOfLenseChar) {
+      return;
+    }
+
+    let tokensToShift = tokens.filter(t => t.start >= fromChar);
     for (let t of tokensToShift) {
-      t.start += event.data.length;
-      t.end += event.data.length;
-    } // TODO think about what happens when there is a tokenization going on 
+      t.start += shiftAmount;
+      t.end += shiftAmount;
+      console.log('shifted token', t);
+    }
   }
 
   /* 

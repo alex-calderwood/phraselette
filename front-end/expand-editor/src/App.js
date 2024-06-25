@@ -2,7 +2,7 @@
 import "./App.css";
 import React, { useCallback , useRef, Component } from "react";
 
-// a library for saving and restoring selections (cursor positions / ranges) in a document
+// a library for aing and restoring selections (cursor positions / ranges) in a document
 // it uses hidden elements to store the selection data
 import { TokenManager } from "./tokenManager";
 import { LenseBar, TokenBar } from "./components";
@@ -56,6 +56,8 @@ class App extends Component {
   render() {
     let startChar = this.state.selection ? this.state.selection.startChar : null;
     let endChar   = this.state.selection ? this.state.selection.endChar : null;
+
+    console.log('rendering with selection', startChar, endChar);
 
     return (
       <div className="context-context">

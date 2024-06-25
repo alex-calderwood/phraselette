@@ -54,6 +54,5 @@ const lengthNormedLogProbToColor = (token) => {
 
   // let hex =  colorScale(normalized).hex();
   let hex = colorScale(normalized).alpha(alpha).css();
-  console.log(normalized, hex)
   return hex;
 };

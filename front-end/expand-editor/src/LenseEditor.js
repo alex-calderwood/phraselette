@@ -36,13 +36,13 @@ export class LenseEditor extends Component {
     this.editorNode = this.contentRef.current;
     this.editorNode.addEventListener('input', this.onInput);
     this.editorNode.addEventListener('click', this.onClick);
-    this.editorNode.addEventListener('keydown', this.beforeInput.bind(this));
+    this.editorNode.addEventListener('keydown', this.onKeyDown.bind(this));
   }
 
   componentWillUnmount() {
     this.editorNode.removeEventListener('input', this.onInput);
     this.editorNode.removeEventListener('click', this.onClick);
-    this.editorNode.removeEventListener('keydown', this.beforeInput);
+    this.editorNode.removeEventListener('keydown', this.onKeyDown);
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -52,9 +52,9 @@ export class LenseEditor extends Component {
   }
 
   /* 
-  * Save the current cursor selection to restore it after processing input
+  * Return the current cursor selection to restore it after processing input
   */
-  saveSelection = () => {
+  currentSelection = () => {
     let rangySelection = rangy.getSelection();
     if (rangySelection.rangeCount > 0) {
       let anchorParent = rangySelection.anchorNode.parentNode;
@@ -62,10 +62,11 @@ export class LenseEditor extends Component {
       let offset = rangySelection.focusOffset; // TODO this should be anchorOffset but right now something reauires this mistake
 
       let startChar = charIndex(anchorParent) + rangySelection.anchorOffset;
-      let endChar = anchorParent === focusParent ? 
-        startChar : (charIndex(focusParent) + rangySelection.focusOffset);
+      // let endChar = anchorParent === focusParent ? 
+      //   startChar : (charIndex(focusParent) + rangySelection.focusOffset); // this is wrong
+      let endChar = charIndex(focusParent) + rangySelection.focusOffset;
 
-      this.selection = {
+      let selection = {
         offset: offset,
         charId: rangySelection.anchorNode.parentNode.id,
         rangy: rangySelection,
@@ -85,11 +86,12 @@ export class LenseEditor extends Component {
         endChar: endChar
       };
 
-      window.selection = this.selection; // for debugging
+      return selection;
     }
     else {
       console.error('No selection');
     }
+
   };
 
   restoreSelection = (event) => {
@@ -151,16 +153,6 @@ export class LenseEditor extends Component {
     let selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
-  };
-
-  onClick = (event) => {
-    // we don't use this after it gets saved but it is nice as a debug tool
-    // we save directly in the handleInput
-    this.saveSelection();
-    console.log('click', this.selection);
-
-    // show the sidebar if there is a selection of non-zero length
-    this.props.setSelection(this.selection);
   };
 
   splitSpan(span, c) {
@@ -343,7 +335,12 @@ export class LenseEditor extends Component {
     return clone.textContent;
   }
 
+  /* 
+   * Split the text into individual tokens according to the tokenizatin strategy specified by the current lense.
+  */
   callTokenize(text, callDepth = 0) {
+    console.log('callTokenize', text);
+
     if (this.tokenManager) {
       let curTokens = this.tokenManager.lenses[this.tokenManager.currentLense];
 
@@ -363,6 +360,7 @@ export class LenseEditor extends Component {
         // This could happen if the user navigates with the arrow keys for instance, so perhpas we want to save the selection during arrows
         let newText = this.getTextWithWhitespace(this.contentRef.current, this.selection.nativeSelection);
         this.callTokenize(newText, callDepth + 1);
+
       };
 
       let data = {
@@ -374,46 +372,22 @@ export class LenseEditor extends Component {
     }
   }
 
-  updateTokens(newText, event) {
-    let lense = this.tokenManager.currentLense;
-    let tokens = this.tokenManager.lenses[lense];
 
-    console.log('updateTokens', { newText, tokens });
-    
-    switch (event.inputType) {
-      case 'insertText':
-        this.tokenManager.editToken(lense, this.selection, event);
-        break;
-      case 'deleteContentBackward':
-
-        break;
-      case 'deleteContentForward':
-          
-        break;
-      case 'insertParagraph':
-
-        break
-      default:
-        break;
-    }
-
-    
-
-    // let editLength = event.data ? event.data.length : 0;
-    // let charsToOffset = givenOffset - editLength;
-    // let tokensToOffset = givenOffset - charsToOffset;
-    // let restoreTo = node;
-    // for (let i = 0; i < tokensToOffset; i++) {
-    //   restoreTo = restoreTo.nextSibling;
-    //   // for some reason when this gives an error, it actually breaks and allows it to work okay?
-    // }
-
+  /*
+   * Handles keydown events to save the selection before the input event is processed and the text changed.
+  */
+  onKeyDown(event) {
+    this.selectionBeforeInput = this.currentSelection();
+    console.log('keydown', this.selectionBeforeInput);
   }
 
-  beforeInput(event) {
-    this.selectionBeforeInput = this.saveSelection();
-    console.log('before input', this.selectionBeforeInput);
-  }
+  onClick = (event) => {
+    // this.selectionBeforeInput = this.currentSelection();
+
+    // show the sidebar if there is a selection of non-zero length
+    // this.props.setSelection(this.selectionBeforeInput);
+    // console.log('click', this.selectionBeforeInput);
+  };
 
   /*
     Bugs:
@@ -422,19 +396,18 @@ export class LenseEditor extends Component {
   */
   onInput = (event) => {
     // Save the current selection to restore later after processing input
-    this.saveSelection();
-
-    console.log(this.selection);
+    this.selection = this.currentSelection();
+    console.log('input', this.selection);
 
     // update the state text
     // let newText = this.contentRef.current.textContent.replace('&nbsp', ' '); // this loses \n TODO
     let newText = this.getTextWithWhitespace(this.contentRef.current, this.selection.nativeSelection);
     console.log('TEXT', { newText });
 
-    this.updateTokens(newText, event); // TODO
+    this.tokenManager.synchronizeTokens(newText, this.selection, this.selectionBeforeInput, event);
 
     // pass the new text into the tokenizer to update its token list and associated character indices
-    this.callTokenize(newText);
+    // this.callTokenize(newText);
 
     // give the new text to the parent
     if (this.props.setText) {
