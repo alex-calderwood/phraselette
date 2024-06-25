@@ -28,24 +28,14 @@
   color: #61dafb;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .editor {
   height: 100%;
-  font-size: 20px;
+  font-size: 14px;
   padding: 60px;
   /* margin-top: 4%; */
   margin-bottom: 4%;
   margin-left: 10%;
   margin-right: 10%;
-  overflow: auto;
   background-color: white;
   box-shadow: 0 10px 20px rgba(0,0,0,0.30), 0 10px 20px rgba(0,0,0,0.22);
   /* remove the blue outline */
@@ -54,6 +44,10 @@
   border-radius: 2px;
   
   z-index: 1;
+
+  word-wrap: break-word;
+	        overflow-wrap: break-word;
+	        white-space: normal;	 
 }
 
 /* make the z index of the text on the editor slightly higher so we can put something in between, so
@@ -100,7 +94,6 @@ we will need to select the text children of the editor */
   margin-left: 2px;
   margin-right: 2px;
   background-color: #f1f1f1;
-  max-width: 100px;
   height: 100%;
   text-wrap: wrap;
 }
