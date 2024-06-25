@@ -54,8 +54,8 @@ class App extends Component {
   }
 
   render() {
-    let startChar = this.state.selection ? this.state.selection.delayedStartChar : null;
-    let endChar   = this.state.selection ? this.state.selection.delayedEndChar : null;
+    let startChar = this.state.selection ? this.state.selection.startChar : null;
+    let endChar   = this.state.selection ? this.state.selection.endChar : null;
 
     return (
       <div className="context-context">

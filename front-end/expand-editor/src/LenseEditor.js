@@ -35,12 +35,12 @@ export class LenseEditor extends Component {
 
   componentDidMount() {
     this.contentRef.current.addEventListener('input', this.onInput);
-    this.contentRef.current.addEventListener('click', this.handleClick);
+    this.contentRef.current.addEventListener('click', this.onClick);
   }
 
   componentWillUnmount() {
     this.contentRef.current.removeEventListener('input', this.onInput);
-    this.contentRef.current.removeEventListener('click', this.handleClick);
+    this.contentRef.current.removeEventListener('click', this.onClick);
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -49,15 +49,19 @@ export class LenseEditor extends Component {
     }
   }
 
+  /* 
+  * Save the current cursor selection to restore it after processing input
+  */
   saveSelection = () => {
     let rangySelection = rangy.getSelection();
     if (rangySelection.rangeCount > 0) {
       let anchorParent = rangySelection.anchorNode.parentNode;
       let focusParent = rangySelection.focusNode.parentNode;
-      let offset = rangySelection.focusOffset; // TODO this should be anchorOffset
+      let offset = rangySelection.focusOffset; // TODO this should be anchorOffset but right now something reauires this mistake
 
-      let startChar = charIndex(anchorParent)
-      let endChar = anchorParent === focusParent ? startChar : charIndex(focusParent);
+      let startChar = charIndex(anchorParent) + rangySelection.anchorOffset;
+      let endChar = anchorParent === focusParent ? 
+        startChar : (charIndex(focusParent) + rangySelection.focusOffset);
 
       this.selection = {
         offset: offset,
@@ -70,13 +74,18 @@ export class LenseEditor extends Component {
         focus: rangySelection.focusNode,
         focusOffset: rangySelection.focusOffset,
 
-        // we use the above to calculate these helper variables, and will not always be present
-        // additionally they may not be up to date if accessed during an input event
-        delayedStartChar: startChar,
-        delayedEndChar: endChar 
+        // we use the above to calculate these helper variables
+        // they may not be up to date if accessed during an input event
+        // both indicies represent the 0 based index of the character that the cursor precedes
+        // but since the cursor is between characters, the startChar is the character that the cursor is before
+        // However, it is ambiguous from these two values alone whether the cursor is in the end of the span or the beginning of the next
+        startChar: startChar,
+        endChar: endChar
       };
+
       window.selection = this.selection; // for debugging
-      console.log("SAVING", this.selection);
+      console.log("start", rangySelection.anchorNode, rangySelection.anchorOffset, '->', startChar);
+      console.log("end",   rangySelection.focusNode,  rangySelection.focusOffset,  '->', endChar);
     }
     else {
       console.error('No selection');
@@ -144,7 +153,7 @@ export class LenseEditor extends Component {
     selection.addRange(range);
   };
 
-  handleClick = (event) => {
+  onClick = (event) => {
     // we don't use this after it gets saved but it is nice as a debug tool
     // we save directly in the handleInput
     this.saveSelection();
@@ -299,7 +308,7 @@ export class LenseEditor extends Component {
           c = this.splitSpan(child, c);
         }
       } else if (child.tagName === 'DIV') {
-        console.log('DIV splitting', child);
+        // console.log('DIV splitting', child);
       }
 
       i++;

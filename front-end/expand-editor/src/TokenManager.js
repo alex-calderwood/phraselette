@@ -51,17 +51,17 @@ export class TokenManager {
     // let newToken = {...token, text: newText};
     // this.pushUpdateToken(token.type, newToken);
     // get the token
-    let tokensAt = this.tokensAt(lense, selection.delayedStartChar, selection.delayedStartChar);
+    let tokensAt = this.tokensAt(lense, selection.startChar, selection.startChar);
     if (tokensAt.length !== 1) {
-      console.error("editToken called with", tokensAt.length, lense, "tokens at", selection.delayedStartChar);
+      console.error("editToken called with", tokensAt.length, lense, "tokens at", selection.startChar);
       return;
     }
 
     let token = tokensAt[0];
 
-    console.log('editing token', token, 'selection start',  selection.delayedStartChar, 'end', selection.delayedEndChar);
+    console.log('editing token', token, 'selection start',  selection.startChar, 'end', selection.endChar);
 
-    let cutIndex = selection.delayedEndChar - token.start;
+    let cutIndex = selection.endChar - token.start;
     let start = token.text.slice(0, cutIndex);
     let end = token.text.slice(cutIndex + 1);
     token.text = start + end;
