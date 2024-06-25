@@ -1,10 +1,14 @@
+import chroma from "chroma-js";
+const colorScale = chroma.scale(['white', 'green']).mode('lab');
+const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple']).mode('lab');
+const alpha = 0.3;
 
 export function getColor(lense, token) {
   let prob = token.prob || 0;
   if (lense === 'words') {
     return wordToColor(token.text)
   } else if (lense === 'basic') {
-    return probToColorExponential(prob);
+    return lengthNormedLogProbToColor(token);
   } else {
     return probToColor(prob);
   }
@@ -33,19 +37,23 @@ const wordToColor = (word) => {
   // Convert hash to a probability (0 to 1)
   let prob = hash / 255;
 
-  if (!prob || prob <= 0) {
-    return 'white';
-  }
-
-  let g = Math.floor(prob * 255);
-  return "rgba(" + 0 + ", " + g + ", " + 0 + ", " + prob + ")";
+  // rainbow scale
+  let hex = rainbowScale(prob).alpha(alpha).hex();
+  return hex;
 };
 
-const probToColorExponential = (prob) => {
-  // the probabilities are very small so lets make them more visible
-  if (!prob || prob <= 0) {
+const lengthNormedLogProbToColor = (token) => {
+  if (!token.text) {
+    console.log('no text for token', token);
     return 'white';
   }
-  let g = Math.min(Math.pow(prob, 1 / 3) * 255, 255);
-  return "rgba(" + 0 + ", " + 255 + ", 0, " + prob + ")";
+
+  let prob = Math.log10(token.prob + 1e-6); // avoid log(0)
+  let normalized = (prob + 6) / 6; // normalize to [0, 1] TODO don't understand this
+  normalized /= token.text.length || 1; // normalize by length
+
+  // let hex =  colorScale(normalized).hex();
+  let hex = colorScale(normalized).alpha(alpha).css();
+  console.log(normalized, hex)
+  return hex;
 };
