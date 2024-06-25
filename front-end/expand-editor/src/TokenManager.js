@@ -48,25 +48,36 @@ export class TokenManager {
   }
 
   editToken(lense, selection, event) {
-    // let newToken = {...token, text: newText};
-    // this.pushUpdateToken(token.type, newToken);
-    // get the token
-    let tokensAt = this.tokensAt(lense, selection.startChar, selection.startChar);
-    if (tokensAt.length !== 1) {
-      console.error("editToken called with", tokensAt.length, lense, "tokens at", selection.startChar);
+    if (event.data.length !== 1) {
+      console.error("editToken called with event.data.length", event.data.length, "not sure what to expect");
+    }
+
+    let startChar = selection.startChar - event.data.length; // because we added a token TODO we want to use the keydown
+
+    let tokensAt = this.tokensAt(lense, startChar)
+    console.log(tokensAt)
+
+    if (tokensAt.length === 0) {
+      // We may be at the end of the text
+      return;
+    }
+    if (tokensAt.length > 1) {
+      console.error("editToken called with", tokensAt.length, "tokens at", startChar);
       return;
     }
 
     let token = tokensAt[0];
-
-    console.log('editing token', token, 'selection start',  selection.startChar, 'end', selection.endChar);
-
-    let cutIndex = selection.endChar - token.start;
-    let start = token.text.slice(0, cutIndex);
-    let end = token.text.slice(cutIndex + 1);
+    let cutIndex = startChar - token.start;
+    let start = token.text.slice(0, cutIndex) + event.data;
+    let end = token.text.slice(cutIndex);
     token.text = start + end;
-    console.log('edited token', start + end, 'cutting at index', cutIndex,  start, end, );
-    // we also have to edit all the token spans afterwards
+    // shift all token indices after the edited token
+    let endOfLenseIndex = Math.max(this.lenses[lense].map(t => t.end)); // TODO O(n) could save this as we go
+    let tokensToShift = this.tokensAt(lense, token.end + 1, endOfLenseIndex);
+    for (let t of tokensToShift) {
+      t.start += event.data.length;
+      t.end += event.data.length;
+    } // TODO think about what happens when there is a tokenization going on 
   }
 
   /* 

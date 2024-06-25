@@ -26,7 +26,6 @@ export class LenseEditor extends Component {
     this.tokenManager = this.props.tokenManager;
     this.tokenManager.setOnToken(this.updateUITokens.bind(this));
     this.tokenManager.tokenize(originalText);
-    this.editorNode = this.contentRef.current;
   }
 
   updateUITokens(token) {
@@ -34,13 +33,16 @@ export class LenseEditor extends Component {
   }
 
   componentDidMount() {
-    this.contentRef.current.addEventListener('input', this.onInput);
-    this.contentRef.current.addEventListener('click', this.onClick);
+    this.editorNode = this.contentRef.current;
+    this.editorNode.addEventListener('input', this.onInput);
+    this.editorNode.addEventListener('click', this.onClick);
+    this.editorNode.addEventListener('keydown', this.beforeInput.bind(this));
   }
 
   componentWillUnmount() {
-    this.contentRef.current.removeEventListener('input', this.onInput);
-    this.contentRef.current.removeEventListener('click', this.onClick);
+    this.editorNode.removeEventListener('input', this.onInput);
+    this.editorNode.removeEventListener('click', this.onClick);
+    this.editorNode.removeEventListener('keydown', this.beforeInput);
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -84,8 +86,6 @@ export class LenseEditor extends Component {
       };
 
       window.selection = this.selection; // for debugging
-      console.log("start", rangySelection.anchorNode, rangySelection.anchorOffset, '->', startChar);
-      console.log("end",   rangySelection.focusNode,  rangySelection.focusOffset,  '->', endChar);
     }
     else {
       console.error('No selection');
@@ -157,11 +157,10 @@ export class LenseEditor extends Component {
     // we don't use this after it gets saved but it is nice as a debug tool
     // we save directly in the handleInput
     this.saveSelection();
+    console.log('click', this.selection);
 
     // show the sidebar if there is a selection of non-zero length
     this.props.setSelection(this.selection);
-
-    console.log('click', this.selection);
   };
 
   splitSpan(span, c) {
@@ -378,6 +377,8 @@ export class LenseEditor extends Component {
   updateTokens(newText, event) {
     let lense = this.tokenManager.currentLense;
     let tokens = this.tokenManager.lenses[lense];
+
+    console.log('updateTokens', { newText, tokens });
     
     switch (event.inputType) {
       case 'insertText':
@@ -409,6 +410,11 @@ export class LenseEditor extends Component {
 
   }
 
+  beforeInput(event) {
+    this.selectionBeforeInput = this.saveSelection();
+    console.log('before input', this.selectionBeforeInput);
+  }
+
   /*
     Bugs:
       TODO spaces aren't being saved correctly on firefox (works on Chrome)
@@ -418,12 +424,14 @@ export class LenseEditor extends Component {
     // Save the current selection to restore later after processing input
     this.saveSelection();
 
+    console.log(this.selection);
+
     // update the state text
     // let newText = this.contentRef.current.textContent.replace('&nbsp', ' '); // this loses \n TODO
     let newText = this.getTextWithWhitespace(this.contentRef.current, this.selection.nativeSelection);
     console.log('TEXT', { newText });
 
-    // this.updateTokens(newText, event); // TODO
+    this.updateTokens(newText, event); // TODO
 
     // pass the new text into the tokenizer to update its token list and associated character indices
     this.callTokenize(newText);
