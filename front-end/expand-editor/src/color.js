@@ -2,11 +2,11 @@ import chroma from "chroma-js";
 const colorScale = chroma.scale(['white', 'green']).mode('lab');
 const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple']).mode('lab');
 
-export function getColor(lense, token) {
+export function getColor(type, token) {
   let prob = token.prob || 0;
-  if (lense === 'words') {
+  if (type === 'words') {
     return wordToColor(token.text)
-  } else if (lense === 'basic') {
+  } else if (type === 'basic') {
     return lengthNormedLogProbToColor(token);
   } else {
     return probToColor(prob);

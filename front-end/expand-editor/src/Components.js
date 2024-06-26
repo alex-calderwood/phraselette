@@ -1,8 +1,8 @@
 import React, { Component } from "react";
 import { getColor } from "./color";
 
-function singular(lense) {
-  switch(lense) {
+function singular(token) {
+  switch(token) {
     case 'words':
       return 'word';
     case 'spacy':
@@ -18,13 +18,13 @@ export class LenseBar extends Component {
   }
 
   /* 
-   * When a user selects a new lense from the dropdown, update the state of the parent
+   * When a user selects a new token from the dropdown, update the state of the parent
   */
   handleChange(event) {
-    let lense = event.target.value;
+    let token = event.target.value;
 
     if (this.props.setCurrentLense)
-      this.props.setCurrentLense(lense);
+      this.props.setCurrentLense(token);
 
     if (this.props.attemptInitialTokenization)
       this.props.attemptInitialTokenization();
@@ -33,11 +33,11 @@ export class LenseBar extends Component {
   render() {
     return (
       <div className="lense-bar">
-        <label htmlFor="lenses">color by </label>
+        <label htmlFor="tokens">color by </label>
         {/* a dropdown with each lense type */}
         <select onChange={this.handleChange.bind(this)}>
-          {this.props.lenses.map((lense) => {
-            return <option key={lense} value={lense}>{lense}</option>;
+          {this.props.tokens.map((token) => {
+            return <option key={token} value={token}>{token}</option>;
           })}
         </select>
       </div>
@@ -57,14 +57,14 @@ export class TokenBar extends Component {
     // for now we want to always show it
     let hidden = "";
 
-    let lense = this.props.lense;
+    let type = this.props.type;
 
     let start = this.props.startChar;
     let end   = this.props.endChar;
 
     let tokens = [];
     if (start !== null) {
-      tokens = this.tokenManager.tokensAt(lense, start, end);
+      tokens = this.tokenManager.tokensAt(type, start, end);
     }
 
     // filter out ' ' and &nbsp;
@@ -79,11 +79,9 @@ export class TokenBar extends Component {
   }
 
     return (
-      <div className={`sidebar-container`}>
         <div className={`sidebar ${hidden}`}>
-          <div>
             {tokens && tokens.map((token) => {
-              let color = getColor(lense, token);
+              let color = getColor(type, token);
               let prob = scientific(token.prob);
               // return <div key={token.id} className="token" style={{backgroundColor: color}}>
               return <div key={token.id} className="token">
@@ -93,11 +91,8 @@ export class TokenBar extends Component {
                       <div className="item">{singular(token.type)}</div>
                     </div>;
             })}
-          </div>
-      </div>
       </div>
     );
   }
 }
-
 

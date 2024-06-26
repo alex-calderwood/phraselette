@@ -5,12 +5,12 @@ export class TokenManager {
   // tokenizationAttempts = 0;
 
   constructor(initialLense, tokens) {
-    this.lenses = {
+    this.tokens = {
       'basic': [],
       'words': [],
       'spacy': [],
     }; 
-    this.lenseInfo = { // TODO eventually should merge this with this.lenses
+    this.lenseInfo = { // TODO eventually should merge this with this.tokens
       'basic': {tokenizedRange: {}},
       'words': {tokenizedRange: {}},
       'spacy': {tokenizedRange: {}},
@@ -21,7 +21,7 @@ export class TokenManager {
   }
 
   setCurrentLense(lense) {
-    if (!this.lenses[lense]) {
+    if (!this.tokens[lense]) {
       console.error("No label of lense type", lense);
       return;
     }
@@ -120,11 +120,11 @@ export class TokenManager {
     }
 
     // delete the tokens that are empty and sort by start index
-    this.lenses[lense] = this.lenses[lense].filter(t => !tokensToDelete.includes(t.id)).sort((a, b) => a.start - b.start);
+    this.tokens[lense] = this.tokens[lense].filter(t => !tokensToDelete.includes(t.id)).sort((a, b) => a.start - b.start);
 
     // update the token indices
     let offset = 0;
-    for (let token of this.lenses[lense]) {
+    for (let token of this.tokens[lense]) {
       token.start = offset;
       token.end = offset + token.text.length - 1;
       offset = token.end + 1;
@@ -162,7 +162,7 @@ export class TokenManager {
     console.log('addedCharToToken', token, token.start, token.end)
 
     // shift all token indices after the edited token
-    this.shiftTokenSpans(token.end + 1, this.lenses[lense], event.data.length); // TODO think about what happens when there is a tokenization going on
+    this.shiftTokenSpans(token.end + 1, this.tokens[lense], event.data.length); // TODO think about what happens when there is a tokenization going on
   }
 
   shiftTokenSpans(fromChar, tokens, shiftAmount) {
@@ -191,7 +191,7 @@ export class TokenManager {
   */
   pushUpdateToken(lenseType, token) {
     // make a copy of the current lense
-    let newLense = this.lenses[lenseType].slice();
+    let newLense = this.tokens[lenseType].slice();
 
     // find all tokens that overlap at all
     let overlappingTokens = [];
@@ -218,7 +218,7 @@ export class TokenManager {
       newLense.push(token);
     }
     
-    this.lenses[lenseType] = newLense;
+    this.tokens[lenseType] = newLense;
   }
 
   /**
@@ -235,7 +235,7 @@ export class TokenManager {
       console.error('tokensAt called with', typeof start, typeof end);
     } 
 
-    let tokens = this.lenses[lense] || [];
+    let tokens = this.tokens[lense] || [];
 
     if (start > end) {
       let temp = start;
@@ -276,18 +276,18 @@ export class TokenManager {
     let tokens = [];
       data = {  ...data, onToken: this.internalOnToken.bind(this) };
       switch (this.currentLense) {
-      case 'words':
-        tokens = splitWordTokenize(text, data);
-        this.lenses.words = tokens; // TODO this is not currently using onToken
-        break;
-      case 'basic':
-        gpt2Tokenize(text, data);
-        break;
-      case 'spacy':
-        data = { ...data, onToken: this.internalOnToken.bind(this) };
-        spacyTokenize(text, data);
-        break;
-    }
+        case 'words':
+          tokens = splitWordTokenize(text, data);
+          this.tokens.words = tokens; // TODO this is not currently using onToken
+          break;
+        case 'basic':
+          gpt2Tokenize(text, data);
+          break;
+        case 'spacy':
+          data = { ...data, onToken: this.internalOnToken.bind(this) };
+          spacyTokenize(text, data);
+          break;
+      }
   }
 
   /* 

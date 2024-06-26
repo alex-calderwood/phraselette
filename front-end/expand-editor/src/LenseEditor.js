@@ -201,8 +201,8 @@ export class LenseEditor extends Component {
   * Apply our character style and create a character ID if there isn't one.
   *
   * <divs> <brs> and <spans> may all be considered characters.
-  * If it is a span, check to see if it should be colored by looking up all active lenses.
-  * (currently there is only one active lense)
+  * If it is a span, check to see if it should be colored by looking up all active tokens.
+  * (currently there is only one active token)
   * 
   * Also, set a unique character ID if it doesn't already exist for the span.
   */
@@ -342,13 +342,13 @@ export class LenseEditor extends Component {
   }
 
   /* 
-   * Split the text into individual tokens according to the tokenizatin strategy specified by the current lense.
+   * Split the text into individual tokens according to the tokenizatin strategy specified by the current token.
   */
   callTokenize(text, callDepth = 0) {
     console.log('callTokenize', text);
 
     if (this.tokenManager) {
-      let curTokens = this.tokenManager.lenses[this.tokenManager.currentLense];
+      let curTokens = this.tokenManager.tokens[this.tokenManager.currentLense];
 
       let tokenizeRange  = TokenManager.getRangeToTokenize(text, curTokens);
       let shouldTokenize = TokenManager.shouldTokenize(text, tokenizeRange, this.tokenManager.currentLense);

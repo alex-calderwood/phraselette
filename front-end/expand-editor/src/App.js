@@ -14,20 +14,26 @@ class App extends Component {
     let initialLense = 'basic'; // TODO this might get recreated every time the App is created
     this.tokenManager = new TokenManager(initialLense);
     window.tokenManager = this.tokenManager; // for debugging
-    let lenses = Object.keys(this.tokenManager.lenses)
+    let tokens = Object.keys(this.tokenManager.tokens)
     this.state = { 
-      activeLenses: ['basic', 'words'], // TODO for each active lense, should tokenize the text
+      activeLenses: [
+        { name: 'probability',  active: true,  dataType: 'number', constraints: []},
+        { name: 'POS',          active: false, dataType: 'string', constraints: []},
+        { name: 'embedding',    active: false, dataType: 'vector', constraints: []},
+        { name: 'basic',        active: false, dataType: 'string', constraints: []},
+        { name: 'critic' ,      active: false, dataType: 'string', constraints: []}
+      ], 
       currentLense: initialLense,
-      lenses: lenses,
+      tokens: tokens,
       selection: null,
       info: {},
      };
 
-    // current lense is words, create a setter to pass to the LenseBar where it will change it
-    this.setCurrentLense = (lense) => {
-      console.log('setting current lense to', lense);
-      this.tokenManager.setCurrentLense(lense);
-      this.setState({ currentLense: lense });
+    // current token is words, create a setter to pass to the LenseBar where it will change it
+    this.setCurrentToken = (token) => {
+      console.log('setting current lense to', token);
+      this.tokenManager.setCurrentLense(token); //TODO refactor name
+      this.setState({ currentLense: token });
     };
 
     this.setSelection = (selection) => {
@@ -45,8 +51,9 @@ class App extends Component {
     this.attemptInitialTokenization = () => {
       if (
         this.tokenManager 
-        && this.tokenManager.lenses
-        && this.tokenManager.lenses[this.state.currentLense].length > 0
+        && this.tokenManager.tokens
+        && this.tokenManager.tokens[this.state.currentLense].length > 0
+        && this.text
       ) {
         this.tokenManager.tokenize(this.text);
       }
@@ -60,33 +67,49 @@ class App extends Component {
     console.log('rendering with selection', startChar, endChar);
 
 
-
     return (
-      <div className="context-context">
-        <LenseBar lenses={this.state.lenses}
-          setCurrentLense={this.setCurrentLense}
+      <div className="context-container">
+        <LenseBar tokens={this.state.tokens}
+          setCurrentLense={this.setCurrentToken}
           attemptInitialTokenization={this.attemptInitialTokenization.bind(this)} />
-        <TokenBar tokenManager={this.tokenManager} 
-          lense={"words"} 
-          selection={this.state.selection} 
-          startChar={startChar} endChar={endChar}/>
-        <TokenBar tokenManager={this.tokenManager}
-          lense={"basic"} 
-          selection={this.state.selection} 
-          startChar={startChar} endChar={endChar}/>
-        <div className="editor-context">
-          <LenseEditor
-          tokenManager={this.tokenManager} 
-          lense={this.state.currentLense} 
-          setSelection={this.setSelection} 
-          setText={this.setText} />
+
+        <div className="editor-container">
+          <div className="left">
+            <LenseEditor
+            tokenManager={this.tokenManager} 
+            token={this.state.currentLense} 
+            setSelection={this.setSelection} 
+            setText={this.setText} />
+          </div>
+
+          <div className="right">
+
+            <div className="lenses"> 
+              Add a lense
+            </div>
+
+            <div className="lense-title">
+              selection
+            </div>
+
+            <div className={`sidebar-container`}>
+              <TokenBar tokenManager={this.tokenManager} 
+                type={"words"} 
+                selection={this.state.selection} 
+                startChar={startChar} endChar={endChar}/>
+              <TokenBar tokenManager={this.tokenManager}
+                type={"basic"} 
+                selection={this.state.selection} 
+                startChar={startChar} endChar={endChar}/>
+            </div>
+          </div>
         </div>
 
         {/* if errors put them in a div otherwise don't have one*/}
-        <div className="info">
+        {/* <div className="info">
           {this.state.info.error ? <div className="error">{this.state.info.error}</div> : null}
-        </div>
-      </div>
+        </div> */}
+      </div> 
 
 
     );
