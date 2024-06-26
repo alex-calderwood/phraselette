@@ -12,7 +12,7 @@ function singular(token) {
   }
 }
 
-export class LenseBar extends Component {
+export class HighlightBar extends Component {
   constructor(props) {
     super(props);
   }
@@ -45,6 +45,7 @@ export class LenseBar extends Component {
   }
 }
 
+
 export class TokenBar extends Component {
   constructor(props) {
     super(props);
@@ -52,7 +53,7 @@ export class TokenBar extends Component {
   }
 
   render() {
-    console.log('rendering TokenBar', this.props.selection, this.props.startChar, this.props.endChar);
+    console.log('rendering TokenBar', this.props.startChar, this.props.endChar);
     // let hidden = this.props.selection && this.props.selection.rangy.isCollapsed ? 'hidden' : "";
     // for now we want to always show it
     let hidden = "";
@@ -70,8 +71,6 @@ export class TokenBar extends Component {
     // filter out ' ' and &nbsp;
     let isSpace = (text) => { return text === ' ' || text === '\u00A0' };
     tokens = tokens.filter((token) => { return !isSpace(token.text) });
-
-    // sort by start
     tokens = tokens.sort((a, b) => { return a.start - b.start });
 
     function scientific(num) {
@@ -79,7 +78,7 @@ export class TokenBar extends Component {
     }
 
     return (
-        <div className={`sidebar ${hidden}`}>
+        <div id={'tokenbar' + type} className={`sidebar ${hidden}`}>
             {tokens && tokens.length > 0 ? <div className='title'> {type} tokens</div> : ''}
             {tokens && tokens.map((token) => {
               let color = getColor(type, token);

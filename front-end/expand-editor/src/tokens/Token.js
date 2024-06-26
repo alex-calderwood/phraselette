@@ -13,5 +13,4 @@ export class Token {
         // First, assign default values, then override with options if provided
         Object.assign(this, defaults, options);
     }
-
 }

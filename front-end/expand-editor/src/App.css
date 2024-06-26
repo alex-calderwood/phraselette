@@ -153,10 +153,33 @@ label {
   padding-right: 2px;
 }
 
+.info {
+  color:rgb(172, 172, 172);
+  font-size: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
 select {
   font-size: 14px;
   background-color: rgb(172, 172, 172);
   outline: none;
   margin-top: 10px;
   margin-bottom: 10px;
+}
+
+button {
+  font-size: 14px;
+  background-color: rgb(172, 172, 172);
+  border: none;
+  outline: none;
+}
+
+button:hover {
+  background-color: rgb(100, 100, 100);
+}
+
+.selectButoon {
+  margin-left: 4px;
+  margin-right: px;
 }

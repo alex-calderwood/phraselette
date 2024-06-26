@@ -1,9 +1,6 @@
 import { splitWordTokenize, gpt2Tokenize, spacyTokenize } from '../smarts.js';
 
-
 export class TokenManager {
-  // tokenizationAttempts = 0;
-
   constructor(initialLense, tokens) {
     this.tokens = {
       'basic': [],
@@ -15,7 +12,7 @@ export class TokenManager {
       'words': {tokenizedRange: {}},
       'spacy': {tokenizedRange: {}},
     }; 
-    this.currentLense = initialLense;
+    this.activeLenses = [initialLense];
     // this.lenseTokenIDtoIndex = { 'words': {} }; // token id to lenses array index
     this.externalOnToken = (token) => {}; // a callback to call when a token is created
   }
@@ -26,11 +23,15 @@ export class TokenManager {
       return;
     }
 
-    this.currentLense = lense;
+    this.activeLenses = [lense];
   }
 
   setOnToken(onToken) {
     this.externalOnToken = onToken;
+  }
+
+  getCurrentLense() { // TODO deprecate this
+    return this.activeLenses[0];
   }
 
   /*
@@ -52,36 +53,32 @@ export class TokenManager {
   * Logic to handle input events: synchornize the text in the tokenManager's various lenses
   * with the edits that were made by {event} to the text in the contenteditable div (which is already updated);
   */
-  synchronizeTokens(newText, selection, beforeEventSelection, event) {
-    let lense = this.currentLense;
-    // let tokens = this.lenses[lense];
-
-    console.log('recieved input', event.inputType);
-    
-    switch (event.inputType) {
-      case 'insertText':
-        this.addCharToToken(lense, selection, event);
-        break;
-      case 'deleteContentBackward':
-        this.removeCharsFromToken(lense, beforeEventSelection, event);
-        break;
-      case 'deleteContentForward':
-        console.error('deleteContentForward not implemented');
-        break;
-      case 'insertParagraph':
-        console.error('insertParagraph not implemented');
-        break;
-      case 'insertLineBreak':
-        console.error('insertLineBreak not implemented');
-        break;
-      case 'insertFromPaste':
-        console.error('insertFromPaste not implemented');
-        break;
-      default:
-        break;
+  synchronizeTokens(selection, beforeEventSelection, event) {
+    for (let lense of this.activeLenses) {
+      console.log('recieved input', event.inputType);
+      switch (event.inputType) {
+        case 'insertText':
+          this.addCharToToken(lense, selection, event);
+          break;
+        case 'deleteContentBackward':
+          this.removeCharsFromToken(lense, beforeEventSelection, event);
+          break;
+        case 'deleteContentForward':
+          console.error('deleteContentForward not implemented');
+          break;
+        case 'insertParagraph':
+          console.error('insertParagraph not implemented');
+          break;
+        case 'insertLineBreak':
+          console.error('insertLineBreak not implemented');
+          break;
+        case 'insertFromPaste':
+          console.error('insertFromPaste not implemented');
+          break;
+        default:
+          break;
+      }
     }
-
-    // console.log('synchronized', this.lenses[lense]);
   }
 
   removeCharsFromToken(lense, beforeSelection, event) {
@@ -275,7 +272,8 @@ export class TokenManager {
   tokenize(text, data = {}) {
     let tokens = [];
       data = {  ...data, onToken: this.internalOnToken.bind(this) };
-      switch (this.currentLense) {
+      for (let lense of this.activeLenses) {
+        switch (lense) {
         case 'words':
           tokens = splitWordTokenize(text, data);
           this.tokens.words = tokens; // TODO this is not currently using onToken
@@ -288,6 +286,7 @@ export class TokenManager {
           spacyTokenize(text, data);
           break;
       }
+    }
   }
 
   /* 

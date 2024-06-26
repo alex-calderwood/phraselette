@@ -214,7 +214,7 @@ export class LenseEditor extends Component {
     child.setAttribute('c', c);
     this.setIdIfNotPresent(child);
     if (child.tagName === 'SPAN') {
-      if (this.tokenManager.currentLense === 'words') {
+      if (this.tokenManager.getCurrentLense() === 'words') {
         this.colorCharacterByProb(child, c);
       }
     }
@@ -236,7 +236,7 @@ export class LenseEditor extends Component {
     let start = token.start;
     let end = token.end;
     let prob = token.prob;
-    let color = getColor(this.tokenManager.currentLense, token);
+    let color = getColor(this.tokenManager.getCurrentLense(), token);
     for (let i = start; i <= end; i++) { // [start, end] inclusive
       let span = document.querySelector(`span[c='${i}']`);
       if (span) {
@@ -251,11 +251,11 @@ export class LenseEditor extends Component {
     }
 
     if (this.tokenManager) {
-      let tokensAt = this.tokenManager.tokensAt(this.tokenManager.currentLense, c);
+      let tokensAt = this.tokenManager.tokensAt(this.tokenManager.getCurrentLense(), c);
       let color;
       if (tokensAt && tokensAt.length > 0) {
         let token = tokensAt[0];
-        color = getColor(this.tokenManager.currentLense, token);
+        color = getColor(this.tokenManager.getCurrentLense(), token);
       } else {
         color = getColor('words', {});
       }
@@ -348,10 +348,10 @@ export class LenseEditor extends Component {
     console.log('callTokenize', text);
 
     if (this.tokenManager) {
-      let curTokens = this.tokenManager.tokens[this.tokenManager.currentLense];
+      let curTokens = this.tokenManager.tokens[this.tokenManager.getCurrentLense()];
 
       let tokenizeRange  = TokenManager.getRangeToTokenize(text, curTokens);
-      let shouldTokenize = TokenManager.shouldTokenize(text, tokenizeRange, this.tokenManager.currentLense);
+      let shouldTokenize = TokenManager.shouldTokenize(text, tokenizeRange, this.tokenManager.getCurrentLense());
 
       // We keep track of the call depth because we want to check to see if there is more tokenization
       // to take care of after the user has finished typing (some requests may have been denied by the server
@@ -410,7 +410,7 @@ export class LenseEditor extends Component {
     let newText = this.getTextWithWhitespace(this.contentRef.current, this.selection.nativeSelection);
     console.log('TEXT', { newText });
 
-    this.tokenManager.synchronizeTokens(newText, this.selection, this.selectionBeforeInput, event);
+    this.tokenManager.synchronizeTokens(this.selection, this.selectionBeforeInput, event);
 
     // pass the new text into the tokenizer to update its token list and associated character indices
     this.callTokenize(newText);
