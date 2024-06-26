@@ -5,7 +5,7 @@ import React, { useCallback , useRef, Component } from "react";
 // a library for aing and restoring selections (cursor positions / ranges) in a document
 // it uses hidden elements to store the selection data
 import { TokenManager } from "./tokens/TokenManager";
-import { LenseBar, TokenBar } from "./components";
+import { LenseBar, TokenBar } from "./Components";
 import { LenseEditor } from "./LenseEditor";
 
 class App extends Component {
