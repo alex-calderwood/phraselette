@@ -92,6 +92,8 @@ we will need to select the text children of the editor */
   z-index: 2;
   width: 100%;
 
+  margin-bottom: 4px;
+
   overflow-x: scroll;
   overflow-y: hidden;
   white-space: nowrap;
@@ -136,6 +138,14 @@ we will need to select the text children of the editor */
 }
 
 label {
+  color:rgb(172, 172, 172);
+  font-size: 14px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding-right: 2px;
+}
+
+.title {
   color:rgb(172, 172, 172);
   font-size: 14px;
   margin-top: 10px;

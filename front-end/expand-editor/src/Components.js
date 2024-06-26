@@ -35,7 +35,7 @@ export class LenseBar extends Component {
       <div className="lense-bar">
         <label htmlFor="tokens">color by </label>
         {/* a dropdown with each lense type */}
-        <select onChange={this.handleChange.bind(this)}>
+        <select onChange={this.handleChange.bind(this)} id="tokens">
           {this.props.tokens.map((token) => {
             return <option key={token} value={token}>{token}</option>;
           })}
@@ -76,14 +76,14 @@ export class TokenBar extends Component {
 
     function scientific(num) {
       return (num !== 0 && (num < 1e-3 || num >= 1e+7)) ? num.toExponential(2) : num.toPrecision(3);
-  }
+    }
 
     return (
         <div className={`sidebar ${hidden}`}>
+            {tokens && tokens.length > 0 ? <div className='title'> {type} tokens</div> : ''}
             {tokens && tokens.map((token) => {
               let color = getColor(type, token);
               let prob = scientific(token.prob);
-              // return <div key={token.id} className="token" style={{backgroundColor: color}}>
               return <div key={token.id} className="token">
                       <div className="item heading">{token.text}</div>
                       <div className="item range">[{token.start}-{token.end}]</div>

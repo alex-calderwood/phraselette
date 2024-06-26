@@ -16,8 +16,10 @@ class App extends Component {
     window.tokenManager = this.tokenManager; // for debugging
     let tokens = Object.keys(this.tokenManager.tokens)
     this.state = { 
-      activeLenses: [
-        { name: 'probability',  active: true,  dataType: 'number', constraints: []},
+      possibleLenses: [
+        { name: 'words',        active: true,  dataType: 'string', constraints: []},
+        { name: 'basic',        active: true,  dataType: 'string', constraints: []},
+        { name: 'probability',  active: false, dataType: 'number', constraints: []},
         { name: 'POS',          active: false, dataType: 'string', constraints: []},
         { name: 'embedding',    active: false, dataType: 'vector', constraints: []},
         { name: 'basic',        active: false, dataType: 'string', constraints: []},
@@ -58,6 +60,23 @@ class App extends Component {
         this.tokenManager.tokenize(this.text);
       }
     }
+
+
+    this.handleAddLense = () => {
+      // const selectedLense = this.lenseSelect.value;
+      const selectedLense = document.getElementById('add_lense').value;
+      console.log('adding lense', selectedLense);
+      this.setState(prevState => {
+        const updatedLenses = prevState.possibleLenses.map(lense => {
+          if (lense.name === selectedLense) {
+            return { ...lense, active: true };
+          }
+          return lense;
+        });
+        return { possibleLenses: updatedLenses };
+      });
+    };
+
   }
 
   render() {
@@ -66,8 +85,9 @@ class App extends Component {
 
     console.log('rendering with selection', startChar, endChar);
 
-
+    let activeLenses = this.state.possibleLenses.filter((lense) => lense.active);
     return (
+
       <div className="context-container">
         <LenseBar tokens={this.state.tokens}
           setCurrentLense={this.setCurrentToken}
@@ -83,24 +103,37 @@ class App extends Component {
           </div>
 
           <div className="right">
-
             <div className="lenses"> 
-              Add a lense
-            </div>
-
-            <div className="lense-title">
-              selection
+              <label htmlFor="add_lense">add a lense</label>
+              <select id="add_lense">
+                {this.state.possibleLenses.map((lense) => {
+                  return <option key={lense.name} value={lense.name}>{lense.name}</option>;
+                })}
+              </select>
+              {/* button that sets the selected lense to active */}
+              <button onClick={this.handleAddLense.bind(this)}>add</button>
             </div>
 
             <div className={`sidebar-container`}>
-              <TokenBar tokenManager={this.tokenManager} 
+
+              {/* for each active lense */}
+              {activeLenses.map((lense) => {
+                return (
+                  <TokenBar tokenManager={this.tokenManager} 
+                    type={lense.name} 
+                    selection={this.state.selection} 
+                    startChar={startChar} endChar={endChar}/>
+                );
+              })}
+
+              {/* <TokenBar tokenManager={this.tokenManager} 
                 type={"words"} 
                 selection={this.state.selection} 
                 startChar={startChar} endChar={endChar}/>
               <TokenBar tokenManager={this.tokenManager}
                 type={"basic"} 
                 selection={this.state.selection} 
-                startChar={startChar} endChar={endChar}/>
+                startChar={startChar} endChar={endChar}/> */}
             </div>
           </div>
         </div>
