@@ -7,11 +7,6 @@ export class TokenManager {
       'words': [],
       'spacy': [],
     }; 
-    this.lenseInfo = { // TODO eventually should merge this with this.tokens
-      'basic': {tokenizedRange: {}},
-      'words': {tokenizedRange: {}},
-      'spacy': {tokenizedRange: {}},
-    }; 
     this.activeLenses = [initialLense];
     // this.lenseTokenIDtoIndex = { 'words': {} }; // token id to lenses array index
     this.externalOnToken = (token) => {}; // a callback to call when a token is created

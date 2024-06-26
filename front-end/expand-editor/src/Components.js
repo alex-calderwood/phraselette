@@ -46,7 +46,7 @@ export class HighlightBar extends Component {
 }
 
 
-export class TokenBar extends Component {
+export class TokenRange extends Component {
   constructor(props) {
     super(props);
     this.tokenManager = this.props.tokenManager;
