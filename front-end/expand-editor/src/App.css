@@ -105,6 +105,8 @@ we will need to select the text children of the editor */
 
 .token .heading {
   font-size: 14px;
+  /* font-weight: bold; */
+  text-align: center;
 }
 
 .hidden {

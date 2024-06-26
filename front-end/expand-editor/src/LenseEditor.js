@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import rangy from 'rangy';
 import { getUniqueUUID } from "./utils";
-import { TokenManager } from "./tokenManager";
+import { TokenManager } from "./tokens/TokenManager";
 import { getColor } from "./color";
 
 /* 
@@ -11,6 +11,12 @@ import { getColor } from "./color";
 function charIndex(span) {
   return parseInt(span.getAttribute('c'));
 }
+
+// Next steps
+// Click on a thing - bring up the words
+// bring up spacy
+// show alternate words
+// interface for showing new words
 
 export class LenseEditor extends Component {
   constructor(props) {
@@ -251,7 +257,7 @@ export class LenseEditor extends Component {
         let token = tokensAt[0];
         color = getColor(this.tokenManager.currentLense, token);
       } else {
-        color = getColor(this.tokenManager.currentLense, {});
+        color = getColor('words', {});
       }
       child.style.backgroundColor = color;
 
@@ -382,11 +388,11 @@ export class LenseEditor extends Component {
   }
 
   onClick = (event) => {
-    // this.selectionBeforeInput = this.currentSelection();
+    this.selectionBeforeInput = this.currentSelection();
 
     // show the sidebar if there is a selection of non-zero length
-    // this.props.setSelection(this.selectionBeforeInput);
-    // console.log('click', this.selectionBeforeInput);
+    this.props.setSelection(this.selectionBeforeInput);
+    console.log('click', this.selectionBeforeInput);
   };
 
   /*
@@ -407,7 +413,7 @@ export class LenseEditor extends Component {
     this.tokenManager.synchronizeTokens(newText, this.selection, this.selectionBeforeInput, event);
 
     // pass the new text into the tokenizer to update its token list and associated character indices
-    // this.callTokenize(newText);
+    this.callTokenize(newText);
 
     // give the new text to the parent
     if (this.props.setText) {

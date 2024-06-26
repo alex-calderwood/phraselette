@@ -1,7 +1,6 @@
 import chroma from "chroma-js";
 const colorScale = chroma.scale(['white', 'green']).mode('lab');
 const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple']).mode('lab');
-const alpha = 0.3;
 
 export function getColor(lense, token) {
   let prob = token.prob || 0;
@@ -24,6 +23,7 @@ const probToColor = (prob) => {
 };
 
 const wordToColor = (word) => {
+
   // Hash function to convert word to a number between 0 and 255
   if (!word) {
     return 'white';
@@ -38,6 +38,7 @@ const wordToColor = (word) => {
   let prob = hash / 255;
 
   // rainbow scale
+  const alpha = 0.3;
   let hex = rainbowScale(prob).alpha(alpha).hex();
   return hex;
 };
@@ -48,11 +49,11 @@ const lengthNormedLogProbToColor = (token) => {
     return 'white';
   }
 
-  let prob = Math.log10(token.prob + 1e-6); // avoid log(0)
+  let prob = Math.log10(token.prob + 1e-12); // avoid log(0)
   let normalized = (prob + 6) / 6; // normalize to [0, 1] TODO don't understand this
   normalized /= token.text.length || 1; // normalize by length
 
-  // let hex =  colorScale(normalized).hex();
+  let alpha = 0.5;
   let hex = colorScale(normalized).alpha(alpha).css();
   return hex;
 };

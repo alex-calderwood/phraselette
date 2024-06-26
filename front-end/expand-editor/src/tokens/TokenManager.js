@@ -1,4 +1,4 @@
-import { splitWordTokenize, gpt2Tokenize, spacyTokenize } from './smarts.js';
+import { splitWordTokenize, gpt2Tokenize, spacyTokenize } from '../smarts.js';
 
 
 export class TokenManager {
@@ -55,6 +55,8 @@ export class TokenManager {
   synchronizeTokens(newText, selection, beforeEventSelection, event) {
     let lense = this.currentLense;
     // let tokens = this.lenses[lense];
+
+    console.log('recieved input', event.inputType);
     
     switch (event.inputType) {
       case 'insertText':
@@ -79,7 +81,7 @@ export class TokenManager {
         break;
     }
 
-    console.log('synchronized', this.lenses[lense]);
+    // console.log('synchronized', this.lenses[lense]);
   }
 
   removeCharsFromToken(lense, beforeSelection, event) {

@@ -1,10 +1,8 @@
+import { Token } from "./tokens/Token.js";
+
 // Something unlikely to be seen, must match the tokenization in the backend (server.py)
 const breakToken = "&&VE*A=]";
 
-let curTokenID = 0;
-function createTokenID() {
-  return curTokenID++;
-}
 
 function badData(text) {
   if (!text || text.length === 0) {
@@ -34,15 +32,14 @@ export async function spacyTokenize(text, data = {}) {
   let rawTokenPromise = await tokenGenerator.next();
   while (!rawTokenPromise.done) {
     let rawToken = rawTokenPromise.value;
-    let token = {
+    let token = new Token({
       'start': rawToken.span[0],
       // rawToken.span[1] is exclusive, our start and end is inclusive
       'end': rawToken.span[1] - 1,
       "text": rawToken.token,
       "type": "spacy",
-      "id": createTokenID(),
       "prob": 0,
-    }
+    });
     if (onToken) {
       onToken(token);
     }
@@ -63,15 +60,14 @@ export async function gpt2Tokenize(text, data = {}) {
   let rawTokenPromise = await tokenGenerator.next();
   while (!rawTokenPromise.done) {
     let rawToken = rawTokenPromise.value;
-    let token = {
+    let token = new Token({
       'start': rawToken.span[0],
       // rawToken.span[1] is exclusive, our start and end is inclusive
       'end': rawToken.span[1] - 1,
       "text": rawToken.token,
       "type": "basic",
-      "id": createTokenID(),
       "prob": rawToken.prob,
-    }
+    })
     if (onToken) {
       onToken(token);
     }
@@ -95,14 +91,13 @@ export function splitWordTokenize(text, data = {}) {
     curToken += c;
     if (c.match(/\s+/g) || i === text.length - 1) {
       let nextProb = Math.random();
-      tokens.push({
+      tokens.push(new Token({
         'start': tokenStart,
         'end': i,
         "text": curToken,
         "type": type,
-        "id": createTokenID(),
         "prob": nextProb,
-      });
+      }));
       curToken = "";
       tokenStart = i + 1;
 

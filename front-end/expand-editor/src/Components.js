@@ -1,4 +1,5 @@
 import React, { Component } from "react";
+import { getColor } from "./color";
 
 function singular(lense) {
   switch(lense) {
@@ -51,7 +52,7 @@ export class TokenBar extends Component {
   }
 
   render() {
-    // TODO we shouldn't actually use startChar / encChar because if you select one character it still should show something
+    console.log('rendering TokenBar', this.props.selection, this.props.startChar, this.props.endChar);
     // let hidden = this.props.selection && this.props.selection.rangy.isCollapsed ? 'hidden' : "";
     // for now we want to always show it
     let hidden = "";
@@ -73,17 +74,22 @@ export class TokenBar extends Component {
     // sort by start
     tokens = tokens.sort((a, b) => { return a.start - b.start });
 
+    function scientific(num) {
+      return (num !== 0 && (num < 1e-3 || num >= 1e+7)) ? num.toExponential(2) : num.toPrecision(3);
+  }
+
     return (
       <div className={`sidebar-container`}>
         <div className={`sidebar ${hidden}`}>
-          {/* for each token show a little thing */}
           <div>
             {tokens && tokens.map((token) => {
+              let color = getColor(lense, token);
+              let prob = scientific(token.prob);
+              // return <div key={token.id} className="token" style={{backgroundColor: color}}>
               return <div key={token.id} className="token">
-                      {/* {JSON.stringify(token)} */}
                       <div className="item heading">{token.text}</div>
                       <div className="item range">[{token.start}-{token.end}]</div>
-                      <div className="item">{token.prob.toPrecision(3)}</div>
+                      {token.type !== 'words' && <div className="item" style={{backgroundColor: color}}>{prob}</div>}
                       <div className="item">{singular(token.type)}</div>
                     </div>;
             })}

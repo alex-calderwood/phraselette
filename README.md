@@ -10,6 +10,7 @@ I recommend you create a new python environment because this uses transformers, 
     pip install -r requirements.txt
     python -m spacy download en_core_web_sm
     export FLASK_APP="server.py"
+    
     flask run
 
 # Start the Front End
