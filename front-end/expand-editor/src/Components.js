@@ -7,7 +7,7 @@ function singular(token) {
       return 'word';
     case 'spacy':
       return 'extraction';
-    case 'basic':
+    case 'probability':
       return 'token';
   }
 }
@@ -18,23 +18,23 @@ export class HighlightBar extends Component {
   }
 
   /* 
-   * When a user selects a new token from the dropdown, update the state of the parent
+   * When a user selects a new token from the dropdown, update the state of the Component's parent.
   */
   handleChange(event) {
     let token = event.target.value;
 
     if (this.props.setCurrentLense)
-      this.props.setCurrentLense(token);
+      this.props.setCurrentLense(token);        // trigger an update in the parent component
 
     if (this.props.attemptInitialTokenization)
-      this.props.attemptInitialTokenization();
+      this.props.attemptInitialTokenization();  // another update, run the tokenizer on the initial currently activated Highlights
   }
 
   render() {
     return (
       <div className="lense-bar">
         <label htmlFor="tokens">color by </label>
-        {/* a dropdown with each lense type */}
+        {/* a dropdown with each prism type */}
         <select onChange={this.handleChange.bind(this)} id="tokens">
           {this.props.tokens.map((token) => {
             return <option key={token} value={token}>{token}</option>;

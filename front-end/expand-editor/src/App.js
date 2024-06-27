@@ -6,30 +6,49 @@ import React, { useCallback , useRef, Component } from "react";
 // it uses hidden elements to store the selection data
 import { TokenManager } from "./tokens/TokenManager";
 import { HighlightBar } from "./Components";
-import { PrismComponent, Prism} from "./Lens";
+import { PrismComponent, Prism} from "./Prism";
 import { LenseEditor } from "./LenseEditor";
+                                     
+//         _-_.
+//      _-',^. `-_.
+//  ._-' ,'   `.   `-_ 
+// !`-_._________`-':::
+// !   /\        /\::::
+// ;  /  \      /..\:::
+// ! /    \    /....\::
+// !/      \  /......\:
+// ;--.___. \/_.__.--;; 
+//  '-_    `:!;;;;;;;'
+//     `-_, :!;;;''
+//         `-!'         mn
+
 
 class App extends Component {
   constructor(props) {
+
+    let prisms = {
+      'words':        new Prism('words',       'category').setActive(true),                                                      
+      'probability':  new Prism('probability', 'number').setActive(false),                                                         
+      'POS':          new Prism('POS',         'string'),                                                                             
+      'embedding':    new Prism('embedding',   'vector'),                                                                       
+      'critic':       new Prism('critic',      'string'),                                                                          
+    }
+
     super(props);
-    let initialLense = 'basic'; // TODO this might get recreated every time the App is created
+    let initialLense = 'probability';
     this.tokenManager = new TokenManager(initialLense);
     window.tokenManager = this.tokenManager; // for debugging
     this.text = null;
     this.state = {
-      prisms: {
-        'words':        new Prism('words', 'string').setActive(true),
-        'basic':        new Prism('basic', 'string').setActive(true),
-        'probability':  new Prism('probability', 'number'),
-        'POS':          new Prism('POS', 'string'),
-        'embedding':    new Prism('embedding', 'vector'),
-        'critic':       new Prism('critic', 'string'),
-      },
-      currentLense: initialLense, // TODO turn this into active lenses.... (deprecate)
+      prisms: prisms,
+      currentLense: initialLense, // TODO deprecate
+      activeLenses: Prism.getActive(prisms),
       tokens: Object.keys(this.tokenManager.tokens),
       selection: null,
       info: {},
      };
+     window.state = this.state; // for debugging
+     console.log('new app state', this.state);
   }
 
   // current token is words, create a setter to pass to the LensBar where it will change it
@@ -38,7 +57,6 @@ class App extends Component {
     this.tokenManager.setCurrentLense(token); //TODO refactor name
     this.setState({ currentLense: token });
   }
-
 
   setSelection(selection) {
     this.setState({ selection: selection });
@@ -67,26 +85,23 @@ class App extends Component {
     // const selectedLense = this.lenseSelect.value;
     const selectedLense = document.getElementById('add-lense').value;
     console.log('adding lense', selectedLense);
-    this.setState(prevState => {
-      const updatedLenses = prevState.possibleLenses.map(lense => {
-        if (lense.name === selectedLense) {
-          return { ...lense, active: true };
-        }
-        return lense;
-      });
-      return { possibleLenses: updatedLenses };
-    });
+
+    // call Prism.setActive on the selected lense
+    let prisms = this.state.prisms;
+    prisms[selectedLense].setActive(true);
+
+    // update the state
+    this.setState({ activeLenses: Prism.getActive(prisms) });
   }
 
   render() {
     let startChar = this.state.selection ? this.state.selection.startChar : null;
     let endChar   = this.state.selection ? this.state.selection.endChar : null;
 
-    console.log('rendering with selection', startChar, endChar);
+    console.log('rendering app with prism', this.state.prisms);
 
     let activeLenses = Object.entries(this.state.prisms).filter(([key, prism]) => prism.active).map(([key, prism]) => prism);
-    
-
+    window.activeLenses = activeLenses; // for debugging
     return (
 
       <div className="context-container">
@@ -113,21 +128,21 @@ class App extends Component {
               <button className="selectButoon" onClick={this.handleAddLense.bind(this)}>add</button>
               <div id="selected" className="info">
                 <span >active: </span>
-                {activeLenses.map((lense) => {
-                  return <span key={lense.name}>{lense.name} </span>;
+                {activeLenses.map((prism) => {
+                  return <span key={prism.name}>{prism.name} </span>;
                 })}
               </div>
             </div>
 
             <div className={`sidebar-container`}>
-              {activeLenses.map((lense) => {
+              {activeLenses.map((prism) => {
+                console.log('prism for sidebar', prism);
+
                 return (
                   <PrismComponent 
-                    key={lense.name}
+                    key={prism.name}
                     tokenManager={this.tokenManager} 
-                    doHighlight={lense.active} // TODO fix this, something to do with state?
-                    toggleHighlight={lense.setActive.bind(lense, !lense.active)}
-                    type={lense.name}
+                    prism={prism}
                     selection={this.state.selection} 
                     startChar={startChar} endChar={endChar} />
                 );

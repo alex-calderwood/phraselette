@@ -3,7 +3,7 @@ import { splitWordTokenize, gpt2Tokenize, spacyTokenize } from '../smarts.js';
 export class TokenManager {
   constructor(initialLense, tokens) {
     this.tokens = {
-      'basic': [],
+      'probability': [],
       'words': [],
       'spacy': [],
     }; 
@@ -273,7 +273,7 @@ export class TokenManager {
           tokens = splitWordTokenize(text, data);
           this.tokens.words = tokens; // TODO this is not currently using onToken
           break;
-        case 'basic':
+        case 'probability':
           gpt2Tokenize(text, data);
           break;
         case 'spacy':

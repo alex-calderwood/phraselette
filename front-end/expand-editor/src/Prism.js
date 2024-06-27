@@ -6,6 +6,7 @@ export class Prism {
     this.name = name;
     this.dataType = dataType;
     this.active = false;
+    this.doHighlight = false;
     this.activeConstraints = [];
   }
 
@@ -13,6 +14,17 @@ export class Prism {
     this.active = value;
     console.log('setting active to', value);
     return this;
+  }
+
+  setDoHighlight(value) {
+    this.doHighlight = value;
+    return this;
+  }
+
+  static getActive(prisms) {
+    return Object.keys(prisms).filter((key) => {
+      return prisms[key].active;
+    });
   }
 }
 
@@ -38,9 +50,10 @@ class ConstraintWindow extends Component {
 export class PrismComponent extends Component {
   constructor(props) {
     super(props);
+    console.log('prism props', props);
     this.tokenManager = this.props.tokenManager;
-    // this.constraints = [];
     this.state = {
+      doHighlight: this.props.prism.doHighlight,
       constraints: []
     }
   }
@@ -52,10 +65,15 @@ export class PrismComponent extends Component {
   }
 
   toggleHighlight() {
-    this.props.toggleHighlight();
+    console.log('toggling highlight', this.props.prism.name, this.props.prism.doHighlight)
+    this.props.prism.setDoHighlight(!this.props.prism.doHighlight);
+    this.setState({ doHighlight: this.props.prism.doHighlight });
+    console.log('toggling highlight', this.props.prism.name, this.props.prism.doHighlight)
+
   }
 
   render() {
+    console.log('rendering prism', this.props.prism.name, 'active', this.props.prism.active, 'doHighlight', this.props.prism.doHighlight);
     return <div> 
         <TokenRange tokenManager={this.tokenManager} 
         type={this.props.type}
@@ -68,8 +86,8 @@ export class PrismComponent extends Component {
           })}
         </div>
         <div className="highlight">
-          <label htmlFor={`highlight` + this.props.type}>highlight</label>
-          <input type="checkbox" id={`highlight` + this.props.type} name="highlight" value={this.props.doHighlight} onChange={this.toggleHighlight.bind(this)}/>
+          <label htmlFor={`highlight` + this.props.prism.name}>highlight</label>
+          <input type="checkbox" id={`highlight` + this.props.prism.name} name="highlight" checked={this.state.doHighlight} onChange={this.toggleHighlight.bind(this)}/>
         </div>
       </div>
   }

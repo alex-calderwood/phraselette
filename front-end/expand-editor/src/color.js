@@ -6,7 +6,7 @@ export function getColor(type, token) {
   let prob = token.prob || 0;
   if (type === 'words') {
     return wordToColor(token.text)
-  } else if (type === 'basic') {
+  } else if (type === 'probability') {
     return lengthNormedLogProbToColor(token);
   } else {
     return probToColor(prob);

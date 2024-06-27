@@ -65,7 +65,7 @@ export async function gpt2Tokenize(text, data = {}) {
       // rawToken.span[1] is exclusive, our start and end is inclusive
       'end': rawToken.span[1] - 1,
       "text": rawToken.token,
-      "type": "basic",
+      "type": 'probability',
       "prob": rawToken.prob,
     })
     if (onToken) {
