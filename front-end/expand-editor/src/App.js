@@ -27,7 +27,7 @@ class App extends Component {
   constructor(props) {
 
     let prisms = {
-      'words':        new Prism('words',       'string').setActive(true).setDoHighlight(false),                                                      
+      'words':        new Prism('words',       'string').setActive(false).setDoHighlight(false),                                                      
       'probability':  new Prism('probability', 'number'  ).setActive(true).setDoHighlight(true),                                                         
       'POS':          new Prism('POS',         'string'  ),                                                                             
       'embedding':    new Prism('embedding',   'vector'  ),                                                                       
@@ -73,6 +73,7 @@ class App extends Component {
   }
 
   attemptInitialTokenization() { // TODO this should go somewhere else
+    console.log('attempting initial tokenization', this.text, this.tokenManager);
     if (this.tokenManager && this.text) {
       this.tokenManager.tokenize(this.text);
     }
@@ -89,12 +90,19 @@ class App extends Component {
     
     // update the state
     this.setState({ activeLenses: Prism.getActive(prisms) });
+
+    // update the tokenManager
+    this.tokenManager.setActiveLense(selectedLense, true);
+
+    // tokenize the text with the new lense
+    this.attemptInitialTokenization();
   }
 
   render() {
     let startChar = this.state.selection ? this.state.selection.startChar : null;
     let endChar   = this.state.selection ? this.state.selection.endChar : null;
-    
+    let selectionText = this.state.selection ? this.state.selection.text : null;
+
     console.log('rendering app with prism', this.state.prisms);
 
     let activeLenses = Object.entries(this.state.prisms).filter(([key, prism]) => prism.active).map(([key, prism]) => prism);
@@ -131,10 +139,11 @@ class App extends Component {
               </span>
             </div>
 
-            <div className={`sidebar-container`}>
-              {activeLenses.map((prism) => {
-                console.log('prism for sidebar', prism);
+            <div className={`prism-inspector`}>
 
+              {selectionText && selectionText.length > 0 ? <div class="selection-text">"{selectionText}"</div> : ""}
+              
+              {activeLenses.map((prism) => {
                 return (
                   <PrismComponent 
                     key={prism.name}

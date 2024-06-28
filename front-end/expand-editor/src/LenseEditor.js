@@ -32,6 +32,10 @@ export class LenseEditor extends Component {
     this.tokenManager = this.props.tokenManager;
     this.tokenManager.setOnToken(this.updateUITokens.bind(this));
     this.tokenManager.tokenize(originalText);
+
+    if (this.props.setText) {
+      this.props.setText(originalText); // give the new text to the parent
+    }
   }
 
   updateUITokens(token) {
@@ -89,7 +93,10 @@ export class LenseEditor extends Component {
         // but since the cursor is between characters, the startChar is the character that the cursor is before
         // However, it is ambiguous from these two values alone whether the cursor is in the end of the span or the beginning of the next
         startChar: startChar,
-        endChar: endChar
+        endChar: endChar,
+
+        // the text that is selected
+        text: rangySelection.toString(),
       };
 
       return selection;
@@ -345,8 +352,6 @@ export class LenseEditor extends Component {
    * Split the text into individual tokens according to the tokenizatin strategy specified by the current token.
   */
   callTokenize(text, callDepth = 0) {
-    console.log('callTokenize', text);
-
     if (this.tokenManager) {
       let curTokens = this.tokenManager.tokens[this.tokenManager.getCurrentLense()];
 

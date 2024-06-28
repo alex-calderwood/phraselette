@@ -51,12 +51,15 @@ export class PrismComponent extends Component {
     this.props.prism.setDoHighlight(!this.props.prism.shouldHighlight);
     this.setState({ shouldHighlight: this.props.prism.shouldHighlight });
     console.log('toggling highlight', this.props.prism.name, this.props.prism.shouldHighlight)
+
+    // tell the parent that the highlight has changed
+    if (this.props.onHighlightChange) { // TODO this
+      this.props.onHighlightChange(this.props.prism.name, this.props.prism.shouldHighlight);
+    }
   }
 
   render() {
     let prism = this.props.prism;
-    console.log('rendering prism', this.props.prism.name, 'active', this.props.prism.active, 'shouldHighlight', this.props.prism.shouldHighlight);
-    
     let start = this.props.startChar;
     let end   = this.props.endChar;
 
@@ -66,7 +69,6 @@ export class PrismComponent extends Component {
     if (start !== null) {
       tokens = this.tokenManager.tokensAt(prism.name, start, end);
     }
-
 
     let hidden = prism.active && tokens.length > 0 ? '' : 'hidden';
 

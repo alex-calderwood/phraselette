@@ -273,7 +273,7 @@ export class TokenManager {
     *   
   */
   tokenize(text, data = {}) {
-    console.log(this.activeLenseNames, 'active lenses')
+    console.log('tokenizing active lenses', this.activeLenseNames)
     let tokens = [];
       data = {  ...data, onToken: this.internalOnToken.bind(this) };
       for (let lense of this.activeLenseNames) {
