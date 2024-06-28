@@ -53,13 +53,6 @@ class App extends Component {
 
   }
 
-  // // current token is words, create a setter to pass to the LensBar where it will change it
-  // setCurrentToken(lenseName) {
-  //   console.log('setting current lense to', lenseName);
-  //   this.tokenManager.setActiveLense(lenseName); //TODO refactor name
-  //   this.setState({ currentLense: lenseName });
-  // }
-
   setSelection(selection) {
     this.setState({ selection: selection });
   }
@@ -98,6 +91,24 @@ class App extends Component {
     this.attemptInitialTokenization();
   }
 
+  onHighlightChange(prismName, shouldHighlight) {
+    console.log('App highlight change', prismName, shouldHighlight);
+    let prisms = this.state.prisms;
+    prisms[prismName].setDoHighlight(shouldHighlight);
+    this.setState({ prisms: prisms });
+
+    // for now, we only allow one highlighted lense, so we need to uncheck all the other ones
+    let activeLenses = Prism.getActive(prisms);
+    for (let lense of activeLenses) {
+      if (lense !== prismName) {
+        prisms[lense].setDoHighlight(false);
+      }
+      console.log('after setting do highlight', lense, prisms[lense].shouldHighlight);
+    }
+
+    this.tokenManager.setActiveLense(prismName, true);
+  }
+
   render() {
     let startChar = this.state.selection ? this.state.selection.startChar : null;
     let endChar   = this.state.selection ? this.state.selection.endChar : null;
@@ -108,7 +119,6 @@ class App extends Component {
     let activeLenses = Object.entries(this.state.prisms).filter(([key, prism]) => prism.active).map(([key, prism]) => prism);
     window.activeLenses = activeLenses; // for debugging
     return (
-
       <div className="context-container">
         {/* <HighlightBar tokens={this.state.tokens}
           setCurrentLense={this.setCurrentToken.bind(this)}
@@ -141,7 +151,7 @@ class App extends Component {
 
             <div className={`prism-inspector`}>
 
-              {selectionText && selectionText.length > 0 ? <div class="selection-text">"{selectionText}"</div> : ""}
+              {selectionText && selectionText.length > 0 ? <div className="selection-text">"{selectionText}"</div> : ""}
               
               {activeLenses.map((prism) => {
                 return (
@@ -150,7 +160,9 @@ class App extends Component {
                     tokenManager={this.tokenManager} 
                     prism={prism}
                     selection={this.state.selection} 
-                    startChar={startChar} endChar={endChar} />
+                    startChar={startChar} endChar={endChar} 
+                    shouldHighlight={prism.shouldHighlight}
+                    onHighlightChange={this.onHighlightChange.bind(this)} />
                 );
               })}
             </div>

@@ -33,13 +33,17 @@ export class LenseEditor extends Component {
     this.tokenManager.setOnToken(this.updateUITokens.bind(this));
     this.tokenManager.tokenize(originalText);
 
+    // this.lenseToHighlight = 'probability';
+
     if (this.props.setText) {
       this.props.setText(originalText); // give the new text to the parent
     }
   }
 
   updateUITokens(token) {
-    this.colorTokenByProb(token);
+    if (this.tokenManager.getCurrentLense() === token.type) {
+      this.colorTokenByProb(token);
+    }
   }
 
   componentDidMount() {

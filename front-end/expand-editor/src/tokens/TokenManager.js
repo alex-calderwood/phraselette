@@ -9,6 +9,7 @@ export class TokenManager {
     }; 
     this.activeLenseNames = activeLenses; // which lenses are currently active
     this.externalOnToken = (token) => {}; // a callback to call when a token is created
+    this.currentLense = activeLenses[0]; // the current lense that is being tokenized
   }
 
   /* 
@@ -25,6 +26,8 @@ export class TokenManager {
     if (!active && this.activeLenseNames.includes(lense)) {
       this.activeLenseNames = this.activeLenseNames.filter(l => l !== lense);
     }
+
+    this.currentLense = lense;
   }
 
   setOnToken(onToken) {
@@ -34,7 +37,9 @@ export class TokenManager {
   getCurrentLense() { // TODO deprecate this
     // console.log('active lense names', this.activeLenseNames);
     // return this.activeLenseNames[0];
-    return 'probability';
+    // return 'probability';
+
+    return this.currentLense;
   }
 
   /*
@@ -58,7 +63,6 @@ export class TokenManager {
   */
   synchronizeTokens(selection, beforeEventSelection, event) {
     for (let lense of this.activeLenseNames) {
-      console.log('recieved input', event.inputType);
       switch (event.inputType) {
         case 'insertText':
           this.addCharToToken(lense, selection, event);
@@ -93,11 +97,7 @@ export class TokenManager {
       totalShift = 1;
     }
 
-    console.log('removeCharFromToken', {lense, selection: beforeSelection, startChar: startCharIndex, endChar: endCharIndex, totalShift});
-
     let selectedTokens = this.tokensAt(lense, startCharIndex, endCharIndex - 1);
-
-    console.log('tokens', {tokensAt: selectedTokens, totalShift});
 
     if (selectedTokens.length === 0) {
       console.error("removeCharsFromToken called with no tokens at", startCharIndex);
@@ -169,7 +169,6 @@ export class TokenManager {
     if (shiftAmount === 0 || tokens.length === 0) {
       return;
     }
-
 
     // tokens aren't necessarily in order
     let endOfLenseChar = Math.max(...tokens.map(t => t.end));

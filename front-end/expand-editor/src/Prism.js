@@ -34,36 +34,36 @@ export class PrismComponent extends Component {
     super(props);
     console.log('prism props', props);
     this.tokenManager = this.props.tokenManager;
+    this.prism = this.props.prism;
+    this.shouldHighlight = this.props.shouldHighlight; // passed in as a prop to trigger changes correctly
     this.state = {
-      shouldHighlight: this.props.prism.shouldHighlight,
       constraints: [],
     }
   }
 
   handleAddConstraint() {
     this.setState({ 
-      constraints: this.state.constraints.concat([new Constraint('constraint', this.props.prism.dataType)]) 
+      constraints: this.state.constraints.concat([new Constraint('constraint', this.prism.dataType)]) 
     });
   }
 
   toggleHighlight() {
-    console.log('toggling highlight', this.props.prism.name, this.props.prism.shouldHighlight)
-    this.props.prism.setDoHighlight(!this.props.prism.shouldHighlight);
-    this.setState({ shouldHighlight: this.props.prism.shouldHighlight });
-    console.log('toggling highlight', this.props.prism.name, this.props.prism.shouldHighlight)
+    console.log('toggling highlight state start:', this.prism.name, this.prism.shouldHighlight)
 
-    // tell the parent that the highlight has changed
-    if (this.props.onHighlightChange) { // TODO this
-      this.props.onHighlightChange(this.props.prism.name, this.props.prism.shouldHighlight);
+    this.setState({ shouldHighlight: !this.prism.shouldHighlight });
+
+    // tell the parent that the highlight has changed, which will update the prism.shouldHighlight
+    if (this.props.onHighlightChange) {
+      this.props.onHighlightChange(this.prism.name, !this.prism.shouldHighlight);
     }
+    console.log('toggling highlight state end:', this.prism.name, this.prism.shouldHighlight);
+
   }
 
   render() {
-    let prism = this.props.prism;
+    let prism = this.prism;
     let start = this.props.startChar;
     let end   = this.props.endChar;
-
-    console.log('prism start end', start, end);
 
     let tokens = [];
     if (start !== null) {
@@ -80,7 +80,7 @@ export class PrismComponent extends Component {
           <span>{prism.name} tokens </span>
           
           <span className="highlight">
-            <input type="checkbox" id={`highlight` + prism.name} name="highlight" checked={this.state.shouldHighlight} onChange={this.toggleHighlight.bind(this)}/>
+            <input type="checkbox" id={`highlight` + prism.name} name="highlight" checked={this.props.shouldHighlight} onChange={this.toggleHighlight.bind(this)}/>
             <label htmlFor={`highlight` + prism.name}>highlight</label>
           </span>
         </div>
