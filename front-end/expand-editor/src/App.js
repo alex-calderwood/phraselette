@@ -9,7 +9,7 @@ import { HighlightBar } from "./TokenRange";
 import { PrismComponent, Prism} from "./Prism";
 import { LenseEditor } from "./LenseEditor";
 
-const initialLense = 'probability';
+const initialLense = 'spacy';
                                      
 //         _-_.
 //      _-',^. `-_.
@@ -29,11 +29,12 @@ class App extends Component {
   constructor(props) {
 
     let prisms = {
-      'words':        new Prism('words',       'string').setActive(false).setDoHighlight(false),                                                      
-      'probability':  new Prism('probability', 'number'  ).setActive(true).setDoHighlight(true),                                                         
-      'POS':          new Prism('POS',         'string'  ),                                                                             
-      'embedding':    new Prism('embedding',   'vector'  ),                                                                       
-      'critic':       new Prism('critic',      'string'  ),                                                                          
+      'words':        new Prism('words',       'string').setActive(false),                                                      
+      'probability':  new Prism('probability', 'number').setActive(false).setDoHighlight(false),                                                         
+      'POS':          new Prism('POS',         'string'),                                                                             
+      'embedding':    new Prism('embedding',   'vector'),                                                                       
+      'critic':       new Prism('critic',      'string'),       
+      'spacy':        new Prism('spacy',       'string').setActive(false).setDoHighlight(false),                                                                   
     }
 
     super(props);

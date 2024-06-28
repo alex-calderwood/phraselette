@@ -6,20 +6,10 @@ nlp = spacy.load("en_core_web_sm")
 # something unlikely to be seen, must match the client (in smarts.js)
 BREAK_TOKEN = "&&VE*A=]"
 
-def parse(text, extra_context = ''):
-    # Process the text
-    doc = nlp(text)
-
-    for token in doc:
-        print(token)
-        yield {
-            'text': token.text,
-            'span': [token.idx, token.idx + len(token.text)],
-            'prob': 0
-        }
-
-
 # Generator for tokenizing and calcultating probabilities of each token in a phrase
 def stream_parse(text, extra_context):
-    for token in parse(text, extra_context):
+    doc = nlp(text)
+    json_doc = doc.to_json() 
+    for token in json_doc['tokens']:
+        print('spacy token', token)
         yield json.dumps(token) + BREAK_TOKEN

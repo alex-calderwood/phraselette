@@ -69,7 +69,6 @@ export class PrismComponent extends Component {
 
     return <div className={`prism ${hidden}`}>
         <div className='title'> 
-          
           <span>{prism.name} tokens </span>
           
           <span className="highlight">

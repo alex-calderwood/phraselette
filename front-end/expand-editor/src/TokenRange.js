@@ -6,7 +6,7 @@ function singular(token) {
     case 'words':
       return 'word';
     case 'spacy':
-      return 'extraction';
+      return 'spacy';
     case 'probability':
       return 'token';
     default:
@@ -74,11 +74,21 @@ export class TokenRange extends Component {
         <div id={'tokenbar' + prismName} className={`sidebar`}>
             {tokens && tokens.map((token) => {
               let color = getColor(prismName, token);
-              let prob = scientific(token.prob);
+
+              let prob = null;
+              let pos = null;
+              if (token.type === 'probability') {
+                prob = scientific(token.prob);
+              } else if (token.type === 'spacy') {
+                pos = token.raw.pos; // id: 6, start: 27, end: 31, tag: NN, pos: NOUN, morph: Number=Sing, lemma: rain, dep: pobj, head: 5
+                
+              }
+
               return <div key={token.id} className="token">
                       <div className="item heading">{token.text}</div>
                       {/* <div className="item range">[{token.start}-{token.end}]</div> */}
-                      {token.type !== 'words' && <div className="item" style={{backgroundColor: color}}>{prob}</div>}
+                      {pos !== null && <div className="item" style={{backgroundColor: color}}>{pos}</div>}
+                      {prob !== null && <div className="item" style={{backgroundColor: color}}>{prob}</div>}
                       <div className="item">{singular(token.type)}</div>
                     </div>;
             })}

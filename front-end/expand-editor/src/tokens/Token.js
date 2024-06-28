@@ -7,6 +7,7 @@ export class Token {
     constructor(options) {
         const defaults = {
             prob: 0,
+            type: 'token',
             id: options.id ? options.id : createTokenID(),
         };
 

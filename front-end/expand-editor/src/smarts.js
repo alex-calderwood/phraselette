@@ -32,13 +32,15 @@ export async function spacyTokenize(text, data = {}) {
   let rawTokenPromise = await tokenGenerator.next();
   while (!rawTokenPromise.done) {
     let rawToken = rawTokenPromise.value;
+    console.log("spacy", rawToken)
     let token = new Token({
-      'start': rawToken.span[0],
-      // rawToken.span[1] is exclusive, our start and end is inclusive
-      'end': rawToken.span[1] - 1,
-      "text": rawToken.token,
-      "type": "spacy",
-      "prob": 0,
+      'start': rawToken.start, // inclusive
+      'end':   rawToken.end,   // inclusive
+      "text":  rawToken.lemma,
+      "type":  "spacy",
+      "prob":  0,
+      "tag":   rawToken.tag,
+      "raw":   rawToken,
     });
     if (onToken) {
       onToken(token);
