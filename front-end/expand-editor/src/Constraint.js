@@ -15,7 +15,6 @@ export class ConstraintWindow extends Component {
   constructor(props) {
     super(props);
     this.constraint = this.props.constraint;
-    console.log('constraint window', this.constraint);
   }
 
   registerConstraint() {
@@ -27,8 +26,6 @@ export class ConstraintWindow extends Component {
   }
 
   render() {
-    console.log('rendering constraint', this.constraint.name, this.constraint.dataType, this.constraint);
-    
     let type;
     switch (this.constraint.dataType) {
       case 'string':

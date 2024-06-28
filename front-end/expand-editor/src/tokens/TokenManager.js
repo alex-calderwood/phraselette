@@ -9,7 +9,6 @@ export class TokenManager {
     }; 
     this.activeLenseNames = activeLenses; // which lenses are currently active
     this.externalOnToken = (token) => {}; // a callback to call when a token is created
-    this.currentLense = activeLenses[0]; // the current lense that is being tokenized
   }
 
   /* 
@@ -26,20 +25,10 @@ export class TokenManager {
     if (!active && this.activeLenseNames.includes(lense)) {
       this.activeLenseNames = this.activeLenseNames.filter(l => l !== lense);
     }
-
-    this.currentLense = lense;
   }
 
   setOnToken(onToken) {
     this.externalOnToken = onToken;
-  }
-
-  getCurrentLense() { // TODO deprecate this
-    // console.log('active lense names', this.activeLenseNames);
-    // return this.activeLenseNames[0];
-    // return 'probability';
-
-    return this.currentLense;
   }
 
   /*
@@ -111,7 +100,6 @@ export class TokenManager {
       let newStart = Math.max(token.start, startCharIndex);
       let newEnd = Math.min(token.end + 1, endCharIndex);
       let text = token.text.slice(0, newStart - token.start) + token.text.slice(newEnd - token.start);
-      console.log('new token', {newStart, newEnd, text});
       if(text.length === 0) {
         tokensToDelete.push(token.id)
       } else {
@@ -139,7 +127,6 @@ export class TokenManager {
     let startChar = selection.startChar - event.data.length; // because we added a token TODO we want to use the keydown
 
     let tokensAt = this.tokensAt(lense, startChar)
-    console.log('addCharToToken', {lense, selection, event, startChar, tokensAt})
 
     if (tokensAt.length > 1) {
       console.error("editToken called with", tokensAt.length, "tokens at", startChar);
@@ -159,8 +146,6 @@ export class TokenManager {
     token.text = start + end;
     token.end += event.data.length;
 
-    console.log('addedCharToToken', token, token.start, token.end)
-
     // shift all token indices after the edited token
     this.shiftTokenSpans(token.end + 1, this.tokens[lense], event.data.length); // TODO think about what happens when there is a tokenization going on
   }
@@ -172,7 +157,6 @@ export class TokenManager {
 
     // tokens aren't necessarily in order
     let endOfLenseChar = Math.max(...tokens.map(t => t.end));
-    console.log('shiftTokenSpans', {fromChar, tokens, endOfLenseChar, shiftAmount})
     if (fromChar > endOfLenseChar) {
       return;
     }
@@ -181,7 +165,6 @@ export class TokenManager {
     for (let t of tokensToShift) {
       t.start += shiftAmount;
       t.end += shiftAmount;
-      console.log('shifted token', t);
     }
   }
 
@@ -272,7 +255,6 @@ export class TokenManager {
     *   
   */
   tokenize(text, data = {}) {
-    console.log('tokenizing active lenses', this.activeLenseNames)
     let tokens = [];
       data = {  ...data, onToken: this.internalOnToken.bind(this) };
       for (let lense of this.activeLenseNames) {

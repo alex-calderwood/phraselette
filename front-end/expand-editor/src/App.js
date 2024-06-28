@@ -8,6 +8,8 @@ import { TokenManager } from "./tokens/TokenManager";
 import { HighlightBar } from "./TokenRange";
 import { PrismComponent, Prism} from "./Prism";
 import { LenseEditor } from "./LenseEditor";
+
+const initialLense = 'probability';
                                      
 //         _-_.
 //      _-',^. `-_.
@@ -35,7 +37,6 @@ class App extends Component {
     }
 
     super(props);
-    let initialLense = 'probability';
     window.tokenManager = this.tokenManager; // for debugging
     let activeLenses = Prism.getActive(prisms);
     this.tokenManager = new TokenManager(activeLenses);
@@ -44,12 +45,12 @@ class App extends Component {
     this.state = {
       prisms: prisms,
       activeLenses: activeLenses,
+      lenseToHighlight: initialLense,
       tokens: Object.keys(this.tokenManager.tokens),
       selection: null,
       info: {},
      };
      window.state = this.state; // for debugging
-     console.log('new app state', this.state);
 
   }
 
@@ -66,7 +67,6 @@ class App extends Component {
   }
 
   attemptInitialTokenization() { // TODO this should go somewhere else
-    console.log('attempting initial tokenization', this.text, this.tokenManager);
     if (this.tokenManager && this.text) {
       this.tokenManager.tokenize(this.text);
     }
@@ -75,7 +75,6 @@ class App extends Component {
   handleAddLense() {
     // const selectedLense = this.lenseSelect.value;
     const selectedLense = document.getElementById('add-lense').value;
-    console.log('adding lense', selectedLense);
 
     // call Prism.setActive on the selected lense
     let prisms = this.state.prisms;
@@ -92,10 +91,9 @@ class App extends Component {
   }
 
   onHighlightChange(prismName, shouldHighlight) {
-    console.log('App highlight change', prismName, shouldHighlight);
     let prisms = this.state.prisms;
     prisms[prismName].setDoHighlight(shouldHighlight);
-    this.setState({ prisms: prisms });
+    // this.setState({ prisms: prisms }); // update the state
 
     // for now, we only allow one highlighted lense, so we need to uncheck all the other ones
     let activeLenses = Prism.getActive(prisms);
@@ -103,33 +101,27 @@ class App extends Component {
       if (lense !== prismName) {
         prisms[lense].setDoHighlight(false);
       }
-      console.log('after setting do highlight', lense, prisms[lense].shouldHighlight);
     }
 
-    this.tokenManager.setActiveLense(prismName, true);
+    // after the update print out the new state
+    this.setState({ lenseToHighlight: prismName});
   }
 
   render() {
-    let startChar = this.state.selection ? this.state.selection.startChar : null;
-    let endChar   = this.state.selection ? this.state.selection.endChar : null;
+    let startChar     = this.state.selection ? this.state.selection.startChar : null;
+    let endChar       = this.state.selection ? this.state.selection.endChar : null;
     let selectionText = this.state.selection ? this.state.selection.text : null;
-
-    console.log('rendering app with prism', this.state.prisms);
 
     let activeLenses = Object.entries(this.state.prisms).filter(([key, prism]) => prism.active).map(([key, prism]) => prism);
     window.activeLenses = activeLenses; // for debugging
     return (
       <div className="context-container">
-        {/* <HighlightBar tokens={this.state.tokens}
-          setCurrentLense={this.setCurrentToken.bind(this)}
-          attemptInitialTokenization={this.attemptInitialTokenization.bind(this)} /> */}
-
         <div className="editor-container">
           <div className="left">
             <LenseEditor tokenManager={this.tokenManager} 
-            token={this.state.currentLense} 
-            setSelection={this.setSelection.bind(this)} 
-            setText={this.setText.bind(this)} />
+              setSelection={this.setSelection.bind(this)} 
+              setText={this.setText.bind(this)} 
+              lenseToHighlight={this.state.lenseToHighlight} />
           </div>
           <div className="right">
             <div className="lenses">

@@ -33,15 +33,13 @@ export class LenseEditor extends Component {
     this.tokenManager.setOnToken(this.updateUITokens.bind(this));
     this.tokenManager.tokenize(originalText);
 
-    // this.lenseToHighlight = 'probability';
-
     if (this.props.setText) {
       this.props.setText(originalText); // give the new text to the parent
     }
   }
 
   updateUITokens(token) {
-    if (this.tokenManager.getCurrentLense() === token.type) {
+    if (this.props.lenseToHighlight === token.type) {
       this.colorTokenByProb(token);
     }
   }
@@ -225,13 +223,14 @@ export class LenseEditor extends Component {
     child.setAttribute('c', c);
     this.setIdIfNotPresent(child);
     if (child.tagName === 'SPAN') {
-      if (this.tokenManager.getCurrentLense() === 'words') {
+      if (this.props.lenseToHighlight === 'words') { // TODO why is this hardcoded?
         this.colorCharacterByProb(child, c);
       }
     }
   }
 
   colorAllCharactersByProb() {
+
     // get all spans with a c attribute
     let spans = document.querySelectorAll('span[c]');
     for (let i = 0; i < spans.length; i++) {
@@ -243,11 +242,10 @@ export class LenseEditor extends Component {
   }
 
   colorTokenByProb(token) {
-    // console.log('coloring token', token.text, token.prob, token);
     let start = token.start;
     let end = token.end;
     let prob = token.prob;
-    let color = getColor(this.tokenManager.getCurrentLense(), token);
+    let color = getColor(this.props.lenseToHighlight, token);
     for (let i = start; i <= end; i++) { // [start, end] inclusive
       let span = document.querySelector(`span[c='${i}']`);
       if (span) {
@@ -262,11 +260,11 @@ export class LenseEditor extends Component {
     }
 
     if (this.tokenManager) {
-      let tokensAt = this.tokenManager.tokensAt(this.tokenManager.getCurrentLense(), c);
+      let tokensAt = this.tokenManager.tokensAt(this.props.lenseToHighlight, c);
       let color;
       if (tokensAt && tokensAt.length > 0) {
         let token = tokensAt[0];
-        color = getColor(this.tokenManager.getCurrentLense(), token);
+        color = getColor(this.props.lenseToHighlight, token);
       } else {
         color = getColor('words', {});
       }
@@ -355,12 +353,12 @@ export class LenseEditor extends Component {
   /* 
    * Split the text into individual tokens according to the tokenizatin strategy specified by the current token.
   */
-  callTokenize(text, callDepth = 0) {
+  callTokenize(text, lense, callDepth = 0) {
     if (this.tokenManager) {
-      let curTokens = this.tokenManager.tokens[this.tokenManager.getCurrentLense()];
+      let curTokens = this.tokenManager.tokens[lense];
 
       let tokenizeRange  = TokenManager.getRangeToTokenize(text, curTokens);
-      let shouldTokenize = TokenManager.shouldTokenize(text, tokenizeRange, this.tokenManager.getCurrentLense());
+      let shouldTokenize = TokenManager.shouldTokenize(text, tokenizeRange, lense);
 
       // We keep track of the call depth because we want to check to see if there is more tokenization
       // to take care of after the user has finished typing (some requests may have been denied by the server
@@ -374,7 +372,7 @@ export class LenseEditor extends Component {
         // TODO there is a potential problem where the selection has been updated since the last time we saved it
         // This could happen if the user navigates with the arrow keys for instance, so perhpas we want to save the selection during arrows
         let newText = this.getTextWithWhitespace(this.contentRef.current, this.selection.nativeSelection);
-        this.callTokenize(newText, callDepth + 1);
+        this.callTokenize(newText, lense, callDepth + 1);
 
       };
 
@@ -393,7 +391,6 @@ export class LenseEditor extends Component {
   */
   onKeyDown(event) {
     this.selectionBeforeInput = this.currentSelection();
-    console.log('keydown', this.selectionBeforeInput);
   }
 
   onClick = (event) => {
@@ -401,7 +398,6 @@ export class LenseEditor extends Component {
 
     // show the sidebar if there is a selection of non-zero length
     this.props.setSelection(this.selectionBeforeInput);
-    console.log('click', this.selectionBeforeInput);
   };
 
   /*
@@ -412,17 +408,15 @@ export class LenseEditor extends Component {
   onInput = (event) => {
     // Save the current selection to restore later after processing input
     this.selection = this.currentSelection();
-    console.log('input', this.selection);
 
     // update the state text
     // let newText = this.contentRef.current.textContent.replace('&nbsp', ' '); // this loses \n TODO
     let newText = this.getTextWithWhitespace(this.contentRef.current, this.selection.nativeSelection);
-    console.log('TEXT', { newText });
 
     this.tokenManager.synchronizeTokens(this.selection, this.selectionBeforeInput, event);
 
     // pass the new text into the tokenizer to update its token list and associated character indices
-    this.callTokenize(newText);
+    this.callTokenize(newText, this.props.lenseToHighlight);
 
     // give the new text to the parent
     if (this.props.setText) {

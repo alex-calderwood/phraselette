@@ -68,7 +68,7 @@ export class TokenRange extends Component {
       return (num !== 0 && (num < 1e-3 || num >= 1e+7)) ? num.toExponential(2) : num.toPrecision(3);
     }
 
-    console.log('token bar', tokens);
+    console.log('token range for', prismName, tokens);
 
     return (
         <div id={'tokenbar' + prismName} className={`sidebar`}>

@@ -45,7 +45,7 @@ const wordToColor = (word) => {
 
 const lengthNormedLogProbToColor = (token) => {
   if (!token.text) {
-    console.log('no text for token', token);
+    console.error('no text for token', token);
     return 'white';
   }
 

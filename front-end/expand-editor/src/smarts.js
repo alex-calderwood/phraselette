@@ -81,7 +81,6 @@ export async function gpt2Tokenize(text, data = {}) {
 }
 
 export function splitWordTokenize(text, data = {}) {
-  console.log('split word', text)
   let type = "words";
   let tokens = [];
   let tokenStart = 0;
@@ -127,7 +126,6 @@ async function* callGPT2(context, tokenizeRange) {
     text: text,
   };
 
-  // console.log("smarts calling GPT2 with", 'context', context, 'range', tokenizeRange, 'data', data);
 
   try {
     const response = await fetch("http://127.0.0.1:5000/probs", {
@@ -215,7 +213,6 @@ async function* callSpacy(context, tokenizeRange) {
       for (const line of lines) {
         if (line.trim()) {
           const token = JSON.parse(line);
-          console.log("smarts token", token);
           yield token;
         }
       }
