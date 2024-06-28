@@ -5,7 +5,7 @@ import React, { useCallback , useRef, Component } from "react";
 // a library for aing and restoring selections (cursor positions / ranges) in a document
 // it uses hidden elements to store the selection data
 import { TokenManager } from "./tokens/TokenManager";
-import { HighlightBar } from "./Components";
+import { HighlightBar } from "./TokenRange";
 import { PrismComponent, Prism} from "./Prism";
 import { LenseEditor } from "./LenseEditor";
                                      
@@ -27,36 +27,38 @@ class App extends Component {
   constructor(props) {
 
     let prisms = {
-      'words':        new Prism('words',       'category').setActive(true),                                                      
-      'probability':  new Prism('probability', 'number').setActive(false),                                                         
-      'POS':          new Prism('POS',         'string'),                                                                             
-      'embedding':    new Prism('embedding',   'vector'),                                                                       
-      'critic':       new Prism('critic',      'string'),                                                                          
+      'words':        new Prism('words',       'string').setActive(true).setDoHighlight(false),                                                      
+      'probability':  new Prism('probability', 'number'  ).setActive(true).setDoHighlight(true),                                                         
+      'POS':          new Prism('POS',         'string'  ),                                                                             
+      'embedding':    new Prism('embedding',   'vector'  ),                                                                       
+      'critic':       new Prism('critic',      'string'  ),                                                                          
     }
 
     super(props);
     let initialLense = 'probability';
-    this.tokenManager = new TokenManager(initialLense);
     window.tokenManager = this.tokenManager; // for debugging
+    let activeLenses = Prism.getActive(prisms);
+    this.tokenManager = new TokenManager(activeLenses);
+
     this.text = null;
     this.state = {
       prisms: prisms,
-      currentLense: initialLense, // TODO deprecate
-      activeLenses: Prism.getActive(prisms),
+      activeLenses: activeLenses,
       tokens: Object.keys(this.tokenManager.tokens),
       selection: null,
       info: {},
      };
      window.state = this.state; // for debugging
      console.log('new app state', this.state);
+
   }
 
-  // current token is words, create a setter to pass to the LensBar where it will change it
-  setCurrentToken(token) {
-    console.log('setting current lense to', token);
-    this.tokenManager.setCurrentLense(token); //TODO refactor name
-    this.setState({ currentLense: token });
-  }
+  // // current token is words, create a setter to pass to the LensBar where it will change it
+  // setCurrentToken(lenseName) {
+  //   console.log('setting current lense to', lenseName);
+  //   this.tokenManager.setActiveLense(lenseName); //TODO refactor name
+  //   this.setState({ currentLense: lenseName });
+  // }
 
   setSelection(selection) {
     this.setState({ selection: selection });
@@ -70,13 +72,8 @@ class App extends Component {
     this.text = text;
   }
 
-  attemptInitialTokenization() {
-    if (
-      this.tokenManager 
-      && this.tokenManager.tokens
-      && this.tokenManager.tokens[this.state.currentLense].length > 0
-      && this.text
-    ) {
+  attemptInitialTokenization() { // TODO this should go somewhere else
+    if (this.tokenManager && this.text) {
       this.tokenManager.tokenize(this.text);
     }
   }
@@ -89,7 +86,7 @@ class App extends Component {
     // call Prism.setActive on the selected lense
     let prisms = this.state.prisms;
     prisms[selectedLense].setActive(true);
-
+    
     // update the state
     this.setState({ activeLenses: Prism.getActive(prisms) });
   }
@@ -97,7 +94,7 @@ class App extends Component {
   render() {
     let startChar = this.state.selection ? this.state.selection.startChar : null;
     let endChar   = this.state.selection ? this.state.selection.endChar : null;
-
+    
     console.log('rendering app with prism', this.state.prisms);
 
     let activeLenses = Object.entries(this.state.prisms).filter(([key, prism]) => prism.active).map(([key, prism]) => prism);
@@ -105,9 +102,9 @@ class App extends Component {
     return (
 
       <div className="context-container">
-        <HighlightBar tokens={this.state.tokens}
+        {/* <HighlightBar tokens={this.state.tokens}
           setCurrentLense={this.setCurrentToken.bind(this)}
-          attemptInitialTokenization={this.attemptInitialTokenization.bind(this)} />
+          attemptInitialTokenization={this.attemptInitialTokenization.bind(this)} /> */}
 
         <div className="editor-container">
           <div className="left">
@@ -126,12 +123,12 @@ class App extends Component {
               </select>
               {/* button that sets the selected lense to active */}
               <button className="selectButoon" onClick={this.handleAddLense.bind(this)}>add</button>
-              <div id="selected" className="info">
+              <span id="selected" className="info">
                 <span >active: </span>
                 {activeLenses.map((prism) => {
                   return <span key={prism.name}>{prism.name} </span>;
                 })}
-              </div>
+              </span>
             </div>
 
             <div className={`sidebar-container`}>

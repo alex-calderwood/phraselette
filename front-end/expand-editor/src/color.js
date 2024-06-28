@@ -1,5 +1,5 @@
 import chroma from "chroma-js";
-const colorScale = chroma.scale(['white', 'green']).mode('lab');
+const colorScale = chroma.scale(['red', 'white', 'green']).mode('lab');
 const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple']).mode('lab');
 
 export function getColor(type, token) {
@@ -51,7 +51,7 @@ const lengthNormedLogProbToColor = (token) => {
 
   let prob = Math.log10(token.prob + 1e-12); // avoid log(0)
   let normalized = (prob + 6) / 6; // normalize to [0, 1] TODO don't understand this
-  normalized /= token.text.length || 1; // normalize by length
+  // normalized /= token.text.length || 1; // normalize by length
 
   let alpha = 0.5;
   let hex = colorScale(normalized).alpha(alpha).css();

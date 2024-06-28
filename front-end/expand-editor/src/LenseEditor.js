@@ -21,7 +21,7 @@ function charIndex(span) {
 export class LenseEditor extends Component {
   constructor(props) {
     super(props);
-    let originalText = "0123456789";
+    let originalText = "That the world will end in rain";
     let content = [];
     for (let i = 0; i < originalText.length; i++) {
       let c = originalText[i];

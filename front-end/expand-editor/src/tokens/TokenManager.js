@@ -1,24 +1,30 @@
 import { splitWordTokenize, gpt2Tokenize, spacyTokenize } from '../smarts.js';
 
 export class TokenManager {
-  constructor(initialLense, tokens) {
+  constructor(activeLenses, tokens) {
     this.tokens = {
       'probability': [],
       'words': [],
       'spacy': [],
     }; 
-    this.activeLenses = [initialLense];
-    // this.lenseTokenIDtoIndex = { 'words': {} }; // token id to lenses array index
+    this.activeLenseNames = activeLenses; // which lenses are currently active
     this.externalOnToken = (token) => {}; // a callback to call when a token is created
   }
 
-  setCurrentLense(lense) {
+  /* 
+   * Toggle TokenManager's understanding of which lenses should be actively tokenized.
+  */
+  setActiveLense(lense, active=true) {
     if (!this.tokens[lense]) {
       console.error("No label of lense type", lense);
       return;
     }
-
-    this.activeLenses = [lense];
+    if (active && !this.activeLenseNames.includes(lense) ) {
+      this.activeLenseNames.push(lense);
+    }
+    if (!active && this.activeLenseNames.includes(lense)) {
+      this.activeLenseNames = this.activeLenseNames.filter(l => l !== lense);
+    }
   }
 
   setOnToken(onToken) {
@@ -26,7 +32,9 @@ export class TokenManager {
   }
 
   getCurrentLense() { // TODO deprecate this
-    return this.activeLenses[0];
+    // console.log('active lense names', this.activeLenseNames);
+    // return this.activeLenseNames[0];
+    return 'probability';
   }
 
   /*
@@ -49,7 +57,7 @@ export class TokenManager {
   * with the edits that were made by {event} to the text in the contenteditable div (which is already updated);
   */
   synchronizeTokens(selection, beforeEventSelection, event) {
-    for (let lense of this.activeLenses) {
+    for (let lense of this.activeLenseNames) {
       console.log('recieved input', event.inputType);
       switch (event.inputType) {
         case 'insertText':
@@ -265,21 +273,22 @@ export class TokenManager {
     *   
   */
   tokenize(text, data = {}) {
+    console.log(this.activeLenseNames, 'active lenses')
     let tokens = [];
       data = {  ...data, onToken: this.internalOnToken.bind(this) };
-      for (let lense of this.activeLenses) {
+      for (let lense of this.activeLenseNames) {
         switch (lense) {
-        case 'words':
-          tokens = splitWordTokenize(text, data);
-          this.tokens.words = tokens; // TODO this is not currently using onToken
-          break;
-        case 'probability':
-          gpt2Tokenize(text, data);
-          break;
-        case 'spacy':
-          data = { ...data, onToken: this.internalOnToken.bind(this) };
-          spacyTokenize(text, data);
-          break;
+          case 'words':
+            tokens = splitWordTokenize(text, data);
+            this.tokens.words = tokens; // TODO this is not currently using onToken
+            break;
+          case 'probability':
+            gpt2Tokenize(text, data);
+            break;
+          case 'spacy':
+            data = { ...data, onToken: this.internalOnToken.bind(this) };
+            spacyTokenize(text, data);
+            break;
       }
     }
   }
