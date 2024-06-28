@@ -4,12 +4,15 @@ const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple']).
 
 export function getColor(type, token) {
   let prob = token.prob || 0;
-  if (type === 'words') {
-    return wordToColor(token.text)
-  } else if (type === 'probability') {
-    return lengthNormedLogProbToColor(token);
-  } else {
-    return probToColor(prob);
+  switch (type) {
+    case 'words':
+      return categoryToColor(token.text);
+    case 'probability':
+      return lengthNormedLogProbToColor(token);
+    case 'spacy': case 'POS':
+      return categoryToColor(token.raw.pos);
+    default:
+      return probToColor(prob);
   }
 }
 
@@ -22,7 +25,7 @@ const probToColor = (prob) => {
   return "rgba(" + 0 + ", " + g + ", 0, " + prob + ")";
 };
 
-const wordToColor = (word) => {
+const categoryToColor = (word) => {
 
   // Hash function to convert word to a number between 0 and 255
   if (!word) {
