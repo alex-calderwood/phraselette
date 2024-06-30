@@ -71,27 +71,29 @@ export class TokenRange extends Component {
     console.log('token range for', prismName, tokens);
 
     return (
-        <div id={'tokenbar' + prismName} className={`sidebar`}>
-            {tokens && tokens.map((token) => {
-              let color = getColor(prismName, token);
+      <div className="token-range-parent">
+          <div id={'tokenbar' + prismName} className={`token-range`}>
+              {tokens && tokens.map((token) => {
+                let color = getColor(prismName, token);
 
-              let prob = null;
-              let pos = null;
-              if (token.type === 'probability') {
-                prob = scientific(token.prob);
-              } else if (token.type === 'spacy') {
-                pos = token.raw.pos; // id: 6, start: 27, end: 31, tag: NN, pos: NOUN, morph: Number=Sing, lemma: rain, dep: pobj, head: 5
-                
-              }
+                let prob = null;
+                let pos = null;
+                if (token.type === 'probability') {
+                  prob = scientific(token.prob);
+                } else if (token.type === 'spacy') {
+                  pos = token.raw.pos; // id: 6, start: 27, end: 31, tag: NN, pos: NOUN, morph: Number=Sing, lemma: rain, dep: pobj, head: 5
+                  
+                }
 
-              return <div key={token.id} className="token">
-                      <div className="item heading">{token.text}</div>
-                      {/* <div className="item range">[{token.start}-{token.end}]</div> */}
-                      {pos !== null && <div className="item" style={{backgroundColor: color}}>{pos}</div>}
-                      {prob !== null && <div className="item" style={{backgroundColor: color}}>{prob}</div>}
-                      <div className="item">{singular(token.type)}</div>
-                    </div>;
-            })}
+                return <div key={token.id} className="token">
+                        <div className="item heading">{token.text}</div>
+                        {/* <div className="item range">[{token.start}-{token.end}]</div> */}
+                        {pos !== null && <div className="item" style={{backgroundColor: color}}>{pos}</div>}
+                        {prob !== null && <div className="item" style={{backgroundColor: color}}>{prob}</div>}
+                        <div className="item">{singular(token.type)}</div>
+                      </div>;
+              })}
+        </div>
       </div>
     );
   }

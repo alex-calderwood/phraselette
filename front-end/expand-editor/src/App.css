@@ -74,7 +74,6 @@ we will need to select the text children of the editor */
   z-index: 3;
 }
 
-
 .lense-bar {
   z-index: 2;
   width: 100%;
@@ -91,12 +90,11 @@ we will need to select the text children of the editor */
   margin: 10px;
 }
 
-.sidebar {
+.token-range {
+  position: relative;
   z-index: 2;
   width: 100%;
-
   margin-bottom: 4px;
-
   overflow-x: scroll;
   overflow-y: hidden;
   white-space: nowrap;
@@ -105,9 +103,22 @@ we will need to select the text children of the editor */
   -ms-overflow-style: none;
 }
 
-/* if the sidebar is filled with items, put a gradient on the right side */
-.sidebar::-webkit-scrollbar {
-  display: none;
+.token-range-parent {
+  position: relative;
+  height: 36px;
+}
+
+/* add a gradient to the right of the token range */
+.token-range-parent::after {
+  z-index: 2;
+  content: "";
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  width: 70px; /* Adjust the width to your preference */
+  height: 100%;
+  background: linear-gradient(to left, rgba(209, 209, 209, 0.7), rgba(255, 255, 255, 0));
+  pointer-events: none; /* Allow interactions with underlying content */
 }
 
 .card { /* anything that needs to go side to side */
@@ -120,6 +131,7 @@ we will need to select the text children of the editor */
   margin-left: 2px;
   margin-right: 2px;
   background-color: #f1f1f1;
+  min-height: 100%;
   height: 100%;
   text-wrap: wrap;
 }
@@ -199,3 +211,4 @@ button:hover {
     outline: none;
   }
 }
+

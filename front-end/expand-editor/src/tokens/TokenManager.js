@@ -269,6 +269,7 @@ export class TokenManager {
           case 'spacy':
             data = { ...data, onToken: this.internalOnToken.bind(this) };
             spacyTokenize(text, data);
+
             break;
       }
     }

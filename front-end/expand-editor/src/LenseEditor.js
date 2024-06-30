@@ -396,7 +396,7 @@ export class LenseEditor extends Component {
   onClick = (event) => {
     this.selectionBeforeInput = this.currentSelection();
 
-    // show the sidebar if there is a selection of non-zero length
+    // show the token-range if there is a selection of non-zero length
     this.props.setSelection(this.selectionBeforeInput);
   };
 
