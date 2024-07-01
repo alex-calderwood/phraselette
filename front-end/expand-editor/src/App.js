@@ -77,9 +77,13 @@ class App extends Component {
     // const selectedLense = this.lenseSelect.value;
     const selectedLense = document.getElementById('add-lense').value;
 
-    // call Prism.setActive on the selected lense
+    // set the prism to active
     let prisms = this.state.prisms;
     prisms[selectedLense].setActive(true);
+
+    // set the prism highlight to on
+    prisms[selectedLense].setDoHighlight(true);
+    this.onHighlightChange(selectedLense, true);
     
     // update the state
     this.setState({ activeLenses: Prism.getActive(prisms) });

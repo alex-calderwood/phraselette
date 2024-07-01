@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import { TokenRange } from "./TokenRange";
 import { Constraint, ConstraintWindow } from "./Constraint";
+import { Alternates } from "./Alternates";
 
 export class Prism {
   constructor(name, dataType) {
@@ -26,6 +27,15 @@ export class Prism {
     return Object.keys(prisms).filter((key) => {
       return prisms[key].active;
     });
+  }
+
+  // deactivate all prisms passed in
+  static unhighlightAll(prisms) {
+    // for now, we only allow one highlighted lense, so we need to uncheck all the other ones
+    let activeLenses = Prism.getActive(prisms);
+    for (let lense of activeLenses) {
+      prisms[lense].setDoHighlight(false);  
+    }
   }
 }
 
@@ -82,6 +92,7 @@ export class PrismComponent extends Component {
           prismName={prism.name}
           startChar={start} endChar={end}/>
 
+        <Alternates tokenManager={this.tokenManager} prism={prism} />
 
         <div className="constraint-container">
           <button onClick={this.handleAddConstraint.bind(this)}>constrain</button>
