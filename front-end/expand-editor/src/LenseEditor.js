@@ -21,7 +21,7 @@ function charIndex(span) {
 export class LenseEditor extends Component {
   constructor(props) {
     super(props);
-    let originalText = "That the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rain";
+    let originalText = "";
     let content = [];
     for (let i = 0; i < originalText.length; i++) {
       let c = originalText[i];
@@ -133,19 +133,25 @@ export class LenseEditor extends Component {
 
   restoreSelectionFromCharId = (charId, givenOffset, event) => {
     let node = document.getElementById(charId);
+    let range = document.createRange();
     if (!node) {
       console.error('No node found with id', charId);
-      return;
+      // restore to the end of the editor, there is a more elegant way...
+      range.selectNodeContents(this.contentRef.current);
+      range.collapse(false);
+    } else {
+      let editLength = event.data ? event.data.length : 0;
+      let charsToOffset = givenOffset - editLength;
+      let tokensToOffset = givenOffset - charsToOffset;
+      let restoreTo = node;
+      for (let i = 0; i < tokensToOffset; i++) {
+        restoreTo = restoreTo.nextSibling;
+        // for some reason when this gives an error, it actually breaks and allows it to work okay?
+      }
+      range.setStart(restoreTo, charsToOffset);
+      range.setEnd(restoreTo, charsToOffset);
     }
 
-    let editLength = event.data ? event.data.length : 0;
-    let charsToOffset = givenOffset - editLength;
-    let tokensToOffset = givenOffset - charsToOffset;
-    let restoreTo = node;
-    for (let i = 0; i < tokensToOffset; i++) {
-      restoreTo = restoreTo.nextSibling;
-      // for some reason when this gives an error, it actually breaks and allows it to work okay?
-    }
 
     // let restoring = {
     //   text: node ? node.textContent : null,
@@ -160,9 +166,6 @@ export class LenseEditor extends Component {
     // };
     // console.log('restoring', restoring);
 
-    let range = document.createRange();
-    range.setStart(restoreTo, charsToOffset);
-    range.setEnd(restoreTo, charsToOffset);
     let selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
@@ -182,11 +185,9 @@ export class LenseEditor extends Component {
     let text = originalSpan.textContent.replace(/\uFEFF/g, ''); // Remove BOM
     let newSpans = [];
     for (let i = 1; i < text.length; i++) {
-      let newSpan = document.createElement('span');
-      newSpan.textContent = text[i];
-      newSpans.push(newSpan);
       c += 1;
-      this.styleCharacter(newSpan, c);
+      let newSpan = this.createCharacterSpan(text[i], c);
+      newSpans.push(newSpan);
     }
     // update the original span to contain just the first character
     originalSpan.textContent = text[0];
@@ -213,6 +214,13 @@ export class LenseEditor extends Component {
     if (shouldSetId) {
       node.id = getUniqueUUID();
     }
+  }
+
+  createCharacterSpan(text, c) {
+    let span = document.createElement('span');
+    span.textContent = text;
+    this.styleCharacter(span, c);
+    return span;
   }
 
   /* 
@@ -287,6 +295,7 @@ export class LenseEditor extends Component {
   * Split the content into individual characters and apply the appropriate styles.
   */
   splitIntoCharactersAndStyle(content) {
+
     function* traverseDOM(node) {
       if ((node.tagName === 'DIV' || node.tagName === 'SPAN' || node.tagName === 'BR')
         // and its not div.editor
@@ -302,9 +311,20 @@ export class LenseEditor extends Component {
     }
 
     let children = [...traverseDOM(content)];
+
     let i = 0;
     let c = 0;
     let child = children[i];
+
+    if (!child) {
+      let text = content.textContent;
+      content.innerHTML = '';
+      for (let i = 0; i < text.length; i++) {
+        let span = this.createCharacterSpan(text, i);
+        content.appendChild(span);
+      }
+    }
+
     while (child) {
       if (child.tagName == "BR") {
         i++;
@@ -419,9 +439,7 @@ export class LenseEditor extends Component {
     // update the state text
     let newText = this.getTextWithWhitespace(this.contentRef.current);
 
-    console.log('before sync', this.tokenManager.tokens.probability);
     this.tokenManager.synchronizeTokens(this.selection, this.selectionBeforeInput, event);
-    console.log('after sync', this.tokenManager.tokens.probability);
 
     // pass the new text into the tokenizer to update its token list and associated character indices
     this.callTokenize(newText, this.props.lenseToHighlight);
@@ -431,7 +449,7 @@ export class LenseEditor extends Component {
       this.props.setText(newText);
     }
 
-    this.splitIntoCharactersAndStyle(this.contentRef.current);
+    let wasFirstCharacter = this.splitIntoCharactersAndStyle(this.contentRef.current);
 
     // Use a timeout to delay execution of restoring the selection
     // This ensures that the DOM updates have completed before the selection is restored

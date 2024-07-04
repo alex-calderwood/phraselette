@@ -54,6 +54,7 @@ export class TokenManager {
     for (let lense of this.activeLenseNames) {
       switch (event.inputType) {
         case 'insertText':
+          console.log('insertText', event.data);
           this.addCharToToken(lense, selection, event);
           break;
         case 'deleteContentBackward':
@@ -135,6 +136,7 @@ export class TokenManager {
 
     if (tokensAt.length === 0) {
       // We may be at the end of the text so logic elsewhere will add the token (splitSpan I think)
+      console.error("editToken called with no tokens at", startChar);
       return;
     }
 
