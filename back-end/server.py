@@ -15,12 +15,10 @@ lock = threading.Lock()
 app = Flask(__name__)
 CORS(app)
 
-
-        
 @app.route("/probs", methods=["POST"])
 def probs():
     # Generator for tokenizing and calculating the probabilities of each token in a phrase
-    def stream_probs(text, extra_context, mock=False):
+    def stream_probs(text, extra_context, mock=False, return_k_alternates=0):
         try:
             if mock: 
                 for token in tqdm(range(4)):
@@ -31,7 +29,7 @@ def probs():
                         'prob': 0.5
                     }) + BREAK_TOKEN
             else: 
-                for token in pluck_probs(text, extra_context):
+                for token in pluck_probs(text, extra_context, return_k_alternates=return_k_alternates):
                     yield json.dumps(token) + BREAK_TOKEN
         finally:
             with lock:
@@ -50,9 +48,13 @@ def probs():
     data = request.get_json()
     text = data["text"]
     extra_context = data.get("context", tokenizer.eos_token)
+    return_k_alternates = data.get("return_k_alternates", 0)
+
     print('request', data, 'working', working)
 
-    return Response(stream_probs(text, extra_context), content_type='application/json')
+    return Response(stream_probs(
+            text, extra_context, return_k_alternates=return_k_alternates
+            ), content_type='application/json')
 
 @app.route("/spacy", methods=["POST"])
 def spacy():
@@ -79,9 +81,6 @@ def spacy():
     print('request', data, 'working', working)
 
     return Response(stream_spacy_with_lock(text, extra_context), content_type='application/json')
-
-
-
 
 
 if __name__ == "__main__":

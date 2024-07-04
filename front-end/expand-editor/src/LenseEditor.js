@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import rangy from 'rangy';
-import { getUniqueUUID } from "./utils";
+import { getUniqueUUID, insertAfter } from "./utils";
 import { TokenManager } from "./tokens/TokenManager";
 import { getColor } from "./color";
 
@@ -170,21 +170,32 @@ export class LenseEditor extends Component {
     selection.addRange(range);
   };
 
-  splitSpan(span, c) {
+  /* 
+  * Split a span into multiple spans, each containing a single character.
+  * If the span contains a character at index c, the new spans will have indicies c, c+1, c+2, etc.
+  * If the span is unstyled (missing an ID and c attribute), assign a unique ID and set the c attribute to c, as well as a color.
+  *
+  * @param {HTMLElement} span - the span to split
+  * @param {number} c - the character index of the span
+  * @returns {number} the new character index
+  */
+  splitSpan(originalSpan, c) {
     // don't delete any spans, just add new ones and remove characters from the old span
-    let text = span.textContent.replace(/\uFEFF/g, ''); // Remove BOM
+    let text = originalSpan.textContent.replace(/\uFEFF/g, ''); // Remove BOM
     let newSpans = [];
     for (let i = 1; i < text.length; i++) {
       let newSpan = document.createElement('span');
       newSpan.textContent = text[i];
       newSpans.push(newSpan);
-    }
-    span.textContent = text[0];
-    for (let i = 0; i < newSpans.length; i++) {
-      let newSpan = newSpans[i];
-      span.parentNode.insertBefore(newSpan, span.nextSibling);
       c += 1;
       this.styleCharacter(newSpan, c);
+    }
+    // update the original span to contain just the first character
+    originalSpan.textContent = text[0];
+    // insert the new spans after the original span
+    for (let i = newSpans.length - 1; i >= 0; i--) {
+      let newSpan = newSpans[i];
+      originalSpan.parentNode.insertBefore(newSpan, originalSpan.nextSibling);
     }
     return c;
   }
@@ -230,7 +241,6 @@ export class LenseEditor extends Component {
   }
 
   colorAllCharactersByProb() {
-
     // get all spans with a c attribute
     let spans = document.querySelectorAll('span[c]');
     for (let i = 0; i < spans.length; i++) {
@@ -276,7 +286,7 @@ export class LenseEditor extends Component {
   }
 
   /*
-    TODO document
+  * Split the content into individual characters and apply the appropriate styles.
   */
   splitIntoCharactersAndStyle(content) {
     function* traverseDOM(node) {
@@ -310,7 +320,7 @@ export class LenseEditor extends Component {
         let text = child.textContent;
         if (text.length > 1) {
           // split the span into multiple spans
-          // updating the character index
+          // and update the running character index based on the number of new spans
           c = this.splitSpan(child, c);
         }
       } else if (child.tagName === 'DIV') {
@@ -335,7 +345,7 @@ export class LenseEditor extends Component {
    * @param {HTMLElement} element - The contenteditable element from which to extract text.
    * @returns {string} The text content of the element with \n characters in place of <br> and <div> tags.
   */
-  getTextWithWhitespace(element, selection) {
+  getTextWithWhitespace(element) {
     let clone = element.cloneNode(true);
 
     // Replace <br> tags with \n
@@ -371,9 +381,8 @@ export class LenseEditor extends Component {
       let onFinished = () => {
         // TODO there is a potential problem where the selection has been updated since the last time we saved it
         // This could happen if the user navigates with the arrow keys for instance, so perhpas we want to save the selection during arrows
-        let newText = this.getTextWithWhitespace(this.contentRef.current, this.selection.nativeSelection);
+        let newText = this.getTextWithWhitespace(this.contentRef.current);
         this.callTokenize(newText, lense, callDepth + 1);
-
       };
 
       let data = {
@@ -410,8 +419,7 @@ export class LenseEditor extends Component {
     this.selection = this.currentSelection();
 
     // update the state text
-    // let newText = this.contentRef.current.textContent.replace('&nbsp', ' '); // this loses \n TODO
-    let newText = this.getTextWithWhitespace(this.contentRef.current, this.selection.nativeSelection);
+    let newText = this.getTextWithWhitespace(this.contentRef.current);
 
     this.tokenManager.synchronizeTokens(this.selection, this.selectionBeforeInput, event);
 
@@ -432,8 +440,40 @@ export class LenseEditor extends Component {
     }, 0);
   };
 
+  /* 
+  * Update the text content of the editor from {start} to {end} with {newText}. 
+  * 
+  * @param {number} start - the start index of the text to replace (inclusive)
+  * @param {number} end - the end index of the text to replace (inclusive)
+  * @param {string} newText - the new text to display
+  */ 
+  swapText = (start, end, newText) => {
+    let startSpan = document.querySelector(`span[c='${start}']`);
+    let endSpan = document.querySelector(`span[c='${end}']`);
+
+    // select the text to replace
+    let range = document.createRange();
+    range.setStart(startSpan, 0);
+    range.setEnd(endSpan, 1);
+
+    // create a span for the new text
+    let newSpan = document.createElement('span');
+    newSpan.textContent = newText;
+
+    console.log('start span', startSpan, 'end span', endSpan, 'new span', newSpan);
+
+    // replace the text
+    range.deleteContents();
+    range.insertNode(newSpan);
+
+    // style the new text
+    this.splitIntoCharactersAndStyle(this.contentRef.current);
+  }
+
   render() {
     this.colorAllCharactersByProb();
+
+    window.swapText = this.swapText.bind(this);
 
     return (
       <div

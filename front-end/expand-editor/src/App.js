@@ -1,6 +1,6 @@
 // https://reactjs.org/docs/create-a-new-react-app.html
 import "./App.css";
-import React, { useCallback , useRef, Component } from "react";
+import React, { useCallback , createRef, Component } from "react";
 
 // a library for aing and restoring selections (cursor positions / ranges) in a document
 // it uses hidden elements to store the selection data
@@ -38,9 +38,9 @@ class App extends Component {
     }
 
     super(props);
-    window.tokenManager = this.tokenManager; // for debugging
     let activeLenses = Prism.getActive(prisms);
     this.tokenManager = new TokenManager(activeLenses);
+    window.tokenManager = this.tokenManager; // for debugging
 
     this.text = null;
     this.state = {
@@ -53,6 +53,7 @@ class App extends Component {
      };
      window.state = this.state; // for debugging
 
+     this.editorRef = React.createRef();
   }
 
   setSelection(selection) {
@@ -112,6 +113,11 @@ class App extends Component {
     this.setState({ lenseToHighlight: prismName});
   }
 
+  swapToken(originalToken, newToken) {
+    this.tokenManager.swapToken(originalToken, newToken)
+    this.editorRef.current.swapText(originalToken.start, originalToken.end, newToken.text);
+  }
+
   render() {
     let startChar     = this.state.selection ? this.state.selection.startChar : null;
     let endChar       = this.state.selection ? this.state.selection.endChar : null;
@@ -126,7 +132,9 @@ class App extends Component {
             <LenseEditor tokenManager={this.tokenManager} 
               setSelection={this.setSelection.bind(this)} 
               setText={this.setText.bind(this)} 
-              lenseToHighlight={this.state.lenseToHighlight} />
+              lenseToHighlight={this.state.lenseToHighlight} 
+              ref={this.editorRef}
+              />
           </div>
           <div className="right">
             <div className="lenses">
@@ -147,9 +155,7 @@ class App extends Component {
             </div>
 
             <div className={`prism-inspector`}>
-
               {selectionText && selectionText.length > 0 ? <div className="selection-text">"{selectionText}"</div> : ""}
-              
               {activeLenses.map((prism) => {
                 return (
                   <PrismComponent 
@@ -159,7 +165,9 @@ class App extends Component {
                     selection={this.state.selection} 
                     startChar={startChar} endChar={endChar} 
                     shouldHighlight={prism.shouldHighlight}
-                    onHighlightChange={this.onHighlightChange.bind(this)} />
+                    onHighlightChange={this.onHighlightChange.bind(this)} 
+                    onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
+                    />
                 );
               })}
             </div>

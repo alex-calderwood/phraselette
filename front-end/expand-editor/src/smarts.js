@@ -55,7 +55,8 @@ export async function gpt2Tokenize(text, data = {}) {
 
   let onToken = data.onToken;
   let tokenizeRange = makeTokenizationRange(text, data);
-  let tokenGenerator = callGPT2(text, tokenizeRange);
+  let alternates = 15; // The number of alternate tokens to return (the highest probability tokens according to the LM)
+  let tokenGenerator = callGPT2(text, tokenizeRange, alternates);
 
   // don't wait for the generator to finish
   // instead, call onToken for each token
@@ -69,6 +70,11 @@ export async function gpt2Tokenize(text, data = {}) {
       "text": rawToken.token,
       "type": 'probability',
       "prob": rawToken.prob,
+      "alternates": rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
+        "text": alt.token,
+        "prob": alt.prob,
+        "type": "probability",
+      }) } ) : [],
     })
     if (onToken) {
       onToken(token);
@@ -117,7 +123,7 @@ export function splitWordTokenize(text, data = {}) {
   context: string - the text before the range to tokenize
   tokenizeRange: [int, int] - the range of text to tokenize (inclusive)
 */
-async function* callGPT2(context, tokenizeRange) {
+async function* callGPT2(context, tokenizeRange, alternates=0) {
 
   // get the text to tokenize based on the inclusive range
   const text = context.substring(tokenizeRange[0], tokenizeRange[1] + 1);
@@ -126,6 +132,7 @@ async function* callGPT2(context, tokenizeRange) {
   const data = {
     context: preContext,
     text: text,
+    return_k_alternates: alternates,
   };
 
 

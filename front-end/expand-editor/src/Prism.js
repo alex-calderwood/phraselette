@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { TokenRange } from "./TokenRange";
 import { Constraint, ConstraintWindow } from "./Constraint";
-import { Alternates } from "./Alternates";
+import { TokenAlternates } from "./Alternates";
 
 export class Prism {
   constructor(name, dataType) {
@@ -92,7 +92,16 @@ export class PrismComponent extends Component {
           prismName={prism.name}
           startChar={start} endChar={end}/>
 
-        <Alternates tokenManager={this.tokenManager} prism={prism} />
+        {tokens.map((token) => {
+          return <TokenAlternates token={token} 
+            alternates={token.alternates} 
+            tokenManager={this.tokenManager}
+            prism={prism}
+            onTokenClick={this.props.onSwapToken}
+            />
+          })
+        }
+
 
         <div className="constraint-container">
           <button onClick={this.handleAddConstraint.bind(this)}>constrain</button>

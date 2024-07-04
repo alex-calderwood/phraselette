@@ -21,7 +21,7 @@ model = TFGPT2LMHeadModel.from_pretrained("gpt2", pad_token_id=tokenizer.eos_tok
 #    span: [int, int],  # the start and end character offset of the token in the phrase
 #    prob: float  # the probability of the token
 # }
-def pluck_probs(phrase, extra_context = tokenizer.eos_token):
+def pluck_probs(phrase, extra_context = tokenizer.eos_token, return_k_alternates=0):
     try:
         start_token_offset = 0
         # start_token_offset = 13
@@ -67,6 +67,19 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token):
             softmax = tf.nn.softmax(greedy_output_dict.scores[0])[0]
             original_prob = softmax[original_word].numpy()
 
+
+            # Determine the top k alternate words for each token
+            alternates = None
+            if return_k_alternates > 0:
+                top_k_values, top_k_indices = tf.math.top_k(softmax, k=return_k_alternates)
+                alternates = [
+                    {
+                        'token': tokenizer.decode(index),
+                        'prob': float(prob)
+                    }
+                    for index, prob in zip(top_k_indices, top_k_values)
+                ]
+
             # calculate the character offset from the start of the phrase (not counting the extra context)
             offset = offsets[:, i - context_len, :]
             offset = offset.numpy()
@@ -77,8 +90,10 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token):
             result = {
                 'token': tokenizer.decode(original_word),
                 'span': offset,
-                'prob': float(original_prob) # needs to be a float to serialize to JSON|
+                'prob': float(original_prob), # needs to be a float to serialize to JSON|
+                'alternates': alternates,     # top k alternates, may be None
             }
+
             print('result', result)
             yield result
 
@@ -86,3 +101,9 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token):
         print('Error:', e)
         print('Phrase:', phrase)
         traceback.print_exc()
+
+if __name__ == "__main__":
+    # Example usage
+    for token in pluck_probs("This is a test.", return_k_alternates=3):
+        print(token)
+        print(json.dumps(token))

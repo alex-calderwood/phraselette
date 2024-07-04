@@ -169,6 +169,36 @@ export class TokenManager {
   }
 
   /* 
+  * Swap the token with the given id with the given token.
+  * TODO right now this only swaps the token in the given lense, but we may want to swap it in all lenses. (or retokenize / recompute the lense)
+  */
+  swapToken(token, newToken) {
+    console.log("Swapping token", token, "with", newToken)
+    let lense = token.type;
+    let index = this.tokens[lense].findIndex(t => t.id === token.id);
+    if (index === -1) {
+      console.error("swapToken called with token that doesn't exist", token);
+      return;
+    }
+
+    this.tokens[lense][index] = newToken;
+
+    this.refreshCharIndices(lense);
+  }
+
+  /* 
+  * Refresh the character indices for the given lense by looping through all tokens and updating their indices.
+  */
+  refreshCharIndices(lense) {
+    let offset = 0;
+    for (let token of this.tokens[lense]) {
+      token.start = offset;
+      token.end = offset + token.text.length - 1;
+      offset = token.end + 1;
+    }
+  }
+
+  /* 
   * TODO document
   */
   pushUpdateToken(lenseType, token) {
