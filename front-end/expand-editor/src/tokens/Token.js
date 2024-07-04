@@ -9,7 +9,6 @@ function mockAlternates () {
         alternates.add(new Token({
             type: 'token',
             id: createTokenID(),
-            prob: 0,
             text: "mock " + i,
         }, false));
     }

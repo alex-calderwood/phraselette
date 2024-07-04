@@ -9,7 +9,19 @@ BREAK_TOKEN = "&&VE*A=]"
 # Generator for tokenizing and calcultating probabilities of each token in a phrase
 def stream_parse(text, extra_context):
     doc = nlp(text)
-    json_doc = doc.to_json() 
-    for token in json_doc['tokens']:
-        print('spacy token', token)
-        yield json.dumps(token) + BREAK_TOKEN
+    for token in doc:
+        response = json.dumps({
+            'text': token.text,
+            'lemma': token.lemma_,
+            'pos': token.pos_,
+            'tag': token.tag_,
+            'dep': token.dep_,
+            'shape': token.shape_,
+            'is_alpha': token.is_alpha,
+            'is_stop': token.is_stop,
+            'start': token.idx,
+            'end': token.idx + max(len(token.text) - 1, 0), # exclusive -> inclusive
+        }) + BREAK_TOKEN
+
+        print('token', response)
+        yield response

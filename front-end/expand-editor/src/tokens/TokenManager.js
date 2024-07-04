@@ -136,8 +136,10 @@ export class TokenManager {
 
     if (tokensAt.length === 0) {
       // We may be at the end of the text so logic elsewhere will add the token (splitSpan I think)
-      console.error("editToken called with no tokens at", startChar);
+      console.error("editToken called with no tokens at", startChar); // doesn't seem to actually be a problem...
       return;
+      // let endChar = this.getEndOfLenseChar(this.tokens[lense])
+      // console.log('end', endChar, 'start', startChar);
     }
 
     // add the character to the token
@@ -160,7 +162,7 @@ export class TokenManager {
     }
 
     // tokens aren't necessarily in order
-    let endOfLenseChar = Math.max(...tokens.map(t => t.end));
+    let endOfLenseChar = this.getEndOfLenseChar(tokens);
     if (fromChar > endOfLenseChar) {
       return;
     }
@@ -170,6 +172,12 @@ export class TokenManager {
       t.start += shiftAmount;
       t.end += shiftAmount;
     }
+  }
+
+  // Return the final character index of the last token in the list
+  // TODO this is janky and slow
+  getEndOfLenseChar(tokens) {
+    return Math.max(...tokens.map(t => t.end));
   }
 
   /* 

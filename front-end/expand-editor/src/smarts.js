@@ -33,14 +33,14 @@ export async function spacyTokenize(text, data = {}) {
   while (!rawTokenPromise.done) {
     let rawToken = rawTokenPromise.value;
     let token = new Token({
-      'start': rawToken.start, // inclusive
-      'end':   rawToken.end,   // inclusive
-      "text":  rawToken.lemma,
+      'start': rawToken.start,     // inclusive
+      'end':   rawToken.end,       // inclusive from server
+      "text":  rawToken.text,
       "type":  "spacy",
-      "prob":  0,
       "tag":   rawToken.tag,
       "raw":   rawToken,
     });
+    console.log("spacy token", token, onToken);
     if (onToken) {
       onToken(token);
     }
@@ -99,7 +99,7 @@ export function splitWordTokenize(text, data = {}) {
       let nextProb = Math.random();
       tokens.push(new Token({
         'start': tokenStart,
-        'end': i - 1,
+        'end': i,
         "text": curToken,
         "type": type,
         "prob": nextProb,
