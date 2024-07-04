@@ -150,6 +150,8 @@ export class TokenManager {
 
     // shift all token indices after the edited token
     this.shiftTokenSpans(token.end + 1, this.tokens[lense], event.data.length); // TODO think about what happens when there is a tokenization going on
+  
+    console.log('editToken', token);
   }
 
   shiftTokenSpans(fromChar, tokens, shiftAmount) {
@@ -313,7 +315,7 @@ export class TokenManager {
   * Return a range representing the range that should be tokenized. 
   * This is the range from the last character that hasn't yet been tokenized to the end of the text.
   */
-  static getRangeToTokenize(text, existingTokens) {
+  static getUntokenizedRange(text, existingTokens) {
     let alreadyTokenizedCharacters = {}
 
     for (let i = 0; i < text.length; i++) {

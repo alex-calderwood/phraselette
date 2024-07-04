@@ -12,7 +12,7 @@ export class TokenAlternates extends Component {
   onTokenClick(clickedToken, originalToken) {
     console.log('clicked', clickedToken, originalToken);
     if (this.props.onTokenClick) {
-      this.props.onTokenClick(originalToken, clickedToken);
+      this.props.onTokenClick(originalToken, clickedToken); // swapping the order of the arguments
     }
   }
 

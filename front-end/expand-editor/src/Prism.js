@@ -73,6 +73,7 @@ export class PrismComponent extends Component {
     if (start !== null) {
       tokens = this.tokenManager.tokensAt(prism.name, start, end);
     }
+    console.log('prism tokens', tokens);
 
     let hidden = prism.active && tokens.length > 0 ? '' : 'hidden';
 

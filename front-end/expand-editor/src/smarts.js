@@ -32,7 +32,6 @@ export async function spacyTokenize(text, data = {}) {
   let rawTokenPromise = await tokenGenerator.next();
   while (!rawTokenPromise.done) {
     let rawToken = rawTokenPromise.value;
-    console.log("spacy", rawToken)
     let token = new Token({
       'start': rawToken.start, // inclusive
       'end':   rawToken.end,   // inclusive
@@ -100,7 +99,7 @@ export function splitWordTokenize(text, data = {}) {
       let nextProb = Math.random();
       tokens.push(new Token({
         'start': tokenStart,
-        'end': i,
+        'end': i - 1,
         "text": curToken,
         "type": type,
         "prob": nextProb,

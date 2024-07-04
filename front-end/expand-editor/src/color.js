@@ -7,9 +7,7 @@ export function getColor(type, token) {
   switch (type) {
     case 'words':
       return categoryToColor(token.text);
-    case 'probability':
-      return lengthNormedLogProbToColor(token);
-    case 'alternate':
+    case 'probability': case 'alternate':
       return lengthNormedLogProbToColor(token);
     case 'spacy': case 'POS':
       return categoryToColor(token.raw.pos);

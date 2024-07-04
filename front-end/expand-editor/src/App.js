@@ -10,7 +10,7 @@ import { PrismComponent, Prism} from "./Prism";
 import { LenseEditor } from "./LenseEditor";
 
 const initialLense = 'spacy';
-const debugMode = false;
+const debugMode = true;
 
                                      
 //         _-_.
@@ -115,6 +115,11 @@ class App extends Component {
     this.setState({ lenseToHighlight: prismName});
   }
 
+  /* 
+   * Handle the swapping of tokens in the editor (as when the user selects a token replacement in the sidebar).
+   * First, we want to swap the tokens in the tokenManager.
+   * Then, we want to change the text in the editor for the new token text.
+  */
   swapToken(originalToken, newToken) {
     this.tokenManager.swapToken(originalToken, newToken)
     this.editorRef.current.swapText(originalToken.start, originalToken.end, newToken.text);
@@ -122,7 +127,7 @@ class App extends Component {
 
   render() {
     let startChar     = this.state.selection ? this.state.selection.startChar : null;
-    let endChar       = this.state.selection ? this.state.selection.endChar - 1: null; // TODO this should be renamed endcharindex cause it's not actually the ending character
+    let endChar       = this.state.selection ? this.state.selection.endChar: null; // TODO this should be renamed endcharindex cause it's not actually the ending character
     let selectionText = this.state.selection ? this.state.selection.text : null;
 
     let showSelection = debugMode && startChar !== null && endChar !== null;

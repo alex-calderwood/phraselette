@@ -379,19 +379,23 @@ export class LenseEditor extends Component {
   }
 
   /* 
-   * Split the text into individual tokens according to the tokenizatin strategy specified by the current token.
+   * Split the text into individual tokens according to the tokenization strategy specified by the current token.
+   * After the tokenization is complete, the token manager will call the onFinished function, which typically
+   * involves attempting to tokize one more time, as the tokenization may have been incomplete if the user continued to type.
   */
-  callTokenize(text, lense, callDepth = 0) {
+  tokenizeOnTextUpdate(text, lense, callDepth = 0) {
     if (this.tokenManager) {
       let curTokens = this.tokenManager.tokens[lense];
 
-      let tokenizeRange  = TokenManager.getRangeToTokenize(text, curTokens);
+      let tokenizeRange  = TokenManager.getUntokenizedRange(text, curTokens);
       let shouldTokenize = TokenManager.shouldTokenize(text, tokenizeRange, lense);
 
       // We keep track of the call depth because we want to check to see if there is more tokenization
       // to take care of after the user has finished typing (some requests may have been denied by the server
       // due to rate limiting) while typing. TODO this is a bit of a hack and could be cleaned up
       shouldTokenize = shouldTokenize && callDepth < 2; 
+
+      console.log('tokenizing range', tokenizeRange, shouldTokenize, lense, callDepth, 'length', text.length);
 
       if (!shouldTokenize) return;
 
@@ -400,7 +404,7 @@ export class LenseEditor extends Component {
         // TODO there is a potential problem where the selection has been updated since the last time we saved it
         // This could happen if the user navigates with the arrow keys for instance, so perhpas we want to save the selection during arrows
         let newText = this.getTextWithWhitespace(this.contentRef.current);
-        this.callTokenize(newText, lense, callDepth + 1);
+        this.tokenizeOnTextUpdate(newText, lense, callDepth + 1);
       };
 
       let data = {
@@ -408,9 +412,21 @@ export class LenseEditor extends Component {
         onFinished: onFinished.bind(this),
       };
 
-      this.tokenManager.tokenize(text, data); // TODO perhaps data should have the thing to do at the end..'[l;,,,,,l;l;']
+      this.tokenManager.tokenize(text, data);
     }
   }
+
+  forceTokenize() {
+    let text = this.getTextWithWhitespace(this.contentRef.current);
+    let tokenizeRange  = [0, text.length - 1];
+    let data = {
+      tokenizeRange: tokenizeRange,
+    };
+
+    this.tokenManager.tokenize(text, data);
+  }
+
+
 
 
   /*
@@ -418,21 +434,29 @@ export class LenseEditor extends Component {
   */
   onKeyDown(event) {
     this.selectionBeforeInput = this.currentSelection();
+
+    // cmd + k should manually re-tokenize
+    if (event.metaKey && event.key === 'k') {
+      console.log('manually tokenizing');
+      this.forceTokenize();
+      this.splitIntoCharactersAndStyle(this.contentRef.current);
+      return;
+    }
   }
 
   onClick = (event) => {
     this.selectionBeforeInput = this.currentSelection();
 
-    // show the token-range if there is a selection of non-zero length
+    // // show the token-range if there is a selection of non-zero length
     this.props.setSelection(this.selectionBeforeInput);
   };
 
   /*
     Bugs:
       TODO spaces aren't being saved correctly on firefox (works on Chrome)
-      TODO pasting from an outside source puts everything in backwards
   */
   onInput = (event) => {
+
     // Save the current selection to restore later after processing input
     this.selection = this.currentSelection();
 
@@ -442,14 +466,14 @@ export class LenseEditor extends Component {
     this.tokenManager.synchronizeTokens(this.selection, this.selectionBeforeInput, event);
 
     // pass the new text into the tokenizer to update its token list and associated character indices
-    this.callTokenize(newText, this.props.lenseToHighlight);
+    this.tokenizeOnTextUpdate(newText, this.props.lenseToHighlight);
 
     // give the new text to the parent
     if (this.props.setText) {
       this.props.setText(newText);
     }
 
-    let wasFirstCharacter = this.splitIntoCharactersAndStyle(this.contentRef.current);
+    this.splitIntoCharactersAndStyle(this.contentRef.current);
 
     // Use a timeout to delay execution of restoring the selection
     // This ensures that the DOM updates have completed before the selection is restored
@@ -478,7 +502,10 @@ export class LenseEditor extends Component {
     let newSpan = document.createElement('span');
     newSpan.textContent = newText;
 
-    console.log('start span', startSpan, 'end span', endSpan, 'new span', newSpan);
+    let oldText = range.toString();
+
+    console.log('start span', startSpan, 'end span', endSpan)
+    console.log('swap text', start, end, 'for', newText, 'from', oldText);
 
     // replace the text
     range.deleteContents();
@@ -489,7 +516,7 @@ export class LenseEditor extends Component {
   }
 
   render() {
-    // this.colorAllCharactersByProb(); // TODO this shouldn't called here
+    this.colorAllCharactersByProb(); // TODO this shouldn't called here
 
     window.swapText = this.swapText.bind(this);
 
