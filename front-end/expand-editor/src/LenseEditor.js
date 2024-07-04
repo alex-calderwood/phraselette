@@ -416,18 +416,23 @@ export class LenseEditor extends Component {
     }
   }
 
-  forceTokenize() {
+  forceTokenize(lenses=this.tokenManager.activeLenseNames) {
+    console.log('force tokenizing', lenses);
+
     let text = this.getTextWithWhitespace(this.contentRef.current);
     let tokenizeRange  = [0, text.length - 1];
+    
+    let lense = lenses[0];
+    let remainingLenses = lenses.slice(1);
+
+    let onFinished = () => { this.forceTokenize(remainingLenses); };
+
     let data = {
       tokenizeRange: tokenizeRange,
+      onFinished: onFinished.bind(this),
     };
-
-    this.tokenManager.tokenize(text, data);
+    this.tokenManager.tokenize(text, data, lenses=[lense]);
   }
-
-
-
 
   /*
    * Handles keydown events to save the selection before the input event is processed and the text changed.

@@ -45,7 +45,6 @@ export class TokenManager {
     this.externalOnToken(token);
   }
 
-
   /* 
   * Logic to handle input events: synchornize the text in the tokenManager's various lenses
   * with the edits that were made by {event} to the text in the contenteditable div (which is already updated);
@@ -54,7 +53,7 @@ export class TokenManager {
     for (let lense of this.activeLenseNames) {
       switch (event.inputType) {
         case 'insertText':
-          console.log('insertText', event.data);
+          console.log('insertText', lense, event.data);
           this.addCharToToken(lense, selection, event);
           break;
         case 'deleteContentBackward':
@@ -298,10 +297,10 @@ export class TokenManager {
     *                        the text that should be processed
     *   
   */
-  tokenize(text, data = {}) {
+  tokenize(text, data = {}, lenses=this.activeLenseNames) {
     let tokens = [];
       data = {  ...data, onToken: this.internalOnToken.bind(this) };
-      for (let lense of this.activeLenseNames) {
+      for (let lense of lenses) {
         switch (lense) {
           case 'words':
             tokens = splitWordTokenize(text, data);
