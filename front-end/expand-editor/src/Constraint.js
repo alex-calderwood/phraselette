@@ -38,7 +38,7 @@ export class ConstraintWindow extends Component {
         type = 'text';
     }
 
-    return <div className="constraint">
+    return <div id={this.props.constraint.id} className="constraint">
               <span>{this.constraint.dataType}</span>
               <input type={type} />
               <button onClick={this.registerConstraint}>constrain</button>

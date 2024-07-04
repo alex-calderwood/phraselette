@@ -10,6 +10,8 @@ import { PrismComponent, Prism} from "./Prism";
 import { LenseEditor } from "./LenseEditor";
 
 const initialLense = 'spacy';
+const debugMode = false;
+
                                      
 //         _-_.
 //      _-',^. `-_.
@@ -68,7 +70,7 @@ class App extends Component {
     this.text = text;
   }
 
-  attemptInitialTokenization() { // TODO this should go somewhere else
+  attemptInitialTokenization() {
     if (this.tokenManager && this.text) {
       this.tokenManager.tokenize(this.text);
     }
@@ -120,8 +122,10 @@ class App extends Component {
 
   render() {
     let startChar     = this.state.selection ? this.state.selection.startChar : null;
-    let endChar       = this.state.selection ? this.state.selection.endChar : null;
+    let endChar       = this.state.selection ? this.state.selection.endChar - 1: null; // TODO this should be renamed endcharindex cause it's not actually the ending character
     let selectionText = this.state.selection ? this.state.selection.text : null;
+
+    let showSelection = debugMode && startChar !== null && endChar !== null;
 
     let activeLenses = Object.entries(this.state.prisms).filter(([key, prism]) => prism.active).map(([key, prism]) => prism);
     window.activeLenses = activeLenses; // for debugging
@@ -156,17 +160,18 @@ class App extends Component {
 
             <div className={`prism-inspector`}>
               {selectionText && selectionText.length > 0 ? <div className="selection-text">"{selectionText}"</div> : ""}
+              {showSelection ? <div className="selection-info">{startChar} - {endChar}</div> : ""}
               {activeLenses.map((prism) => {
                 return (
                   <PrismComponent 
                     key={prism.name}
                     tokenManager={this.tokenManager} 
                     prism={prism}
-                    selection={this.state.selection} 
                     startChar={startChar} endChar={endChar} 
                     shouldHighlight={prism.shouldHighlight}
                     onHighlightChange={this.onHighlightChange.bind(this)} 
                     onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
+                    debugMode={debugMode}
                     />
                 );
               })}

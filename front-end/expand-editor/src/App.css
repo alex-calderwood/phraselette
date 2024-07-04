@@ -109,7 +109,7 @@ we will need to select the text children of the editor */
 }
 
 /* add a gradient to the right of the token range */
-.token-range-parent::after {
+.overflowing::after {
   z-index: 2;
   content: "";
   position: absolute;

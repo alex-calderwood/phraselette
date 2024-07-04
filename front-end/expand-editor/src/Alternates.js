@@ -11,7 +11,6 @@ export class TokenAlternates extends Component {
 
   onTokenClick(clickedToken, originalToken) {
     console.log('clicked', clickedToken, originalToken);
-    // this.tokenManager.swapToken(originalToken, clickedToken);
     if (this.props.onTokenClick) {
       this.props.onTokenClick(originalToken, clickedToken);
     }
@@ -23,15 +22,14 @@ export class TokenAlternates extends Component {
     if (!token || !token.alternates || token.alternates.length === 0) {
       return <div></div>
     }
-
-    console.log('token alternates for', token, token.alternates)
+    
     let alternates = token.alternates; // array of token objects
 
-    return <div className="alternates">
+    return <div id={'alternate-' + this.props.token.id} className="alternates">
         <div className='title'> Alternates for {token.text}</div>
-        
         <TokenRange 
           tokens={alternates}
+          tokenType='alternate'
           tokenManager={this.tokenManager}
           onTokenClick={(clickedToken) => { this.onTokenClick(clickedToken, token) }}
           />

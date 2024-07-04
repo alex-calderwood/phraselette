@@ -14,7 +14,6 @@ export class Prism {
 
   setActive(value) {
     this.active = value;
-    console.log('setting active to', value);
     return this;
   }
 
@@ -77,6 +76,8 @@ export class PrismComponent extends Component {
 
     let hidden = prism.active && tokens.length > 0 ? '' : 'hidden';
 
+    console.log('token range for', prism.name, tokens);
+
     return <div className={`prism ${hidden}`}>
         <div className='title'> 
           <span>{prism.name} tokens </span>
@@ -87,11 +88,14 @@ export class PrismComponent extends Component {
           </span>
         </div>
 
-        <TokenRange tokens={tokens} 
+         <TokenRange tokens={tokens} 
           tokenManager={this.tokenManager} 
-          prismName={prism.name}
-          startChar={start} endChar={end}/>
+          tokenType={prism.name}
+          startChar={start} endChar={end}
+          debugMode={this.props.debugMode}
+          />
 
+        
         {tokens.map((token) => {
           return <TokenAlternates token={token} 
             alternates={token.alternates} 
@@ -103,12 +107,12 @@ export class PrismComponent extends Component {
         }
 
 
-        <div className="constraint-container">
+        {/* <div className="constraint-container">
           <button onClick={this.handleAddConstraint.bind(this)}>constrain</button>
           {this.state.constraints.map((constraint) => {
             return <ConstraintWindow constraint={constraint} />
           })}
-        </div>
+        </div> */}
         
       </div>
   }

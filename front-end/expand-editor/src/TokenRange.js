@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { Component, createRef } from "react";
 import { getColor } from "./color";
 
 function singular(token) {
@@ -9,6 +9,8 @@ function singular(token) {
       return 'spacy';
     case 'probability':
       return 'token';
+    case 'alternate':
+      return 'alternate';
     default:
       console.error('no singular for', token);
       return token;
@@ -19,10 +21,32 @@ export class TokenRange extends Component {
   constructor(props) {
     super(props);
     this.tokenManager = this.props.tokenManager;
+    this.tokenBarRef = createRef(); // Create a reference to the token bar div
+    this.state = {
+      overflowing: false
+    };
+  }
+
+  componentDidMount() {
+    this.checkOverflow();
+    window.addEventListener('resize', this.checkOverflow); // Optionally handle window resize
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('resize', this.checkOverflow);
+  }
+
+  checkOverflow = () => {
+    const node = this.tokenBarRef.current;
+    if (node) {
+      const isOverflowing = node.scrollWidth > node.clientWidth;
+      this.setState({ overflowing: isOverflowing });
+    }
   }
 
   render() {
-    let prismName = this.props.prismName;
+    let tokenType = this.props.tokenType;
+    let overflowing = this.state.overflowing ? "overflowing" : "";
 
     // filter out ' ' and &nbsp;
     let isSpace = (text) => { return text === ' ' || text === '\u00A0' };
@@ -35,28 +59,32 @@ export class TokenRange extends Component {
       return (num !== 0 && (num < 1e-3 || num >= 1e+7)) ? num.toExponential(2) : num.toPrecision(3);
     }
 
-    console.log('token range for', prismName, tokens);
-
     return (
-      <div className="token-range-parent">
-          <div id={'tokenbar' + prismName} className={`token-range`}>
+      <div className={"token-range-parent " + overflowing}>
+          <div id={'tokenbar' + tokenType} className={`token-range`}>
               {tokens && tokens.map((token) => {
 
-                let color = prismName ? getColor(prismName, token) : 'white';
+                let color = tokenType ? getColor(tokenType, token) : 'white';
 
                 let prob = null;
                 let pos = null;
-                if (token.type === 'probability') {
+
+                let showProb = tokenType === 'probability' || tokenType === 'alternate';
+                if (showProb) {
                   prob = scientific(token.prob);
-                } else if (token.type === 'spacy') {
+                }
+
+                if (token.type === 'spacy') {
                   pos = token.raw.pos; // id: 6, start: 27, end: 31, tag: NN, pos: NOUN, morph: Number=Sing, lemma: rain, dep: pobj, head: 5
                 }
 
                 let onClick = this.props.onTokenClick ? this.props.onTokenClick : () => {};
 
+                let showCharRange = this.props.debugMode && token.start !== undefined && token.end !== undefined;
+
                 return <div key={token.id} className="token" onClick={() => { onClick(token) }}>
                         <div className="item heading">{token.text}</div>
-                        {/* <div className="item range">[{token.start}-{token.end}]</div> */}
+                        {showCharRange && <div className="item range">[{token.start}-{token.end}]</div> }
                         {pos !== null && <div className="item" style={{backgroundColor: color}}>{pos}</div>}
                         {prob !== null && <div className="item" style={{backgroundColor: color}}>{prob}</div>}
                         {/* <div className="item">{singular(token.type)}</div> */}

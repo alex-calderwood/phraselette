@@ -21,7 +21,7 @@ function charIndex(span) {
 export class LenseEditor extends Component {
   constructor(props) {
     super(props);
-    let originalText = "That the world will end in rain";
+    let originalText = "That the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rainhat the world will end in rain";
     let content = [];
     for (let i = 0; i < originalText.length; i++) {
       let c = originalText[i];
@@ -71,15 +71,11 @@ export class LenseEditor extends Component {
     if (rangySelection.rangeCount > 0) {
       let anchorParent = rangySelection.anchorNode.parentNode;
       let focusParent = rangySelection.focusNode.parentNode;
-      let offset = rangySelection.focusOffset; // TODO this should be anchorOffset but right now something reauires this mistake
 
       let startChar = charIndex(anchorParent) + rangySelection.anchorOffset;
-      // let endChar = anchorParent === focusParent ? 
-      //   startChar : (charIndex(focusParent) + rangySelection.focusOffset); // this is wrong
       let endChar = charIndex(focusParent) + rangySelection.focusOffset;
 
       let selection = {
-        offset: offset,
         charId: rangySelection.anchorNode.parentNode.id,
         rangy: rangySelection,
 
@@ -92,8 +88,10 @@ export class LenseEditor extends Component {
         // we use the above to calculate these helper variables
         // they may not be up to date if accessed during an input event
         // both indicies represent the 0 based index of the character that the cursor precedes
-        // but since the cursor is between characters, the startChar is the character that the cursor is before
+        // another way to think about it:
+        // Each number counts the number of characters that precede it.
         // However, it is ambiguous from these two values alone whether the cursor is in the end of the span or the beginning of the next
+        // in those cases, use the above values
         startChar: startChar,
         endChar: endChar,
 
@@ -421,7 +419,9 @@ export class LenseEditor extends Component {
     // update the state text
     let newText = this.getTextWithWhitespace(this.contentRef.current);
 
+    console.log('before sync', this.tokenManager.tokens.probability);
     this.tokenManager.synchronizeTokens(this.selection, this.selectionBeforeInput, event);
+    console.log('after sync', this.tokenManager.tokens.probability);
 
     // pass the new text into the tokenizer to update its token list and associated character indices
     this.callTokenize(newText, this.props.lenseToHighlight);
@@ -471,7 +471,7 @@ export class LenseEditor extends Component {
   }
 
   render() {
-    this.colorAllCharactersByProb();
+    // this.colorAllCharactersByProb(); // TODO this shouldn't called here
 
     window.swapText = this.swapText.bind(this);
 

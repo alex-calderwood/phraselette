@@ -73,7 +73,7 @@ export async function gpt2Tokenize(text, data = {}) {
       "alternates": rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
         "text": alt.token,
         "prob": alt.prob,
-        "type": "probability",
+        "type": "alternate",
       }) } ) : [],
     })
     if (onToken) {
