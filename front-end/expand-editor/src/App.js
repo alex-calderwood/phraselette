@@ -10,7 +10,7 @@ import { PrismComponent, Prism} from "./Prism";
 import { LenseEditor } from "./LenseEditor";
 
 const initialLense = 'spacy';
-const debugMode = true;
+const debugMode = false;
 
                                      
 //         _-_.
@@ -98,15 +98,28 @@ class App extends Component {
     this.attemptInitialTokenization();
   }
 
+  // on mount
+  componentDidMount() {
+    // Figure out which lense to initially higihlight
+    let highlightPrism =  Object.keys(this.state.prisms).filter((key) => {
+      return this.state.prisms[key].shouldHighlight;
+    });
+    highlightPrism = highlightPrism.length > 0 ? highlightPrism[0] : null;
+    if (highlightPrism)
+      this.onHighlightChange(highlightPrism, true);
+  }
+
+
+
   onHighlightChange(prismName, shouldHighlight) {
     let prisms = this.state.prisms;
-    prisms[prismName].setDoHighlight(shouldHighlight);
-    // this.setState({ prisms: prisms }); // update the state
 
     // for now, we only allow one highlighted lense, so we need to uncheck all the other ones
     let activeLenses = Prism.getActive(prisms);
     for (let lense of activeLenses) {
-      if (lense !== prismName) {
+      if (lense === prismName) {
+        prisms[lense].setDoHighlight(shouldHighlight)
+      } else {
         prisms[lense].setDoHighlight(false);
       }
     }

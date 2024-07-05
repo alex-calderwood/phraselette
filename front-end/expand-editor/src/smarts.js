@@ -81,10 +81,6 @@ export async function gpt2Tokenize(text, data = {}) {
     rawTokenPromise = await tokenGenerator.next();
   }
 
-    // at the end we should try to check again and call it if not everything is tokenized
-    if (data.onFinished) {
-      data.onFinished();
-    }
 }
 
 export function splitWordTokenize(text, data = {}) {
@@ -172,6 +168,7 @@ async function* callGPT2(context, tokenizeRange, alternates=0) {
       for (const line of lines) {
         if (line.trim()) {
           const token = JSON.parse(line);
+          console.log('gpt token', token);
           yield token;
         }
       }

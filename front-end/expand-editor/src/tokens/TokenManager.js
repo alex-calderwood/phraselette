@@ -300,6 +300,7 @@ export class TokenManager {
     let tokens = [];
       data = {  ...data, onToken: this.internalOnToken.bind(this) };
       for (let lense of lenses) {
+        console.log('tokenizing', lense);
         switch (lense) {
           case 'words':
             tokens = splitWordTokenize(text, data);
@@ -311,9 +312,13 @@ export class TokenManager {
           case 'spacy':
             data = { ...data, onToken: this.internalOnToken.bind(this) };
             spacyTokenize(text, data);
-
             break;
       }
+    }
+
+    // at the end we should try to check again and call it if not everything is tokenized
+    if (data.onFinished) {
+      data.onFinished();
     }
   }
 

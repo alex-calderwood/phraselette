@@ -39,8 +39,11 @@ export class LenseEditor extends Component {
   }
 
   updateUITokens(token) {
+    console.log('updating UI for ', token, this.props.lenseToHighlight)
     if (this.props.lenseToHighlight === token.type) {
       this.colorTokenByProb(token);
+      // trigger a rerender
+      this.forceUpdate(); 
     }
   }
 
@@ -266,6 +269,9 @@ export class LenseEditor extends Component {
       let span = document.querySelector(`span[c='${i}']`);
       if (span) {
         span.style.backgroundColor = color;
+        console.log('coloring', span)
+      } else {
+        console.log('no span')
       }
     }
   }
@@ -422,15 +428,22 @@ export class LenseEditor extends Component {
     let text = this.getTextWithWhitespace(this.contentRef.current);
     let tokenizeRange  = [0, text.length - 1];
     
-    let lense = lenses[0];
-    let remainingLenses = lenses.slice(1);
-
-    let onFinished = () => { this.forceTokenize(remainingLenses); };
+    if (lenses.length < 1) {
+      return;
+    }
 
     let data = {
       tokenizeRange: tokenizeRange,
-      onFinished: onFinished.bind(this),
     };
+
+    let lense = lenses[0];
+    let remainingLenses = lenses.slice(1);
+
+    if (remainingLenses && remainingLenses.length > 0) {
+      let onFinished = () => { this.forceTokenize(remainingLenses); };
+      data['onFinished']= onFinished.bind(this);
+    }
+
     this.tokenManager.tokenize(text, data, lenses=[lense]);
   }
 
