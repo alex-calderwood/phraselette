@@ -32,11 +32,11 @@ class App extends Component {
 
     let prisms = {
       'words':        new Prism('words',       'string').setActive(true),                                                      
-      'probability':  new Prism('probability', 'number').setActive(true).setDoHighlight(true),                                                         
+      'probability':  new Prism('probability', 'number').setActive(false).setDoHighlight(false),                                                         
       'POS':          new Prism('POS',         'string'),                                                                             
       'embedding':    new Prism('embedding',   'vector'),                                                                       
       'critic':       new Prism('critic',      'string'),       
-      'spacy':        new Prism('spacy',       'string').setActive(false).setDoHighlight(false),                                                                   
+      'spacy':        new Prism('spacy',       'string').setActive(true).setDoHighlight(true),                                                                   
     }
 
     super(props);
@@ -169,11 +169,11 @@ class App extends Component {
               {/* button that sets the selected lense to active */}
               <button className="selectButoon" onClick={this.handleAddLense.bind(this)}>add</button>
               <span id="selected" className="info">
-                <span >active: </span>
+                <span id="active" >active: </span>
                 {activeLenses.map((prism) => {
                   let shouldHighlight = prism.shouldHighlight;
                   let onHighlightChange = this.onHighlightChange.bind(this)
-                  return <ActiveLense prism={prism} shouldHighlight={shouldHighlight} onHighlightChange={onHighlightChange}>{prism.name}</ActiveLense>
+                  return <ActiveLense key={prism.name} prism={prism} shouldHighlight={shouldHighlight} onHighlightChange={onHighlightChange}>{prism.name}</ActiveLense>
                 })}
               </span>
             </div>

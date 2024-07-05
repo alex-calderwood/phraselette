@@ -24,6 +24,7 @@ export async function spacyTokenize(text, data = {}) {
   if (badData(text)) return;
 
   let onToken = data.onToken;
+  delete data.tokenizationRange
   let tokenizeRange = makeTokenizationRange(text, data);
   let tokenGenerator = callSpacy(text, tokenizeRange);
 
@@ -168,7 +169,6 @@ async function* callGPT2(context, tokenizeRange, alternates=0) {
       for (const line of lines) {
         if (line.trim()) {
           const token = JSON.parse(line);
-          console.log('gpt token', token);
           yield token;
         }
       }
@@ -184,8 +184,8 @@ async function* callSpacy(context, tokenizeRange) {
   const preContext = context.substring(0, tokenizeRange[0]);
 
   const data = {
-    context: preContext,
-    text: text,
+    // context: preContext,
+    text: preContext + text,
   };
 
   console.log("smarts calling spacy with data", data);

@@ -39,11 +39,9 @@ export class LenseEditor extends Component {
   }
 
   updateUITokens(token) {
-    console.log('updating UI for ', token, this.props.lenseToHighlight)
     if (this.props.lenseToHighlight === token.type) {
       this.colorTokenByProb(token);
-      // trigger a rerender
-      this.forceUpdate(); 
+      this.forceUpdate(); // trigger a rerender of the editor
     }
   }
 
@@ -263,15 +261,13 @@ export class LenseEditor extends Component {
   colorTokenByProb(token) {
     let start = token.start;
     let end = token.end;
-    let prob = token.prob;
     let color = getColor(this.props.lenseToHighlight, token);
     for (let i = start; i <= end; i++) { // [start, end] inclusive
       let span = document.querySelector(`span[c='${i}']`);
       if (span) {
         span.style.backgroundColor = color;
-        console.log('coloring', span)
       } else {
-        console.log('no span')
+        console.error('no span for', token)
       }
     }
   }
@@ -400,8 +396,6 @@ export class LenseEditor extends Component {
       // to take care of after the user has finished typing (some requests may have been denied by the server
       // due to rate limiting) while typing. TODO this is a bit of a hack and could be cleaned up
       shouldTokenize = shouldTokenize && callDepth < 2; 
-
-      console.log('tokenizing range', tokenizeRange, shouldTokenize, lense, callDepth, 'length', text.length);
 
       if (!shouldTokenize) return;
 

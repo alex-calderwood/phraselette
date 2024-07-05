@@ -21,7 +21,7 @@ export class ActiveLense extends Component {
   render() {  
     let prism = this.props.prism;
 
-    return <span id={`active-highlight-` + prism.id} className="highlight">
+    return <span id={`active-highlight-` + prism.name} className="highlight">
             {prism.name}
             <input type="checkbox" id={`highlight` + prism.name} className="highlight-check" checked={this.props.shouldHighlight} onChange={this.toggleHighlight.bind(this)}/>
           </span>

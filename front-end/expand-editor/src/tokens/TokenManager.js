@@ -9,6 +9,7 @@ export class TokenManager {
     }; 
     this.activeLenseNames = activeLenses; // which lenses are currently active
     this.externalOnToken = (token) => {}; // a callback to call when a token is created
+    this.lenseForWordBreaks = 'spacy';
   }
 
   /* 
@@ -150,8 +151,6 @@ export class TokenManager {
 
     // shift all token indices after the edited token
     this.shiftTokenSpans(token.end + 1, this.tokens[lense], event.data.length); // TODO think about what happens when there is a tokenization going on
-  
-    console.log('editToken', token);
   }
 
   shiftTokenSpans(fromChar, tokens, shiftAmount) {
@@ -310,7 +309,6 @@ export class TokenManager {
             gpt2Tokenize(text, data);
             break;
           case 'spacy':
-            data = { ...data, onToken: this.internalOnToken.bind(this) };
             spacyTokenize(text, data);
             break;
       }
