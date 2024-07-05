@@ -221,6 +221,12 @@ button:hover {
 }
 
 
+/* input of type checkbox */
+.input[type="checkbox"] {
+  height: 2em;
+  width: 2em;
+}
+
 
 /* Selection Highlighting */
 :root {

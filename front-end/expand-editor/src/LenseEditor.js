@@ -468,6 +468,7 @@ export class LenseEditor extends Component {
     // update the state text
     let newText = this.getTextWithWhitespace(this.contentRef.current);
 
+    // update each modified token (currently broken)
     this.tokenManager.synchronizeTokens(this.selection, this.selectionBeforeInput, event);
 
     // pass the new text into the tokenizer to update its token list and associated character indices

@@ -53,7 +53,6 @@ export class TokenManager {
     for (let lense of this.activeLenseNames) {
       switch (event.inputType) {
         case 'insertText':
-          console.log('insertText', lense, event.data);
           this.addCharToToken(lense, selection, event);
           break;
         case 'deleteContentBackward':

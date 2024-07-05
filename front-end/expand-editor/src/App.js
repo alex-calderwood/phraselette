@@ -1,11 +1,11 @@
 // https://reactjs.org/docs/create-a-new-react-app.html
 import "./App.css";
 import React, { useCallback , createRef, Component } from "react";
+import { ActiveLense } from "./components/ActiveLense";
 
 // a library for aing and restoring selections (cursor positions / ranges) in a document
 // it uses hidden elements to store the selection data
 import { TokenManager } from "./tokens/TokenManager";
-import { HighlightBar } from "./TokenRange";
 import { PrismComponent, Prism} from "./Prism";
 import { LenseEditor } from "./LenseEditor";
 
@@ -31,8 +31,8 @@ class App extends Component {
   constructor(props) {
 
     let prisms = {
-      'words':        new Prism('words',       'string').setActive(false),                                                      
-      'probability':  new Prism('probability', 'number').setActive(false).setDoHighlight(false),                                                         
+      'words':        new Prism('words',       'string').setActive(true),                                                      
+      'probability':  new Prism('probability', 'number').setActive(true).setDoHighlight(true),                                                         
       'POS':          new Prism('POS',         'string'),                                                                             
       'embedding':    new Prism('embedding',   'vector'),                                                                       
       'critic':       new Prism('critic',      'string'),       
@@ -158,7 +158,9 @@ class App extends Component {
               <span id="selected" className="info">
                 <span >active: </span>
                 {activeLenses.map((prism) => {
-                  return <span key={prism.name}>{prism.name} </span>;
+                  let shouldHighlight = prism.shouldHighlight;
+                  let onHighlightChange = this.onHighlightChange.bind(this)
+                  return <ActiveLense prism={prism} shouldHighlight={shouldHighlight} onHighlightChange={onHighlightChange}>{prism.name}</ActiveLense>
                 })}
               </span>
             </div>
@@ -173,8 +175,6 @@ class App extends Component {
                     tokenManager={this.tokenManager} 
                     prism={prism}
                     startChar={startChar} endChar={endChar} 
-                    shouldHighlight={prism.shouldHighlight}
-                    onHighlightChange={this.onHighlightChange.bind(this)} 
                     onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
                     debugMode={debugMode}
                     />

@@ -1,5 +1,5 @@
 import React, { Component, createRef } from "react";
-import { getColor } from "./color";
+import { getColor } from "../color";
 
 function singular(token) {
   switch(token) {

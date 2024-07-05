@@ -1,7 +1,7 @@
 import React, { Component } from "react";
-import { TokenRange } from "./TokenRange";
+import { TokenRange } from "./components/TokenRange";
 import { Constraint, ConstraintWindow } from "./Constraint";
-import { TokenAlternates } from "./Alternates";
+import { TokenAlternates } from "./components/Alternates"
 
 export class Prism {
   constructor(name, dataType) {
@@ -43,7 +43,6 @@ export class PrismComponent extends Component {
     super(props);
     this.tokenManager = this.props.tokenManager;
     this.prism = this.props.prism;
-    this.shouldHighlight = this.props.shouldHighlight; // passed in as a prop to trigger changes correctly
     this.state = {
       constraints: [],
     }
@@ -53,15 +52,6 @@ export class PrismComponent extends Component {
     this.setState({ 
       constraints: this.state.constraints.concat([new Constraint('constraint', this.prism.dataType)]) 
     });
-  }
-
-  toggleHighlight() {
-    this.setState({ shouldHighlight: !this.prism.shouldHighlight });
-
-    // tell the parent that the highlight has changed, which will update the prism.shouldHighlight
-    if (this.props.onHighlightChange) {
-      this.props.onHighlightChange(this.prism.name, !this.prism.shouldHighlight);
-    }
   }
 
   render() {
@@ -83,10 +73,11 @@ export class PrismComponent extends Component {
         <div className='title'> 
           <span>{prism.name} tokens </span>
           
-          <span className="highlight">
+          {/* May want to also have highlight toggling here */}
+          {/* <span className="highlight">
             <input type="checkbox" id={`highlight` + prism.name} name="highlight" checked={this.props.shouldHighlight} onChange={this.toggleHighlight.bind(this)}/>
             <label htmlFor={`highlight` + prism.name}>highlight</label>
-          </span>
+          </span> */}
         </div>
 
          <TokenRange tokens={tokens} 
