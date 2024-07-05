@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 from gpt import pluck_probs, tokenizer
 from space import stream_parse
+from phones import phonemes_for
 from network import BREAK_TOKEN
 
 # global variable to keep track of whether the server is working on something
@@ -81,6 +82,21 @@ def spacy():
     print('request', data, 'working', working)
 
     return Response(stream_spacy_with_lock(text, extra_context), content_type='application/json')
+
+@app.route("/phones", methods=["POST"])
+def phones():
+    global working
+    with lock:
+        if working:
+            print("Ignoring request, still working on previous response")
+            return Response("Still working on previous response", content_type='application/json', status=409)
+        working = True
+
+    data = request.get_json()
+    words = data["words"]
+    print('request', data, 'working', working)
+
+    return Response(json.dumps(phonemes_for(words)), content_type='application/json')
 
 
 if __name__ == "__main__":
