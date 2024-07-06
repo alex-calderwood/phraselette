@@ -5,9 +5,11 @@ import { ActiveLense } from "./components/ActiveLense";
 
 // a library for aing and restoring selections (cursor positions / ranges) in a document
 // it uses hidden elements to store the selection data
-import { TokenManager } from "./tokens/TokenManager";
-import { PrismComponent, Prism} from "./Prism";
-import { LenseEditor } from "./LenseEditor";
+import { TokenManager } from "./document/TokenManager";
+import { Prism} from "./document/Prism";
+import { TokenLense } from "./components/TokenLense";
+import { WordView } from "./components/WordView";
+import { LenseEditor } from "./components/LenseEditor";
 
 const initialLense = 'spacy';
 const debugMode = false;
@@ -26,18 +28,31 @@ const debugMode = false;
 //     `-_, :!;;;''
 //         `-!'         mn
 
+class DocumentHighlight {
+  constructor(span, tokenManager) {
+    this.span = span;
+    this.tokenManager = tokenManager;
+  }
+}
+
 
 class App extends Component {
   constructor(props) {
 
     let prisms = {
-      'words':        new Prism('words',       'string').setActive(true),                                                      
+      'words':        new Prism('words',       'string').setActive(false),                                                      
       'probability':  new Prism('probability', 'number').setActive(false).setDoHighlight(false),                                                         
-      'POS':          new Prism('POS',         'string'),                                                                             
-      'embedding':    new Prism('embedding',   'vector'),                                                                       
-      'critic':       new Prism('critic',      'string'),       
+      'POS':          new Prism('POS',         'string'),                                                                 
+      // 'embedding':    new Prism('embedding',   'vector'),                                                                       
+      'critic':       new Prism('critic',      'string'),
+      'sound':        new Prism('sound',       'list'),
       'spacy':        new Prism('spacy',       'string').setActive(true).setDoHighlight(true),                                                                   
     }
+
+    let constraints = []; 
+    // constraints have associated tokens, bounds?
+
+    let searcher = "";
 
     super(props);
     let activeLenses = Prism.getActive(prisms);
@@ -139,14 +154,18 @@ class App extends Component {
   }
 
   render() {
-    let startChar     = this.state.selection ? this.state.selection.startChar : null;
-    let endChar       = this.state.selection ? this.state.selection.endChar: null; // TODO this should be renamed endcharindex cause it's not actually the ending character
+    let startIndex    = this.state.selection ? this.state.selection.startIndex : null;
+    let endIndex      = this.state.selection ? this.state.selection.endIndex: null;
     let selectionText = this.state.selection ? this.state.selection.text : null;
 
-    let showSelection = debugMode && startChar !== null && endChar !== null;
+    let showSelection = debugMode && startIndex !== null && endIndex !== null;
 
     let activeLenses = Object.entries(this.state.prisms).filter(([key, prism]) => prism.active).map(([key, prism]) => prism);
     window.activeLenses = activeLenses; // for debugging
+    
+    let wordsLense = this.state.prisms[this.tokenManager.wordsLense];
+    // let additionalLenses = Object.entries(this.state.prisms).filter(([key, prism]) => prism.active && key !== this.tokenManager.wordsLense).map(([key, prism]) => prism);
+    
     return (
       <div className="context-container">
         <div className="editor-container">
@@ -160,8 +179,8 @@ class App extends Component {
           </div>
           <div className="right">
             <div className="lenses">
-              <label htmlFor="add-lense">add a lense</label>
-              <select id="add-lense">
+              {/* <label htmlFor="add-lense">add a lense</label> */}
+              <select title="add a lense" id="add-lense">
                 {Object.entries(this.state.prisms).map(([name, lense]) => {
                   return <option key={lense.name} value={lense.name}>{lense.name}</option>;
                 })}
@@ -180,19 +199,41 @@ class App extends Component {
 
             <div className={`prism-inspector`}>
               {selectionText && selectionText.length > 0 ? <div className="selection-text">"{selectionText}"</div> : ""}
-              {showSelection ? <div className="selection-info">{startChar} - {endChar}</div> : ""}
-              {activeLenses.map((prism) => {
-                return (
-                  <PrismComponent 
-                    key={prism.name}
+              {showSelection ? <div className="selection-info">{startIndex} - {endIndex}</div> : ""}
+              
+              <WordView 
+                    key={"wordslense"}
                     tokenManager={this.tokenManager} 
-                    prism={prism}
-                    startChar={startChar} endChar={endChar} 
+                    prism={wordsLense}
+                    startIndex={startIndex} endIndex={endIndex} 
                     onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
                     debugMode={debugMode}
                     />
+
+              {activeLenses.map((prism) => {
+                return (
+                  <TokenLense 
+                    key={prism.name}
+                    tokenManager={this.tokenManager} 
+                    prism={prism}
+                    startIndex={startIndex} endIndex={endIndex} 
+                    onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
+                    debugMode={debugMode}
+                  />
                 );
               })}
+
+              <div>Add Constraint</div>
+
+              <div>Alternatives</div>
+              {/* <Alternatives 
+                tokenManager={this.tokenManager}
+                constratints={this.constraints}
+                startIndex={startIndex} endIndex={endIndex} 
+                onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
+                debugMode={debugMode} 
+              /> */}
+
             </div>
           </div>
         </div>

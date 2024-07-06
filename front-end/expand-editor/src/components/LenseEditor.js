@@ -1,8 +1,8 @@
 import React, { Component } from "react";
 import rangy from 'rangy';
-import { getUniqueUUID, insertAfter } from "./utils";
-import { TokenManager } from "./tokens/TokenManager";
-import { getColor } from "./color";
+import { getUniqueUUID, insertAfter } from "../scripts/utils";
+import { TokenManager } from "../document/TokenManager";
+import { getColor } from "../color";
 
 /* 
 * Given character span <span c="5" id="id14acbb15b7e0e"">f</span>
@@ -73,8 +73,8 @@ export class LenseEditor extends Component {
       let anchorParent = rangySelection.anchorNode.parentNode;
       let focusParent = rangySelection.focusNode.parentNode;
 
-      let startChar = charIndex(anchorParent) + rangySelection.anchorOffset;
-      let endChar = charIndex(focusParent) + rangySelection.focusOffset;
+      let startIndex = charIndex(anchorParent) + rangySelection.anchorOffset;
+      let endIndex = charIndex(focusParent) + rangySelection.focusOffset;
 
       let selection = {
         charId: rangySelection.anchorNode.parentNode.id,
@@ -93,8 +93,8 @@ export class LenseEditor extends Component {
         // Each number counts the number of characters that precede it.
         // However, it is ambiguous from these two values alone whether the cursor is in the end of the span or the beginning of the next
         // in those cases, use the above values
-        startChar: startChar,
-        endChar: endChar,
+        startIndex: startIndex, // TODO rename this startIndex
+        endIndex: endIndex,
 
         // the text that is selected
         text: rangySelection.toString(),

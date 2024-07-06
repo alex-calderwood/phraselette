@@ -1,4 +1,4 @@
-import { splitWordTokenize, gpt2Tokenize, spacyTokenize } from '../smarts.js';
+import { splitWordTokenize, gpt2Tokenize, spacyTokenize } from '../scripts/smarts.js';
 
 export class TokenManager {
   constructor(activeLenses, tokens) {
@@ -9,7 +9,7 @@ export class TokenManager {
     }; 
     this.activeLenseNames = activeLenses; // which lenses are currently active
     this.externalOnToken = (token) => {}; // a callback to call when a token is created
-    this.lenseForWordBreaks = 'spacy';
+    this.wordsLense = 'spacy';
   }
 
   /* 
@@ -78,11 +78,11 @@ export class TokenManager {
   }
 
   removeCharsFromToken(lense, beforeSelection, event) {
-    let startCharIndex = Math.min(beforeSelection.startChar, beforeSelection.endChar);
-    let endCharIndex = Math.max(beforeSelection.startChar, beforeSelection.endChar);
+    let startCharIndex = Math.min(beforeSelection.startIndex, beforeSelection.endIndex);
+    let endCharIndex = Math.max(beforeSelection.startIndex, beforeSelection.endIndex);
     let totalShift = endCharIndex - startCharIndex;
-    if(beforeSelection.startChar == beforeSelection.endChar) {
-      startCharIndex = beforeSelection.startChar - 1;
+    if(beforeSelection.startIndex == beforeSelection.endIndex) {
+      startCharIndex = beforeSelection.startIndex - 1;
       totalShift = 1;
     }
 
@@ -124,26 +124,26 @@ export class TokenManager {
       console.error("editToken called with event.data.length", event.data.length, "not sure what to expect");
     }
 
-    let startChar = selection.startChar - event.data.length; // because we added a token TODO we want to use the keydown
+    let startIndex = selection.startIndex - event.data.length; // because we added a token TODO we want to use the keydown
 
-    let tokensAt = this.tokensAt(lense, startChar)
+    let tokensAt = this.tokensAt(lense, startIndex)
 
     if (tokensAt.length > 1) {
-      console.error("editToken called with", tokensAt.length, "tokens at", startChar);
+      console.error("editToken called with", tokensAt.length, "tokens at", startIndex);
       return;
     }
 
     if (tokensAt.length === 0) {
       // We may be at the end of the text so logic elsewhere will add the token (splitSpan I think)
-      console.error("editToken called with no tokens at", startChar); // doesn't seem to actually be a problem...
+      console.error("editToken called with no tokens at", startIndex); // doesn't seem to actually be a problem...
       return;
-      // let endChar = this.getEndOfLenseChar(this.tokens[lense])
-      // console.log('end', endChar, 'start', startChar);
+      // let endIndex = this.getEndOfLenseChar(this.tokens[lense])
+      // console.log('end', endIndex, 'start', startIndex);
     }
 
     // add the character to the token
     let token = tokensAt[0];
-    let cutIndex = startChar - token.start;
+    let cutIndex = startIndex - token.start;
     let start = token.text.slice(0, cutIndex) + event.data;
     let end = token.text.slice(cutIndex);
     token.text = start + end;

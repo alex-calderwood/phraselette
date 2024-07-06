@@ -1,4 +1,4 @@
-import { Token } from "./tokens/Token.js";
+import { Token } from "../document/Token.js";
 
 // Something unlikely to be seen, must match the tokenization in the backend (server.py)
 const breakToken = "&&VE*A=]";
@@ -41,7 +41,6 @@ export async function spacyTokenize(text, data = {}) {
       "tag":   rawToken.tag,
       "raw":   rawToken,
     });
-    console.log("spacy token", token, onToken);
     if (onToken) {
       onToken(token);
     }
@@ -188,7 +187,7 @@ async function* callSpacy(context, tokenizeRange) {
     text: preContext + text,
   };
 
-  console.log("smarts calling spacy with data", data);
+  // console.log("smarts calling spacy with data", data);
 
   try {
     const response = await fetch("http://127.0.0.1:5000/spacy", {

@@ -1,16 +1,6 @@
 import React, { Component } from "react";
 
-export class Constraint {
-  constructor(name, dataType) {
-    this.name = name;
-    this.dataType = dataType;
-    this.id = Constraint.makeConstraintID();
-  }
 
-  static makeConstraintID() {
-    return Math.random().toString(36).substring(7);
-  }
-}
 export class ConstraintWindow extends Component {
   constructor(props) {
     super(props);
@@ -39,11 +29,11 @@ export class ConstraintWindow extends Component {
     }
 
     return <div id={this.props.constraint.id} className="constraint">
-              <span>{this.constraint.dataType}</span>
-              <input type={type} />
-              <button onClick={this.registerConstraint}>constrain</button>
-              <button onClick={this.deleteConstratint} >x</button>
-            </div>;
+      <span>{this.constraint.dataType}</span>
+      <input type={type} />
+      <button onClick={this.registerConstraint}>constrain</button>
+      <button onClick={this.deleteConstratint}>x</button>
+    </div>;
   }
 
 }

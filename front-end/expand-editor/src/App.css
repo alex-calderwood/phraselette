@@ -105,7 +105,6 @@ we will need to select the text children of the editor */
 
 .token-range-parent {
   position: relative;
-  height: 36px;
 }
 
 /* add a gradient to the right of the token range */
@@ -170,8 +169,6 @@ label {
 .title {
   color:rgb(172, 172, 172);
   font-size: 14px;
-  margin-top: 10px;
-  margin-bottom: 10px;
   padding-right: 2px;
 }
 
