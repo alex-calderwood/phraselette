@@ -4,7 +4,7 @@ A text editor for viewing your text in many different ways...
 
 # Start the Front End
 
-    cd front-end/expand-editor/
+    cd front-end/
     npm start
 
 ## Reminder on how to set up node
@@ -26,8 +26,3 @@ I recommend you create a new python environment because this uses transformers, 
     export FLASK_APP="server.py"
     
     flask run
-
-
-# To Do's 
-
-* Rename front-end/expand-editor/ directory
