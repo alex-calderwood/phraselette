@@ -1,6 +1,6 @@
 // https://reactjs.org/docs/create-a-new-react-app.html
 import "./App.css";
-import React, { useCallback , createRef, Component } from "react";
+import React, { Component } from "react";
 import { ActiveLense } from "./components/ActiveLense";
 
 // a library for aing and restoring selections (cursor positions / ranges) in a document
@@ -14,7 +14,6 @@ import { LenseEditor } from "./components/LenseEditor";
 const initialLense = 'spacy';
 const debugMode = false;
 
-                                     
 //         _-_.
 //      _-',^. `-_.
 //  ._-' ,'   `.   `-_ 
@@ -28,31 +27,19 @@ const debugMode = false;
 //     `-_, :!;;;''
 //         `-!'         mn
 
-class DocumentHighlight {
-  constructor(span, tokenManager) {
-    this.span = span;
-    this.tokenManager = tokenManager;
-  }
-}
-
 
 class App extends Component {
   constructor(props) {
 
     let prisms = {
       'words':        new Prism('words',       'string').setActive(false),                                                      
-      'probability':  new Prism('probability', 'number').setActive(false).setDoHighlight(false),                                                         
+      'probability':  new Prism('probability', 'number').setActive(false).setDoHighlight(false),    
+      'search':       new Prism('search',      'string').setActive(true),
       'POS':          new Prism('POS',         'string'),                                                                 
-      // 'embedding':    new Prism('embedding',   'vector'),                                                                       
       'critic':       new Prism('critic',      'string'),
       'sound':        new Prism('sound',       'list'),
-      'spacy':        new Prism('spacy',       'string').setActive(true).setDoHighlight(true),                                                                   
+      'spacy':        new Prism('spacy',       'string').setActive(false).setDoHighlight(false),                                                                   
     }
-
-    let constraints = []; 
-    // constraints have associated tokens, bounds?
-
-    let searcher = "";
 
     super(props);
     let activeLenses = Prism.getActive(prisms);
@@ -124,8 +111,6 @@ class App extends Component {
       this.onHighlightChange(highlightPrism, true);
   }
 
-
-
   onHighlightChange(prismName, shouldHighlight) {
     let prisms = this.state.prisms;
 
@@ -175,6 +160,7 @@ class App extends Component {
               setText={this.setText.bind(this)} 
               lenseToHighlight={this.state.lenseToHighlight} 
               ref={this.editorRef}
+              testPrism={this.state.prisms['search']}
               />
           </div>
           <div className="right">

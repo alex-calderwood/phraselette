@@ -1,10 +1,10 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, Response
 from flask_cors import CORS
 import threading
 import json, time
 from tqdm import tqdm
 
-from gpt import pluck_probs, tokenizer
+from gpt import pluck_probs, search_alternates, tokenizer
 from space import stream_parse
 from phones import phonemes_for
 from network import BREAK_TOKEN
@@ -19,7 +19,7 @@ CORS(app)
 @app.route("/probs", methods=["POST"])
 def probs():
     # Generator for tokenizing and calculating the probabilities of each token in a phrase
-    def stream_probs(text, extra_context, mock=False, return_k_alternates=0):
+    def stream_probs(text, extra_context, mock=False, top_k=0):
         try:
             if mock: 
                 for token in tqdm(range(4)):
@@ -30,7 +30,7 @@ def probs():
                         'prob': 0.5
                     }) + BREAK_TOKEN
             else: 
-                for token in pluck_probs(text, extra_context, return_k_alternates=return_k_alternates):
+                for token in pluck_probs(text, extra_context, top_k=top_k):
                     yield json.dumps(token) + BREAK_TOKEN
         finally:
             with lock:
@@ -49,12 +49,10 @@ def probs():
     data = request.get_json()
     text = data["text"]
     extra_context = data.get("context", tokenizer.eos_token)
-    return_k_alternates = data.get("return_k_alternates", 0)
-
-    print('request', data, 'working', working)
+    top_k = data.get("top_k", 0)
 
     return Response(stream_probs(
-            text, extra_context, return_k_alternates=return_k_alternates
+            text, extra_context, top_k=top_k
             ), content_type='application/json')
 
 @app.route("/spacy", methods=["POST"])
@@ -98,6 +96,24 @@ def phones():
 
     return Response(json.dumps(phonemes_for(words)), content_type='application/json')
 
+
+@app.route("/search", methods=["POST"])
+def search():
+    global working
+    with lock:
+        if working:
+            print("Ignoring request, still working on previous response")
+            return Response("Still working on previous response", content_type='application/json', status=409)
+        working = True
+
+    data = request.args
+    text = data["text"]
+    extra_context = data.get("context", "")
+    top_k = int(data.get("top_k", 0))
+    depth = int(data.get("depth", 1))
+
+    for token in search_alternates(text, extra_context, top_k=top_k, depth=depth):
+        yield json.dumps(token) + BREAK_TOKEN
 
 if __name__ == "__main__":
     app.run()

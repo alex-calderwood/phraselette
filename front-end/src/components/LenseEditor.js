@@ -3,6 +3,7 @@ import rangy from 'rangy';
 import { getUniqueUUID, insertAfter } from "../scripts/utils";
 import { TokenManager } from "../document/TokenManager";
 import { getColor } from "../color";
+import { Document } from "../document/Document";
 
 /* 
 * Given character span <span c="5" id="id14acbb15b7e0e"">f</span>
@@ -453,6 +454,23 @@ export class LenseEditor extends Component {
       this.forceTokenize();
       this.splitIntoCharactersAndStyle(this.contentRef.current);
       return;
+    }
+
+    if (event.metaKey && event.key === '\'') {
+      console.log('testing search');
+      let document = new Document( // TODO this should be somewhere else
+        this.getTextWithWhitespace(this.contentRef.current),
+        this.selectionBeforeInput,
+        this.tokenManager,
+      );
+      let constraints = [];
+
+      let prism = this.props.testPrism;
+      let predictions = prism.search(document, constraints).then(
+        (predictions) => {
+          console.log('predictions', predictions);
+        }  
+      )
     }
   }
 

@@ -48,6 +48,7 @@ export async function spacyTokenize(text, data = {}) {
   }
 }
 
+
 export async function gpt2Tokenize(text, data = {}) {
   if (badData(text)) return;
 
@@ -79,7 +80,6 @@ export async function gpt2Tokenize(text, data = {}) {
     }
     rawTokenPromise = await tokenGenerator.next();
   }
-
 }
 
 export function splitWordTokenize(text, data = {}) {
@@ -129,6 +129,7 @@ async function* callGPT2(context, tokenizeRange, alternates=0) {
     top_k: alternates,
   };
 
+
   try {
     const response = await fetch("http://127.0.0.1:5000/probs", {
       method: "POST",
@@ -174,8 +175,6 @@ async function* callGPT2(context, tokenizeRange, alternates=0) {
     console.error("There has been a problem with your fetch operation:", error);
   }
 }
-
-
 
 async function* callSpacy(context, tokenizeRange) {
   // get the text to tokenize based on the inclusive range
@@ -226,87 +225,4 @@ async function* callSpacy(context, tokenizeRange) {
   }
 }
 
-export async function searchForward(document, constraints) {
-  let alternates = 100;
-  let searchDepth = 10;
-  let tokenGenerator = callSearch(document.selectionText, document.prefixText, alternates, searchDepth);
 
-  let rawTokenPromise = await tokenGenerator.next();
-  let predictions = [];
-  while (!rawTokenPromise.done) {
-    let rawToken = rawTokenPromise.value;
-    let token = new Token({
-      'start': rawToken.span[0],
-      // rawToken.span[1] is exclusive, our start and end is inclusive
-      'end': rawToken.span[1] - 1,
-      "text": rawToken.token,
-      "type": 'probability',
-      "prob": rawToken.prob,
-      "alternates": rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
-        "text": alt.token,
-        "prob": alt.prob,
-        "type": "alternate",
-      }) } ) : [],
-    })
-    predictions.push(token);
-    rawTokenPromise = await tokenGenerator.next();
-  }
-
-  return predictions;
-}
-
-async function* callSearch(text, prefix, alternates=0, searchDepth=10) {
-  const data = {
-    context: prefix,
-    text: text,
-    top_k: alternates,
-    depth: searchDepth,
-  };
-
-  console.log("searching with data", data)
-
-  try {
-    const response = await fetch("http://127.0.0.1:5000/probs", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    // Error handling
-    if (response.status === 409) { // busy
-      // We expect a busy signal, so try again later
-      // Don't need to throw an error
-      // console.log("Server busy");
-      return
-    } else {
-      if (!response.ok) {
-        // Some other error that we may need to deal with
-        throw new Error("Network response was not ok");
-      }
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split(breakToken);
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        if (line.trim()) {
-          const token = JSON.parse(line);
-          yield token;
-        }
-      }
-    }
-  } catch (error) {
-    console.error("There has been a problem with your fetch operation:", error);
-  }
-}
