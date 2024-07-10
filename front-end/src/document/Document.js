@@ -5,7 +5,6 @@ export class Document {
         this.tokenManager = tokenManager;
     }
 
-    // TODO test these
     get prefixText() {
         return this.text.slice(0, this.selection.startIndex);
     }

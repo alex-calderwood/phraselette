@@ -235,24 +235,17 @@ export async function searchForward(document, constraints) {
   let predictions = [];
   while (!rawTokenPromise.done) {
     let rawToken = rawTokenPromise.value;
-    let token = new Token({
-      'start': rawToken.span[0],
-      // rawToken.span[1] is exclusive, our start and end is inclusive
-      'end': rawToken.span[1] - 1,
-      "text": rawToken.token,
-      "type": 'probability',
-      "prob": rawToken.prob,
-      "alternates": rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
-        "text": alt.token,
-        "prob": alt.prob,
-        "type": "alternate",
-      }) } ) : [],
-    })
-    predictions.push(token);
+    let alternates = rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
+      "text": alt.token,
+      "prob": alt.prob,
+      "type": "alternate",
+    }) } ) : [];
+
+    predictions.push(alternates);
     rawTokenPromise = await tokenGenerator.next();
   }
 
-  return predictions;
+  return predictions[0]
 }
 
 async function* callSearch(text, prefix, alternates=0, searchDepth=10) {

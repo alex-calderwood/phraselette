@@ -15,16 +15,28 @@ export class Prism {
    * Given a document and a list of constraints, return a list of spans that maximally satisfy the constraints.
   */
   async search(document, constraints) {
-    console.log('search', document, constraints)
-    let preConstraints = constraints.filter((constraint) => { return constraint.isPre});
+    console.log('search', document, constraints);
+
+    let preConstraints = constraints.filter((constraint) => {
+      return constraint.isPre;
+    });
+    let postConstraints = constraints.filter((constraint) => {
+      return !constraint.isPre;
+    });
+    
     return searchForward(document, preConstraints).then(
       (predictions) => {
         console.log('predictions', predictions)
-        let postConstraints = constraints.filter((constraint) => {return !constraint.isPre});
-        for (let predictedSpan in predictions) {
-          for (let constraint in postConstraints) {
+        for (let predictedSpan of predictions) {
+          for (let constraint of postConstraints) {
+            console.log('constraint', constraint)
             if (constraint.applies(predictedSpan)) {
-              let score = constraint.evaluate(predictedSpan)
+              let score = constraint.evaluate(predictedSpan, document)
+              console.log(predictedSpan, score)
+              // predictedSpan.scores[constraint.name] = score; // scores may not exist
+              if (!predictedSpan.scores) {
+                predictedSpan.scores = {};
+              }
               predictedSpan.scores[constraint.name] = score;
             }
           }
@@ -32,15 +44,22 @@ export class Prism {
 
         // filter out constraints that are lower than a threshold
         let threshold = 0.0;
-        console.log(typeof predictions, Array.isArray(predictions), predictions)
         let finalPredictions = predictions.filter((prediction) => {
-          for (let constraint in postConstraints) {
+          for (let constraint of postConstraints) {
             if (prediction.scores[constraint.name] < threshold) {
               return false;
             }
           }
           return true;
         });
+
+        console.log('finalPredictions', finalPredictions);
+
+        let sorted = finalPredictions.sort((a, b) => {
+          let name = 'test';
+          return a.scores[name] - b.scores[name];
+        });
+
         return finalPredictions;
       }
     );
