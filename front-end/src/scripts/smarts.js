@@ -140,10 +140,7 @@ async function* callGPT2(context, tokenizeRange, alternates=0) {
 
     // Error handling
     if (response.status === 409) { // busy
-      // We expect a busy signal, so try again later
-      // Don't need to throw an error
-      // console.log("Server busy");
-      return
+      return // We expect a busy signal, so try again later
     } else {
       if (!response.ok) {
         // Some other error that we may need to deal with

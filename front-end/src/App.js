@@ -8,6 +8,8 @@ import { Prism} from "./document/Prism";
 import { TokenLense } from "./components/TokenLense";
 import { WordView } from "./components/WordView";
 import { LenseEditor } from "./components/LenseEditor";
+import { TokenAlternates, ConstraintResults} from "./components/Alternates";
+import { TokenRange } from "./components/TokenRange";
 
 const initialLense = 'spacy';
 const debugMode = false;
@@ -126,6 +128,14 @@ class App extends Component {
     this.setState({ lenseToHighlight: prismName});
   }
 
+  onSearchResults(results) {
+    // flatten the 2d array of single length arrays
+    let tokens =  results.map((result) => { return result ? result.span[0] : null});
+    console.log('search results im app', results);
+
+    this.setState({ constraintResults: tokens});
+  }
+
   /* 
    * Handle the swapping of tokens in the editor (as when the user selects a token replacement in the sidebar).
    * First, we want to swap the tokens in the tokenManager.
@@ -147,8 +157,8 @@ class App extends Component {
     window.activeLenses = activeLenses; // for debugging
     
     let wordsLense = this.state.prisms[this.tokenManager.wordsLense];
-    // let additionalLenses = Object.entries(this.state.prisms).filter(([key, prism]) => prism.active && key !== this.tokenManager.wordsLense).map(([key, prism]) => prism);
-    
+    let constraintResults = this.state.constraintResults ? this.state.constraintResults : [];
+
     return (
       <div className="context-container">
         <div className="editor-container">
@@ -159,6 +169,7 @@ class App extends Component {
               lenseToHighlight={this.state.lenseToHighlight} 
               ref={this.editorRef}
               testPrism={this.state.prisms['search']}
+              onSearchResults={this.onSearchResults.bind(this)}
               />
           </div>
           <div className="right">
@@ -185,6 +196,7 @@ class App extends Component {
               {selectionText && selectionText.length > 0 ? <div className="selection-text">"{selectionText}"</div> : ""}
               {showSelection ? <div className="selection-info">{startIndex} - {endIndex}</div> : ""}
               
+              {/* Display the selected span and some info about it */}
               <WordView 
                     key={"wordslense"}
                     tokenManager={this.tokenManager} 
@@ -194,6 +206,7 @@ class App extends Component {
                     debugMode={debugMode}
                     />
 
+              {/* Display the active prisms */}
               {activeLenses.map((prism) => {
                 return (
                   <TokenLense 
@@ -206,17 +219,9 @@ class App extends Component {
                   />
                 );
               })}
-
-              {/* <div>Add Constraint</div>
-
-              <div>Alternatives</div> */}
-              {/* <Alternatives 
-                tokenManager={this.tokenManager}
-                constratints={this.constraints}
-                startIndex={startIndex} endIndex={endIndex} 
-                onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
-                debugMode={debugMode} 
-              /> */}
+              
+              {/* Constrained search results */}
+              <TokenRange tokens={constraintResults} />
 
             </div>
           </div>

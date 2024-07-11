@@ -46,7 +46,6 @@ export class TokenLense extends Component {
       </div>
 
       <TokenRange tokens={tokens}
-        tokenManager={this.tokenManager}
         tokenType={prism.name}
         startIndex={start} endIndex={end}
         debugMode={this.props.debugMode} />

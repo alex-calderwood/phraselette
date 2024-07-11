@@ -20,7 +20,6 @@ function singular(token) {
 export class TokenRange extends Component {
   constructor(props) {
     super(props);
-    this.tokenManager = this.props.tokenManager;
     this.tokenBarRef = createRef(); // Create a reference to the token bar div
     this.state = {
       overflowing: false

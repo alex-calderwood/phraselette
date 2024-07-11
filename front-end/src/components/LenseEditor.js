@@ -469,8 +469,10 @@ export class LenseEditor extends Component {
       let prism = this.props.testPrism;
       prism.search(document, constraints).then(
         (predictions) => {
-          console.log('search results', predictions)
-        }  
+          if (this.props.onSearchResults) {
+            this.props.onSearchResults(predictions);
+          }
+        }
       )
     }
   }
