@@ -1,10 +1,8 @@
-// https://reactjs.org/docs/create-a-new-react-app.html
+// Used https://reactjs.org/docs/create-a-new-react-app.html
 import "./App.css";
 import React, { Component } from "react";
 import { ActiveLense } from "./components/ActiveLense";
 
-// a library for aing and restoring selections (cursor positions / ranges) in a document
-// it uses hidden elements to store the selection data
 import { TokenManager } from "./document/TokenManager";
 import { Prism} from "./document/Prism";
 import { TokenLense } from "./components/TokenLense";
@@ -209,9 +207,9 @@ class App extends Component {
                 );
               })}
 
-              <div>Add Constraint</div>
+              {/* <div>Add Constraint</div>
 
-              <div>Alternatives</div>
+              <div>Alternatives</div> */}
               {/* <Alternatives 
                 tokenManager={this.tokenManager}
                 constratints={this.constraints}

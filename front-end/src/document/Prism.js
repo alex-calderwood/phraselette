@@ -17,71 +17,69 @@ export class Prism {
   async search(document, constraints) {
     console.log('search', document, constraints);
 
-    let preConstraints = constraints.filter((constraint) => {
-      return constraint.isPre;
-    });
-    let postConstraints = constraints.filter((constraint) => {
-      return !constraint.isPre;
-    });
+    const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
+    const postConstraints = constraints.filter((constraint) => { return !constraint.isPre; });
     
     return searchForward(document, preConstraints).then(
       (predictions) => {
-        console.log('predictions', predictions)
         for (let predictedSpan of predictions) {
-          for (let constraint of postConstraints) {
-            console.log('constraint', constraint)
+          let spanTotal = 0;
+          console.log('predictions', predictions)
+          for (let constraint of postConstraints) { // TODO prob an O(1) way to do this part
+            console.log('constraint', constraint);
             if (constraint.applies(predictedSpan)) {
-              let score = constraint.evaluate(predictedSpan, document)
+              console.log('applies to ', predictedSpan)
+              const score = constraint.evaluate(predictedSpan, document);
               console.log(predictedSpan, score)
-              // predictedSpan.scores[constraint.name] = score; // scores may not exist
-              if (!predictedSpan.scores) {
-                predictedSpan.scores = {};
-              }
               predictedSpan.scores[constraint.name] = score;
+              spanTotal += score;
             }
           }
+          predictedSpan.scores['total'] = spanTotal;
         }
 
         // filter out constraints that are lower than a threshold
-        let threshold = 0.0;
-        let finalPredictions = predictions.filter((prediction) => {
-          for (let constraint of postConstraints) {
-            if (prediction.scores[constraint.name] < threshold) {
-              return false;
-            }
-          }
-          return true;
-        });
-
-        console.log('finalPredictions', finalPredictions);
+        const threshold = 0.1;
+        let finalPredictions = predictions.filter((prediction) => { return prediction.scores['total'] > threshold; });
 
         let sorted = finalPredictions.sort((a, b) => {
-          let name = 'test';
-          return a.scores[name] - b.scores[name];
+          return b.scores['total'] - a.scores['total'];
         });
 
-        return finalPredictions;
+        return sorted;
       }
     );
   }
 
+  /* 
+   * Is the Prism active in the UI?
+   * In the future we should separate this UI functionality from the Prism object
+  */
   setActive(value) {
     this.active = value;
     return this;
   }
 
+  /* 
+   * Should the Prism highlight the spans it finds?
+  */
   setDoHighlight(value) {
     this.shouldHighlight = value;
     return this;
   }
 
+  /* 
+  * Helper to filter the active prisms from a list of prisms.
+  */
   static getActive(prisms) {
     return Object.keys(prisms).filter((key) => {
       return prisms[key].active;
     });
   }
 
-  // deactivate all prisms passed in
+  /* 
+  * Helper to deactivate all prisms passed in.
+  */
   static unhighlightAll(prisms) {
     // for now, we only allow one highlighted lense, so we need to uncheck all the other ones
     let activeLenses = Prism.getActive(prisms);

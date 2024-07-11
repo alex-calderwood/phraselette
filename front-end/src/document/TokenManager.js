@@ -221,7 +221,7 @@ export class TokenManager {
     let overlapIndex = -1;
     for (let i = 0; i < newLense.length; i++) {
       let curToken = newLense[i];
-      if (curToken.start <= token.end && curToken.end >= token.start) {
+      if (curToken.start <= token.end && curToken.end >= token.start) { // TODO is this missing cases? could call utils.overlaps
         overlappingTokens.push(i);
         // use the first one as the index to replace
         if(overlapIndex === -1) { 

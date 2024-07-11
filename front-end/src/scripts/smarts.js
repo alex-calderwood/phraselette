@@ -176,7 +176,6 @@ async function* callGPT2(context, tokenizeRange, alternates=0) {
 }
 
 
-
 async function* callSpacy(context, tokenizeRange) {
   // get the text to tokenize based on the inclusive range
   const text = context.substring(tokenizeRange[0], tokenizeRange[1] + 1);
@@ -226,6 +225,15 @@ async function* callSpacy(context, tokenizeRange) {
   }
 }
 
+/* 
+  This function takes a document and a set of constraints.
+  It calls the backend to run a constrained forward search.
+
+  document: Document - the document to tokenize and search
+  constraints: [Constraint] - a list of constraints to search for
+
+  returns: [Token] - a list of tokens spans that satisfy the constraints (each token span is a list of tokens)
+*/
 export async function searchForward(document, constraints) {
   let alternates = 100;
   let searchDepth = 10;
@@ -245,7 +253,12 @@ export async function searchForward(document, constraints) {
     rawTokenPromise = await tokenGenerator.next();
   }
 
-  return predictions[0]
+  return predictions[0].map((token, i) => {
+    return {
+      'span': [token],
+      'scores': {},
+    }
+  });
 }
 
 async function* callSearch(text, prefix, alternates=0, searchDepth=10) {

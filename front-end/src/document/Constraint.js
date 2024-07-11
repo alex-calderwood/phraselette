@@ -1,4 +1,7 @@
+import { overlaps } from '../scripts/utils.js';
+
 export class Constraint {
+
   constructor(name, dataType) {
     this.name = name;
     this.dataType = dataType;
@@ -12,10 +15,10 @@ export class Constraint {
   */
   evaluate(span, document) {
     console.log('evaluating', span, document)
-    // do spacy stuff
-    let token = span; // this is a placeholder
+
+    // this is a placeholder
+    let token = span[0];
     let letter = token.text[0];
-    // turn it to a number
     let number = parseInt(letter, 36) - 9;
     return number;
   }
@@ -24,10 +27,35 @@ export class Constraint {
   * Does the constraint apply to the given span?
   */
   applies(span) {
-    return true;
+    if (this.span === null) {
+      return false;
+    }
+
+    return overlaps(this.span, span);
   }
 
   static makeConstraintID() {
     return Math.random().toString(36).substring(7);
+  }
+}
+
+
+export class TestConstraint extends Constraint {
+  constructor() {
+    super('test', 'test');
+  }
+
+  evaluate(span, document) {
+    console.log('evaluating', span, document);
+
+    // this is a placeholder
+    let token = span.span[0];
+    let letter = token.text && token.text.length > 0 ? token.text.trim()[0] : 'a';
+    let number = parseInt(letter, 36);
+    return number || 0;
+  }
+
+  applies(span) {
+    return true;
   }
 }

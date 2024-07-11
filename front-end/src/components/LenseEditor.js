@@ -4,7 +4,7 @@ import { getUniqueUUID, insertAfter } from "../scripts/utils";
 import { TokenManager } from "../document/TokenManager";
 import { getColor } from "../color";
 import { Document } from "../document/Document";
-import { Constraint } from "../document/Constraint";
+import { TestConstraint } from "../document/Constraint";
 
 /* 
 * Given character span <span c="5" id="id14acbb15b7e0e"">f</span>
@@ -464,12 +464,12 @@ export class LenseEditor extends Component {
         this.selectionBeforeInput,
         this.tokenManager,
       );
-      let constraints = [new Constraint("test", "number")];
+      let constraints = [new TestConstraint()];
 
       let prism = this.props.testPrism;
-      let predictions = prism.search(document, constraints).then(
+      prism.search(document, constraints).then(
         (predictions) => {
-          // do something
+          console.log('search results', predictions)
         }  
       )
     }
