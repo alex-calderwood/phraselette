@@ -4,7 +4,7 @@ import threading
 import json, time
 from tqdm import tqdm
 
-from gpt import pluck_probs, search_alternates, tokenizer
+from gpt import pluck_probs, tokenizer
 from space import stream_parse
 from phones import phonemes_for
 from network import BREAK_TOKEN
@@ -97,23 +97,23 @@ def phones():
     return Response(json.dumps(phonemes_for(words)), content_type='application/json')
 
 
-@app.route("/search", methods=["POST"])
-def search():
-    global working
-    with lock:
-        if working:
-            print("Ignoring request, still working on previous response")
-            return Response("Still working on previous response", content_type='application/json', status=409)
-        working = True
+# @app.route("/search", methods=["POST"])
+# def search():
+#     global working
+#     with lock:
+#         if working:
+#             print("Ignoring request, still working on previous response")
+#             return Response("Still working on previous response", content_type='application/json', status=409)
+#         working = True
 
-    data = request.args
-    text = data["text"]
-    extra_context = data.get("context", "")
-    top_k = int(data.get("top_k", 0))
-    depth = int(data.get("depth", 1))
+#     data = request.args
+#     text = data["text"]
+#     extra_context = data.get("context", "")
+#     top_k = int(data.get("top_k", 0))
+#     depth = int(data.get("depth", 1))
 
-    for token in search_alternates(text, extra_context, top_k=top_k, depth=depth):
-        yield json.dumps(token) + BREAK_TOKEN
+#     for token in search_alternates(text, extra_context, top_k=top_k, depth=depth):
+#         yield json.dumps(token) + BREAK_TOKEN
 
 if __name__ == "__main__":
     app.run()

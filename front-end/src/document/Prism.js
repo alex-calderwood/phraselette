@@ -21,16 +21,13 @@ export class Prism {
     const postConstraints = constraints.filter((constraint) => { return !constraint.isPre; });
     
     return searchForward(document, preConstraints).then(
-      (predictions) => {
+      async (predictions) => {
         for (let predictedSpan of predictions) {
           let spanTotal = 0;
-          console.log('predictions', predictions)
           for (let constraint of postConstraints) { // TODO prob an O(1) way to do this part
-            console.log('constraint', constraint);
             if (constraint.applies(predictedSpan)) {
-              console.log('applies to ', predictedSpan)
-              const score = constraint.evaluate(predictedSpan, document);
-              console.log(predictedSpan, score)
+              console.log('predictionSpan', predictedSpan);
+              const score = await constraint.evaluate(predictedSpan.span, document);
               predictedSpan.scores[constraint.name] = score;
               spanTotal += score;
             }

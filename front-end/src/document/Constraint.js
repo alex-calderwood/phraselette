@@ -1,51 +1,46 @@
-import { overlaps } from '../scripts/utils.js';
+import { overlaps, getUniqueUUID } from '../scripts/utils.js';
+import { spacyTokenize } from '../scripts/smarts.js';
 
 export class Constraint {
-
   constructor(name, dataType) {
     this.name = name;
     this.dataType = dataType;
-    this.id = Constraint.makeConstraintID();
+    this.id = getUniqueUUID();
     this.span = null;
     this.isPre = false; // can the constraint be computed quickly?
+    this.target = null; // what is the goal of the constraint 
   }
 
   /* 
-  * Return a score indicating how much the span coheres to the constraint
+  * Return a score indicating how much the span coheres to the constraint target
   */
-  evaluate(span, document) {
-    console.log('evaluating', span, document)
-
-    // this is a placeholder
-    let token = span[0];
-    let letter = token.text[0];
-    let number = parseInt(letter, 36) - 9;
-    return number;
+  async evaluate(span, document) {
+    return 0;
   }
 
   /*
   * Does the constraint apply to the given span?
+  * TODO perhaps we want to also pass in a token here... since Span character ids might
+  * change as the text edits... need to think through this
   */
   applies(span) {
-    if (this.span === null) {
-      return false;
-    }
+    return true;
+    // TODO implement this kind of logic...
+    // if (this.span === null) {
+    //   return false;
+    // }
 
-    return overlaps(this.span, span);
-  }
-
-  static makeConstraintID() {
-    return Math.random().toString(36).substring(7);
+    // return overlaps(this.span, span);
   }
 }
 
-
 export class TestConstraint extends Constraint {
-  constructor() {
+  constructor(targetPOSPhrase) {
     super('test', 'test');
+    this.target = targetPOSPhrase;
   }
 
-  evaluate(span, document) {
+  async evaluate(span, document) {
     console.log('evaluating', span, document);
 
     // this is a placeholder
@@ -59,3 +54,51 @@ export class TestConstraint extends Constraint {
     return true;
   }
 }
+
+export class POSConstraint extends Constraint { // may want to make a 'categorical constraint'
+  constructor() {
+    super('POS', 'category');
+  }
+
+  async evaluate(tokens, document) {
+    console.log('POS constraint evaluation', tokens);
+    if (tokens.length === 0) {
+      return 0;
+    }
+    if (this.target === null || this.target.length === 0) {
+      return 0;
+    }
+
+    // TODO we can reuse spacy's tokenization
+    // https://stackoverflow.com/questions/53594690/is-it-possible-to-use-spacy-with-already-tokenized-input
+    // but for now let's just retokenize
+    let newText = document.prefixText + tokens.reduce(
+      (acc, token) => {
+        return acc + token.text;
+      },
+      ''
+    );
+
+    let wordTokens = await spacyTokenize(newText, { onToken: (token) => { } });
+
+    // now we need to split it back into the tokens that were in after the given text
+    let splitIndex = tokens[0].start;
+    let newWordTokens = wordTokens.filter((token) => {
+      return token.start >= splitIndex;
+    });
+
+    // zip through the span tokens and the tokens to evaluate
+    let matches = 0;
+    for (let i = 0; i < newWordTokens.length; i++) {
+      let newToken = newWordTokens[i];
+      let baselineTag = this.target[i];
+      console.log('match', newToken.text, newToken.tag, baselineTag, newToken.tag === baselineTag);
+      if (newToken.tag == baselineTag) {
+        matches += 1;
+      }
+    }
+    return matches / newWordTokens.length;
+  }
+}
+
+

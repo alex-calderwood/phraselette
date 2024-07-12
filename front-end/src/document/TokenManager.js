@@ -288,12 +288,12 @@ export class TokenManager {
   }
 
   /**
-    * Asynchonously turn the incoming text into a list of 'tokens' based on the current lense's tokenization strategy.
+    * Asynchonously turn the incoming text into a list of 'tokens' based on the current lenses' 
+    * tokenization strategy.
     * 
     * @param {string} text - the text to tokenize (should be the entire context)
     * @param {object} data - extra arguments to the tokenizer call such as the range of 
     *                        the text that should be processed
-    *   
   */
   tokenize(text, data = {}, lenses=this.activeLenseNames) {
     let tokens = [];
@@ -302,8 +302,9 @@ export class TokenManager {
         console.log('tokenizing', lense);
         switch (lense) {
           case 'words':
+            // TODO this is not currently using onToken
             tokens = splitWordTokenize(text, data);
-            this.tokens.words = tokens; // TODO this is not currently using onToken
+            this.tokens.words = tokens; 
             break;
           case 'probability':
             gpt2Tokenize(text, data);
@@ -311,10 +312,12 @@ export class TokenManager {
           case 'spacy':
             spacyTokenize(text, data);
             break;
+          default:
+            console.log('ignoring', lense);
+            break;
       }
     }
 
-    // at the end we should try to check again and call it if not everything is tokenized
     if (data.onFinished) {
       data.onFinished();
     }

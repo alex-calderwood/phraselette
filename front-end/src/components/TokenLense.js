@@ -32,17 +32,11 @@ export class TokenLense extends Component {
 
     let hidden = prism.active && tokens.length > 0 ? '' : 'hidden';
 
-    console.log('token range for', prism.name, tokens);
+    // console.log('token range for', prism.name, tokens);
 
     return <div className={`prism ${hidden}`}>
       <div className='title'>
         <span>{prism.name} tokens </span>
-
-        {/* May want to also have highlight toggling here */}
-        {/* <span className="highlight">
-              <input type="checkbox" id={`highlight` + prism.name} name="highlight" checked={this.props.shouldHighlight} onChange={this.toggleHighlight.bind(this)}/>
-              <label htmlFor={`highlight` + prism.name}>highlight</label>
-            </span> */}
       </div>
 
       <TokenRange tokens={tokens}

@@ -8,8 +8,11 @@ import { Prism} from "./document/Prism";
 import { TokenLense } from "./components/TokenLense";
 import { WordView } from "./components/WordView";
 import { LenseEditor } from "./components/LenseEditor";
-import { TokenAlternates, ConstraintResults} from "./components/Alternates";
+import { SearchResults } from "./components/Alternates";
 import { TokenRange } from "./components/TokenRange";
+import { getUniqueUUID } from "./scripts/utils";
+window.getId = getUniqueUUID;
+
 
 const initialLense = 'spacy';
 const debugMode = false;
@@ -27,18 +30,16 @@ const debugMode = false;
 //     `-_, :!;;;''
 //         `-!'         mn
 
-
 class App extends Component {
   constructor(props) {
 
     let prisms = {
-      'words':        new Prism('words',       'string').setActive(false),                                                      
-      'probability':  new Prism('probability', 'number').setActive(false).setDoHighlight(false),    
+      'words':        new Prism('words',       'string'),                                                    
+      'probability':  new Prism('probability', 'number'),    
       'search':       new Prism('search',      'string').setActive(true),
-      'POS':          new Prism('POS',         'string'),                                                                 
       'critic':       new Prism('critic',      'string'),
-      'sound':        new Prism('sound',       'list'),
-      'spacy':        new Prism('spacy',       'string').setActive(false).setDoHighlight(false),                                                                   
+      'sound':        new Prism('sound',       'list'  ),
+      'spacy':        new Prism('spacy',       'string').setActive(true).setDoHighlight(true),                                                                 
     }
 
     super(props);
@@ -53,6 +54,7 @@ class App extends Component {
       lenseToHighlight: initialLense,
       tokens: Object.keys(this.tokenManager.tokens),
       selection: null,
+      // constraints: [],
       info: {},
      };
      window.state = this.state; // for debugging
@@ -100,7 +102,7 @@ class App extends Component {
     this.attemptInitialTokenization();
   }
 
-  // on mount
+  // Initialize the uninitialized
   componentDidMount() {
     // Figure out which lense to initially higihlight
     let highlightPrism =  Object.keys(this.state.prisms).filter((key) => {
@@ -205,6 +207,10 @@ class App extends Component {
                     onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
                     debugMode={debugMode}
                     />
+              
+              {/* Constrained search results */}
+              <SearchResults tokens={constraintResults} />
+
 
               {/* Display the active prisms */}
               {activeLenses.map((prism) => {
@@ -220,13 +226,10 @@ class App extends Component {
                 );
               })}
               
-              {/* Constrained search results */}
-              <TokenRange tokens={constraintResults} />
-
             </div>
           </div>
         </div>
-      </div> 
+      </div>
     );
   }
 }

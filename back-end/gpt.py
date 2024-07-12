@@ -57,7 +57,7 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): 
         total_len = len(all_ids[0])
 
         for i in tqdm(range(context_len, total_len)):
-            original_word = all_ids[0][i]
+            original_word_id = all_ids[0][i]
             max_length = len(all_ids[0][:i]) + 1
             # print('i', i, 'original_word', original_word, 'max_length', max_length, 'input', input_ids[:, :i])
 
@@ -65,32 +65,28 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): 
                 all_ids[:, :i], max_length=max_length, output_scores=True, return_dict_in_generate=True
             )
             softmax = tf.nn.softmax(greedy_output_dict.scores[0])[0]
-            original_prob = softmax[original_word].numpy()
-
-            # Determine the top k alternate words for each token
-            alternates = None
-            if top_k > 0:
-                top_k_values, top_k_indices = tf.math.top_k(softmax, k=top_k)
-                alternates = [
-                    {
-                        'token': tokenizer.decode(index),
-                        'prob': float(prob)
-                    }
-                    for index, prob in zip(top_k_indices, top_k_values)
-                ]
+            original_prob = softmax[original_word_id].numpy()
 
             # calculate the character offset from the start of the phrase (not counting the extra context)
-            offset = offsets[:, i - context_len, :]
-            offset = offset.numpy()
-            offset = offset.tolist()[0]
-            offset[0] = len(extra_context) + offset[0] - start_token_offset
-            offset[1] = len(extra_context) + offset[1] - start_token_offset
+            offset = calculate_offset(offsets[:, i - context_len, :], extra_context, start_token_offset)
 
+            # Determine the top k alternate words for each token
+            alternates = []
+            if top_k > 0:
+                top_k_values, top_k_indices = tf.math.top_k(softmax, k=top_k)
+                for index, prob in zip(top_k_indices, top_k_values):
+                    token = tokenizer.decode(index)
+                    alternates.append({
+                        'token': token,
+                        'prob': float(prob),
+                        'span': [offset[0], offset[0] + len(token)],
+                    })
+                    
             result = {
-                'token': tokenizer.decode(original_word),
+                'token': tokenizer.decode(original_word_id),
                 'span': offset,
                 'prob': float(original_prob), # needs to be a float to serialize to JSON|
-                'alternates': alternates,     # top k alternates, may be None
+                'alternates': alternates,     # top k alternates
             }
 
             print('result', result)
@@ -100,6 +96,13 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): 
         print('Error:', e)
         print('Phrase:', phrase)
         traceback.print_exc()
+
+def calculate_offset(offset, extra_context, start_token_offset):
+    offset = offset.numpy()
+    offset = offset.tolist()[0]
+    offset[0] = len(extra_context) + offset[0] - start_token_offset
+    offset[1] = len(extra_context) + offset[1] - start_token_offset
+    return offset
 
 # A function that generates the probabilities of each token in the phrase
 # it also tokenizes strings using the GPT-2 tokenizer
@@ -111,85 +114,85 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): 
 #    span: [int, int],  # the start and end character offset of the token in the phrase
 #    prob: float  # the probability of the token
 # }
-def search_alternates(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): # TODO need to imnplement depth!
-    try:
-        start_token_offset = 0
-        # start_token_offset = 13
-        # Add the EOS token as the prefix to the phrase
-        if not extra_context.startswith(tokenizer.eos_token):
-            extra_context = tokenizer.eos_token + extra_context
-            start_token_offset = 13
+# def search_alternates(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): # TODO need to imnplement depth!
+#     try:
+#         start_token_offset = 0
+#         # start_token_offset = 13
+#         # Add the EOS token as the prefix to the phrase
+#         if not extra_context.startswith(tokenizer.eos_token):
+#             extra_context = tokenizer.eos_token + extra_context
+#             start_token_offset = 13
 
-        context_encoding = tokenizer.encode_plus(
-            extra_context,
-            return_offsets_mapping=True,  # This will return the token offsets
-            return_tensors='tf'
-        )
+#         context_encoding = tokenizer.encode_plus(
+#             extra_context,
+#             return_offsets_mapping=True,  # This will return the token offsets
+#             return_tensors='tf'
+#         )
 
-        context_input_ids = context_encoding['input_ids']
-        context_offsets = context_encoding['offset_mapping']
+#         context_input_ids = context_encoding['input_ids']
+#         context_offsets = context_encoding['offset_mapping']
 
-        encoding = tokenizer.encode_plus(
-            phrase,
-            return_offsets_mapping=True,  # This will return the token offsets
-            return_tensors='tf',
-        )
+#         encoding = tokenizer.encode_plus(
+#             phrase,
+#             return_offsets_mapping=True,  # This will return the token offsets
+#             return_tensors='tf',
+#         )
 
-        # Extract input_ids and offsets
-        input_ids = encoding['input_ids']
-        offsets = encoding['offset_mapping']
+#         # Extract input_ids and offsets
+#         input_ids = encoding['input_ids']
+#         offsets = encoding['offset_mapping']
 
-        # merge extra context with the input
-        all_ids = tf.concat([context_input_ids, input_ids], axis=1)
+#         # merge extra context with the input
+#         all_ids = tf.concat([context_input_ids, input_ids], axis=1)
 
-        context_len = len(context_input_ids[0])
-        input_len = len(input_ids[0])
-        total_len = len(all_ids[0])
+#         context_len = len(context_input_ids[0])
+#         input_len = len(input_ids[0])
+#         total_len = len(all_ids[0])
 
-        for i in tqdm(range(context_len, total_len)):
-            original_word = all_ids[0][i]
-            max_length = len(all_ids[0][:i]) + 1
-            # print('i', i, 'original_word', original_word, 'max_length', max_length, 'input', input_ids[:, :i])
+#         for i in tqdm(range(context_len, total_len)):
+#             original_word = all_ids[0][i]
+#             max_length = len(all_ids[0][:i]) + 1
+#             # print('i', i, 'original_word', original_word, 'max_length', max_length, 'input', input_ids[:, :i])
 
-            greedy_output_dict = model.generate(
-                all_ids[:, :i], max_length=max_length, output_scores=True, return_dict_in_generate=True
-            )
-            softmax = tf.nn.softmax(greedy_output_dict.scores[0])[0]
-            original_prob = softmax[original_word].numpy()
+#             greedy_output_dict = model.generate(
+#                 all_ids[:, :i], max_length=max_length, output_scores=True, return_dict_in_generate=True
+#             )
+#             softmax = tf.nn.softmax(greedy_output_dict.scores[0])[0]
+#             original_prob = softmax[original_word].numpy()
 
-            # Determine the top k alternate words for each token
-            alternates = None
-            if top_k > 0:
-                top_k_values, top_k_indices = tf.math.top_k(softmax, k=top_k)
-                alternates = [
-                    {
-                        'token': tokenizer.decode(index),
-                        'prob': float(prob)
-                    }
-                    for index, prob in zip(top_k_indices, top_k_values)
-                ]
+#             # Determine the top k alternate words for each token
+#             alternates = None
+#             if top_k > 0:
+#                 top_k_values, top_k_indices = tf.math.top_k(softmax, k=top_k)
+#                 alternates = [
+#                     {
+#                         'token': tokenizer.decode(index),
+#                         'prob': float(prob)
+#                     }
+#                     for index, prob in zip(top_k_indices, top_k_values)
+#                 ]
 
-            # calculate the character offset from the start of the phrase (not counting the extra context)
-            offset = offsets[:, i - context_len, :]
-            offset = offset.numpy()
-            offset = offset.tolist()[0]
-            offset[0] = len(extra_context) + offset[0] - start_token_offset
-            offset[1] = len(extra_context) + offset[1] - start_token_offset
+#             # calculate the character offset from the start of the phrase (not counting the extra context)
+#             offset = offsets[:, i - context_len, :]
+#             offset = offset.numpy()
+#             offset = offset.tolist()[0]
+#             offset[0] = len(extra_context) + offset[0] - start_token_offset
+#             offset[1] = len(extra_context) + offset[1] - start_token_offset
 
-            result = {
-                'token': tokenizer.decode(original_word),
-                'span': offset,
-                'prob': float(original_prob), # needs to be a float to serialize to JSON|
-                'alternates': alternates,     # top k alternates, may be None
-            }
+#             result = {
+#                 'token': tokenizer.decode(original_word),
+#                 'span': offset,
+#                 'prob': float(original_prob), # needs to be a float to serialize to JSON|
+#                 'alternates': alternates,     # top k alternates, may be None
+#             }
 
-            print('result', result)
-            yield result
+#             print('result', result)
+#             yield result
 
-    except Exception as e:
-        print('Error:', e)
-        print('Phrase:', phrase)
-        traceback.print_exc()
+#     except Exception as e:
+#         print('Error:', e)
+#         print('Phrase:', phrase)
+#         traceback.print_exc()
 
 if __name__ == "__main__":
     # Example usage

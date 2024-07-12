@@ -4,7 +4,7 @@ import { getUniqueUUID, insertAfter } from "../scripts/utils";
 import { TokenManager } from "../document/TokenManager";
 import { getColor } from "../color";
 import { Document } from "../document/Document";
-import { TestConstraint } from "../document/Constraint";
+import { POSConstraint} from "../document/Constraint";
 
 /* 
 * Given character span <span c="5" id="id14acbb15b7e0e"">f</span>
@@ -112,26 +112,10 @@ export class LenseEditor extends Component {
 
   restoreSelection = (event) => {
     if (this.selection) {
-      // TODO this really should be anchor offset which is where charID comes from 
-      // TODO figure out why it breaks when I change that
-      this.restoreSelectionFromCharId(this.selection.charId, this.selection.focusOffset, event);
+      // TODO something about this seems to bug out occasionally (or maybe the place that calls this does?)
+      // For a while I thought it was working when I changed anchorOffset to focusOffset (the wrong one...) but now it is buggy either way
+      this.restoreSelectionFromCharId(this.selection.charId, this.selection.anchorOffset, event);
     }
-  };
-
-  // Helper function to find the index path from a node up to the editorNode
-  getNodeIndexPath = (node, editorNode) => {
-    let path = [];
-    while (node && node !== editorNode) {
-      let parent = node.parentNode;
-      if (!parent) {
-        console.error('Node has no parent', node, node.textContent);
-        return [];
-      }
-      let index = Array.prototype.indexOf.call(parent.childNodes, node);
-      path.unshift(index); // Add index to the beginning of the path array
-      node = parent; // Move up in the DOM tree
-    }
-    return path;
   };
 
   restoreSelectionFromCharId = (charId, givenOffset, event) => {
@@ -155,7 +139,7 @@ export class LenseEditor extends Component {
       range.setEnd(restoreTo, charsToOffset);
     }
 
-
+    // for debugging
     // let restoring = {
     //   text: node ? node.textContent : null,
     //   nextText: restoreTo ? restoreTo.textContent : null,
@@ -172,6 +156,22 @@ export class LenseEditor extends Component {
     let selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
+  };
+
+  // Helper function to find the index path from a node up to the editorNode
+  getNodeIndexPath = (node, editorNode) => {
+    let path = [];
+    while (node && node !== editorNode) {
+      let parent = node.parentNode;
+      if (!parent) {
+        console.error('Node has no parent', node, node.textContent);
+        return [];
+      }
+      let index = Array.prototype.indexOf.call(parent.childNodes, node);
+      path.unshift(index); // Add index to the beginning of the path array
+      node = parent; // Move up in the DOM tree
+    }
+    return path;
   };
 
   /* 
@@ -243,7 +243,7 @@ export class LenseEditor extends Component {
     child.setAttribute('c', c);
     this.setIdIfNotPresent(child);
     if (child.tagName === 'SPAN') {
-      if (this.props.lenseToHighlight === 'words') { // TODO why is this hardcoded?
+      if (this.props.lenseToHighlight === 'words') { // TODO make wordsTokenize use onToken callback so that we don't have to do this
         this.colorCharacterByProb(child, c);
       }
     }
@@ -419,8 +419,6 @@ export class LenseEditor extends Component {
   }
 
   forceTokenize(lenses=this.tokenManager.activeLenseNames) {
-    console.log('force tokenizing', lenses);
-
     let text = this.getTextWithWhitespace(this.contentRef.current);
     let tokenizeRange  = [0, text.length - 1];
     
@@ -458,13 +456,13 @@ export class LenseEditor extends Component {
     }
 
     if (event.metaKey && event.key === '\'') {
-      console.log('testing search');
       let document = new Document( // TODO this should be somewhere else
         this.getTextWithWhitespace(this.contentRef.current),
         this.selectionBeforeInput,
         this.tokenManager,
       );
-      let constraints = [new TestConstraint()];
+      
+      let constraints = [new POSConstraint('NN', 'ADJ', 'ADJ', 'ADJ')];
 
       let prism = this.props.testPrism;
       prism.search(document, constraints).then(

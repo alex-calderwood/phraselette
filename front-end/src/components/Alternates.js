@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import {TokenRange} from "./TokenRange";
+import { TokenRange } from "./TokenRange";
 
 
 export class TokenAlternates extends Component {
@@ -36,7 +36,7 @@ export class TokenAlternates extends Component {
 }
 
 
-export class ConstraintResults extends Component {
+export class SearchResults extends Component {
   constructor(props) {
     super(props);
     this.prism = this.props.prism;
@@ -50,20 +50,10 @@ export class ConstraintResults extends Component {
   }
 
   render() {
-    let token = this.props.token; 
-    if (!token || !token.alternates || token.alternates.length === 0) {
-      return <div></div>
-    }
-    
-    let alternates = token.alternates; // array of token objects
-    return <div id={'alternate-' + this.props.token.id} className="alternates">
-        <div className='title'> Alternates for {token.text}</div>
-        <TokenRange 
-          tokens={alternates}
-          tokenType='alternate'
-          onTokenClick={(clickedToken) => { this.onTokenClick(clickedToken, token) }}
-          />
-      </div> 
+    let tokens = this.props.tokens;
+    return <div id={"search-results"}>
+      <TokenRange tokens={tokens} />
+    </div> 
   }
 }
 

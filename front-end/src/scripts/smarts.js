@@ -3,7 +3,6 @@ import { Token } from "../document/Token.js";
 // Something unlikely to be seen, must match the tokenization in the backend (server.py)
 const breakToken = "&&VE*A=]";
 
-
 function badData(text) {
   if (!text || text.length === 0) {
     console.error("tokenizer passed empty text");
@@ -20,13 +19,20 @@ function makeTokenizationRange(text, data) {
   }
 }
 
+/* 
+ * Turn the text into a list of tokens using spacy in the backend. 
+ * TODO to speed this up we would like to be able to pass in the beginning of a sentence
+ * and have it only tokenize the end.
+*/ 
 export async function spacyTokenize(text, data = {}) {
   if (badData(text)) return;
 
   let onToken = data.onToken;
-  delete data.tokenizationRange
+  delete data.tokenizationRange // right now we tokenize the whoel thing
   let tokenizeRange = makeTokenizationRange(text, data);
   let tokenGenerator = callSpacy(text, tokenizeRange);
+
+  let tokens = [];
 
   // don't wait for the generator to finish
   // instead, call onToken for each token
@@ -37,15 +43,18 @@ export async function spacyTokenize(text, data = {}) {
       'start': rawToken.start,     // inclusive
       'end':   rawToken.end,       // inclusive from server
       "text":  rawToken.text,
-      "type":  "spacy",
       "tag":   rawToken.tag,
       "raw":   rawToken,
+      "type":  "spacy",
     });
+    tokens.push(token);
     if (onToken) {
       onToken(token);
     }
     rawTokenPromise = await tokenGenerator.next();
   }
+
+  return tokens;
 }
 
 export async function gpt2Tokenize(text, data = {}) {
@@ -69,6 +78,8 @@ export async function gpt2Tokenize(text, data = {}) {
       "type": 'probability',
       "prob": rawToken.prob,
       "alternates": rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
+        "start": alt.span[0],
+        "end": alt.span[1],
         "text": alt.token,
         "prob": alt.prob,
         "type": "alternate",
@@ -79,7 +90,6 @@ export async function gpt2Tokenize(text, data = {}) {
     }
     rawTokenPromise = await tokenGenerator.next();
   }
-
 }
 
 export function splitWordTokenize(text, data = {}) {
@@ -172,7 +182,6 @@ async function* callGPT2(context, tokenizeRange, alternates=0) {
   }
 }
 
-
 async function* callSpacy(context, tokenizeRange) {
   // get the text to tokenize based on the inclusive range
   const text = context.substring(tokenizeRange[0], tokenizeRange[1] + 1);
@@ -182,8 +191,6 @@ async function* callSpacy(context, tokenizeRange) {
     // context: preContext,
     text: preContext + text,
   };
-
-  // console.log("smarts calling spacy with data", data);
 
   try {
     const response = await fetch("http://127.0.0.1:5000/spacy", {
@@ -233,7 +240,7 @@ async function* callSpacy(context, tokenizeRange) {
 */
 export async function searchForward(document, constraints) {
   let alternates = 100;
-  let searchDepth = 10;
+  let searchDepth = 1;
   let tokenGenerator = callSearch(document.selectionText, document.prefixText, alternates, searchDepth);
 
   let rawTokenPromise = await tokenGenerator.next();
@@ -243,6 +250,8 @@ export async function searchForward(document, constraints) {
     let alternates = rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
       "text": alt.token,
       "prob": alt.prob,
+      "start": alt.span[0],
+      "end": alt.span[1],
       "type": "alternate",
     }) } ) : [];
 
