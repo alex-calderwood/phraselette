@@ -14,12 +14,8 @@ function charIndex(span) {
   return parseInt(span.getAttribute('c'));
 }
 
-// Next steps
-// Click on a thing - bring up the words
-// bring up spacy
-// show alternate words
-// interface for showing new words
-
+// A text editor that tracks all sorts of information about the words as they are typed
+// And provides affordances for pulling in information from different sources, reconciling their tokens
 export class LenseEditor extends Component {
   constructor(props) {
     super(props);
@@ -446,30 +442,12 @@ export class LenseEditor extends Component {
   */
   onKeyDown(event) {
     this.selectionBeforeInput = this.currentSelection();
-
-    // cmd + k should manually re-tokenize
     if (event.metaKey && event.key === 'k') {
-      console.log('manually tokenizing');
-      this.forceTokenize();
-      this.splitIntoCharactersAndStyle(this.contentRef.current);
-      return;
+      return this.manualRetokenizeAction();
     }
 
     if (event.metaKey && event.key === '\'') {
-      let document = new Document( // TODO this should be somewhere else
-        this.getTextWithWhitespace(this.contentRef.current),
-        this.selectionBeforeInput,
-        this.tokenManager,
-      );
-    
-      let prism = this.props.testPrism;
-      prism.search(document, this.props.constraints).then(
-        (predictions) => {
-          if (this.props.onSearchResults) {
-            this.props.onSearchResults(predictions);
-          }
-        }
-      )
+      return this.manualSearchAction();
     }
   }
 
@@ -543,6 +521,30 @@ export class LenseEditor extends Component {
 
     // style the new text
     this.splitIntoCharactersAndStyle(this.contentRef.current);
+  }
+
+  manualSearchAction() {
+    let document = new Document(
+      this.getTextWithWhitespace(this.contentRef.current),
+      this.selectionBeforeInput,
+      this.tokenManager
+    );
+
+    let prism = this.props.testPrism;
+    prism.search(document, this.props.constraints).then(
+      (predictions) => {
+        if (this.props.onSearchResults) {
+          this.props.onSearchResults(predictions);
+        }
+      }
+    );
+  }
+
+  manualRetokenizeAction() {
+    console.log('manually tokenizing');
+    this.forceTokenize();
+    this.splitIntoCharactersAndStyle(this.contentRef.current);
+    return;
   }
 
   render() {

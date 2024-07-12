@@ -5,14 +5,9 @@ import { ActiveLense } from "./components/ActiveLense";
 
 import { TokenManager } from "./document/TokenManager";
 import { Prism} from "./document/Prism";
-import { TokenLense } from "./components/TokenLense";
 import { WordView } from "./components/WordView";
 import { LenseEditor } from "./components/LenseEditor";
-import { SearchResults } from "./components/Alternates";
-import { TokenRange } from "./components/TokenRange";
-import { getUniqueUUID } from "./scripts/utils";
 import { POSConstraint } from "./document/Constraint";
-window.getId = getUniqueUUID;
 
 
 const initialLense = 'spacy';
@@ -58,7 +53,6 @@ class App extends Component {
       constraints: [new POSConstraint(['NN', 'ADJ', 'ADJ', 'ADJ'])],
       info: {},
      };
-     window.state = this.state; // for debugging
 
      this.editorRef = React.createRef();
   }
@@ -159,26 +153,27 @@ class App extends Component {
     let activeLenses = Object.entries(this.state.prisms).filter(([key, prism]) => prism.active).map(([key, prism]) => prism);
     window.activeLenses = activeLenses; // for debugging
     
-    let wordsLense = this.state.prisms[this.tokenManager.wordsLense];
+    let wordsLense = this.state.prisms[this.tokenManager.wordsLense]; // which prism represents word breaks
     let constraintResults = this.state.constraintResults ? this.state.constraintResults : [];
 
     return (
       <div className="context-container">
         <div className="editor-container">
-          <div className="left">
-            <LenseEditor tokenManager={this.tokenManager} 
-              setSelection={this.setSelection.bind(this)} 
-              setText={this.setText.bind(this)} 
-              lenseToHighlight={this.state.lenseToHighlight} 
+
+          <div className="left"> {/* The text editor */}
+            <LenseEditor tokenManager={this.tokenManager}
+              setSelection={this.setSelection.bind(this)}
+              setText={this.setText.bind(this)}
+              lenseToHighlight={this.state.lenseToHighlight}
               ref={this.editorRef}
               testPrism={this.state.prisms['search']}
               onSearchResults={this.onSearchResults.bind(this)}
               constraints={this.state.constraints}
               />
           </div>
-          <div className="right">
-            <div className="lenses">
-              {/* <label htmlFor="add-lense">add a lense</label> */}
+          
+          <div className="right"> {/* Everything on the right hand side of the screen */}
+            <div className="lenses"> {/* A list of each active lense and a checkbox to activate/deactivate them */}
               <select title="add a lense" id="add-lense">
                 {Object.entries(this.state.prisms).map(([name, lense]) => {
                   return <option key={lense.name} value={lense.name}>{lense.name}</option>;
@@ -208,13 +203,13 @@ class App extends Component {
                     startIndex={startIndex} endIndex={endIndex} 
                     onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
                     debugMode={debugMode}
+                    constraints={this.state.constraints}
+                    constraintResults={constraintResults}
                     />
-              
-              {/* Constrained search results */}
-              <SearchResults tokens={constraintResults} />
-
 
               {/* Display the active prisms */}
+              {/* Highlighted out because its a bit distracting for now */}
+              {/* 
               {activeLenses.map((prism) => {
                 return (
                   <TokenLense 
@@ -226,7 +221,7 @@ class App extends Component {
                     debugMode={debugMode}
                   />
                 );
-              })}
+              })} */}
               
             </div>
           </div>

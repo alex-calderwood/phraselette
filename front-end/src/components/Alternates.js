@@ -34,27 +34,3 @@ export class TokenAlternates extends Component {
       </div> 
   }
 }
-
-
-export class SearchResults extends Component {
-  constructor(props) {
-    super(props);
-    this.prism = this.props.prism;
-  }
-
-  onTokenClick(clickedToken, originalToken) {
-    console.log('clicked', clickedToken, originalToken);
-    if (this.props.onTokenClick) {
-      this.props.onTokenClick(originalToken, clickedToken); // swapping the order of the arguments
-    }
-  }
-
-  render() {
-    let tokens = this.props.tokens;
-    return <div id={"search-results"}>
-      <TokenRange tokens={tokens} />
-    </div> 
-  }
-}
-
-

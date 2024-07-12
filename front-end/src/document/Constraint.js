@@ -12,7 +12,9 @@ export class Constraint {
   }
 
   /* 
-  * Return a score indicating how much the span coheres to the constraint target
+  * Return a [0-1] score indicating how much the span coheres to the constraint target. 
+  * 0 means the span does not match the constraint
+  * 1 means the span perfectly coheres to the constraint
   */
   async evaluate(span, document) {
     return 0;

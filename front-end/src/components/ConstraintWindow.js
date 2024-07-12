@@ -1,6 +1,5 @@
 import React, { Component } from "react";
 
-
 export class ConstraintWindow extends Component {
   constructor(props) {
     super(props);
@@ -28,12 +27,11 @@ export class ConstraintWindow extends Component {
         type = 'text';
     }
 
-    return <div id={this.props.constraint.id} className="constraint">
+    return  <div id={this.props.constraint.id} className="constraint">
       <span>{this.constraint.dataType}</span>
       <input type={type} />
       <button onClick={this.registerConstraint}>constrain</button>
       <button onClick={this.deleteConstratint}>x</button>
     </div>;
   }
-
 }

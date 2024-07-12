@@ -1,6 +1,8 @@
 import React, { Component } from "react";
 import { TokenRange } from "./TokenRange";
 import { Constraint } from "../document/Constraint";
+import { ConstraintWindow } from "./ConstraintWindow";
+import { SearchResults } from "./SearchResults";
 
 
 export class WordView extends Component {
@@ -8,9 +10,6 @@ export class WordView extends Component {
     super(props);
     this.tokenManager = this.props.tokenManager;
     this.prism = this.props.prism;
-    this.state = {
-      constraints: [],
-    };
   }
 
   handleAddConstraint() {
@@ -29,14 +28,29 @@ export class WordView extends Component {
       tokens = this.tokenManager.tokensAt(prism.name, start, end);
     }
 
-    let hidden = prism.active && tokens.length > 0 ? '' : 'hidden';
+    let hidden = !prism.active || tokens.length == 0;
 
-    return <div className={`prism ${hidden}`}>
+    if (hidden) {
+      return <div></div>;
+    }
+
+    return <div className={`prism`}>
       <TokenRange tokens={tokens}
         tokenManager={this.tokenManager}
         tokenType={prism.name}
         startIndex={start} endIndex={end}
         debugMode={this.props.debugMode} />
+
+      { this.props.constraints.map((constraint) => {
+          console.log("CONSTRAINAT", constraint);
+          return <ConstraintWindow key={constraint.id} constraint={constraint} />
+      })}
+              
+      {/* Constrained search results */}
+      <SearchResults tokens={this.props.constraintResults} />
+
     </div>;
+
+
   }
 }
