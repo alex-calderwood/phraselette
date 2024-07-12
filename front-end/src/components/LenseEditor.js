@@ -461,11 +461,9 @@ export class LenseEditor extends Component {
         this.selectionBeforeInput,
         this.tokenManager,
       );
-      
-      let constraints = [new POSConstraint('NN', 'ADJ', 'ADJ', 'ADJ')];
-
+    
       let prism = this.props.testPrism;
-      prism.search(document, constraints).then(
+      prism.search(document, this.props.constraints).then(
         (predictions) => {
           if (this.props.onSearchResults) {
             this.props.onSearchResults(predictions);

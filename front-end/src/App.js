@@ -11,6 +11,7 @@ import { LenseEditor } from "./components/LenseEditor";
 import { SearchResults } from "./components/Alternates";
 import { TokenRange } from "./components/TokenRange";
 import { getUniqueUUID } from "./scripts/utils";
+import { POSConstraint } from "./document/Constraint";
 window.getId = getUniqueUUID;
 
 
@@ -54,7 +55,7 @@ class App extends Component {
       lenseToHighlight: initialLense,
       tokens: Object.keys(this.tokenManager.tokens),
       selection: null,
-      // constraints: [],
+      constraints: [new POSConstraint(['NN', 'ADJ', 'ADJ', 'ADJ'])],
       info: {},
      };
      window.state = this.state; // for debugging
@@ -172,6 +173,7 @@ class App extends Component {
               ref={this.editorRef}
               testPrism={this.state.prisms['search']}
               onSearchResults={this.onSearchResults.bind(this)}
+              constraints={this.state.constraints}
               />
           </div>
           <div className="right">

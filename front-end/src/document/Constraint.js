@@ -35,9 +35,8 @@ export class Constraint {
 }
 
 export class TestConstraint extends Constraint {
-  constructor(targetPOSPhrase) {
+  constructor() {
     super('test', 'test');
-    this.target = targetPOSPhrase;
   }
 
   async evaluate(span, document) {
@@ -56,12 +55,12 @@ export class TestConstraint extends Constraint {
 }
 
 export class POSConstraint extends Constraint { // may want to make a 'categorical constraint'
-  constructor() {
+  constructor(targetPOSPhrase) {
     super('POS', 'category');
+    this.target = targetPOSPhrase;
   }
 
   async evaluate(tokens, document) {
-    console.log('POS constraint evaluation', tokens);
     if (tokens.length === 0) {
       return 0;
     }
@@ -86,6 +85,8 @@ export class POSConstraint extends Constraint { // may want to make a 'categoric
     let newWordTokens = wordTokens.filter((token) => {
       return token.start >= splitIndex;
     });
+
+    console.log('wordTokens', wordTokens, 'newWordTokens', newWordTokens);
 
     // zip through the span tokens and the tokens to evaluate
     let matches = 0;
