@@ -62,6 +62,7 @@ export class CategoricalConstraint extends Constraint {
     super(name, dataType);
     this.targetFeature = null;
     this.range = null;
+    this.defaultTarget = null;
   }
 
   async evaluate(span, document) {
@@ -76,6 +77,39 @@ export class CategoricalConstraint extends Constraint {
     }
 
     this.targetSpan[index][this.targetFeature] = newValue;
+
+    return this.targetSpan;
+  }
+
+  addTarget(newTarget=null) {
+    console.log('adding target', this.targetSpan);
+    if (this.defaultTarget === null) {
+      console.error('no default target for constraint', this);
+      return;
+    }
+
+    if (this.targetSpan == null) {
+      this.targetSpan = [];
+    }
+
+    if (newTarget === null) {
+      newTarget = this.defaultTarget;
+    }
+
+    let newIndex = this.targetSpan.length;
+    this.targetSpan.push({ [this.targetFeature]: newTarget, index: newIndex });
+
+    return this.targetSpan;
+  }
+
+  deleteTarget() {
+    console.log('deleting target', this.targetSpan);
+    if (this.targetSpan == null || this.targetSpan.length === 0) {
+      return;
+    }
+    this.targetSpan.pop();
+
+    return this.targetSpan;
   }
 
 }
@@ -85,6 +119,7 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
     super('POS', 'category');
     this.targetSpan = targetPOSPhrase.map((pos, i) => { return { pos: pos, index: i }; });
     this.targetFeature = 'pos';
+    this.defaultTarget = 'NN';
     // https://github.com/explosion/spaCy/blob/master/spacy/glossary.py
     this.range = Object.keys({ // get the keys from this
       "AFX": "affix",

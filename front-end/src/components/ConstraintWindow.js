@@ -10,23 +10,22 @@ export class CategoricalConstraintView extends Component {
     }
   }
 
-  registerConstraint() {
-    console.error('register constraint not registered');
+  addTarget = () => {
+    let newTarget = this.props.constraint.addTarget();
+    this.setState({ target: newTarget });
   }
 
-  deleteConstratint() {
-    console.error('delete constraint not registered');
+  deleteTarget = () => {
+    let newTarget = this.props.constraint.deleteTarget();
+    this.setState({ target: newTarget });
   }
 
   handleChange = (event) => {
     const newValue = event.target.value;
     const index = event.target.id.split('-').pop();
     console.log('newValue', newValue);
-    // I think this is bad practice, but we are relying on the state change to rerender this component
-    // so we don't change the state yet, we only do it in the constraint class
-    this.setState({ target: this.state.target }, () => { 
-      this.props.constraint.updateTarget(index, newValue);
-    });
+    let newTarget = this.props.constraint.updateTarget(index, newValue);
+    this.setState({ target: newTarget });
   };
 
   render() {
@@ -59,9 +58,8 @@ export class CategoricalConstraintView extends Component {
           })}
         </select>
       })}
-
-      {/* <button onClick={this.registerConstraint}>constrain</button>
-      <button onClick={this.deleteConstratint}>x</button> */}
+      <button onClick={this.addTarget}>+</button>
+      <button onClick={this.deleteTarget}>-</button>
     </div>;
   }
 }
