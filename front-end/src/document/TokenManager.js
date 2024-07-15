@@ -192,7 +192,6 @@ export class TokenManager {
     }
 
     this.tokens[lense][index] = newToken;
-
     this.refreshCharIndices(lense);
     // }
   }

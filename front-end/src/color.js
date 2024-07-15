@@ -3,6 +3,7 @@ const colorScale = chroma.scale(['red', 'white', 'green']).mode('lab');
 const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple']).mode('lab');
 
 export function getColor(type, token) {
+  console.log('getColor', type, token);
   let prob = token.prob || 0;
   switch (type) {
     case 'words':
@@ -10,7 +11,7 @@ export function getColor(type, token) {
     case 'probability': case 'alternate':
       return lengthNormedLogProbToColor(token);
     case 'spacy': case 'POS':
-      return categoryToColor(token.raw.pos);
+      return categoryToColor(token.pos);
     default:
       return probToColor(prob);
   }

@@ -24,12 +24,20 @@ export class Prism {
       async (predictions) => {
         for (let predictedSpan of predictions) {
           let spanTotal = 0;
-          for (let constraint of postConstraints) { // TODO prob an O(1) way to do this part
+          for (let constraint of postConstraints) {
             if (constraint.applies(predictedSpan)) {
               console.log('predictionSpan', predictedSpan);
               const score = await constraint.evaluate(predictedSpan.span, document);
               predictedSpan.scores[constraint.name] = score;
               spanTotal += score;
+
+              // temp TODO figure out where to do this / how to do it. need it for the UI
+              for (let i = 0; i < predictedSpan.span.length; i++) {
+                let token = predictedSpan.span[i];
+                let posTarget = constraint.targetSpan[i];
+                console.log(token, posTarget)
+                token.pos = constraint.targetSpan[i].pos;
+              }
             }
           }
           predictedSpan.scores['total'] = spanTotal;

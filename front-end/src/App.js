@@ -137,13 +137,14 @@ class App extends Component {
     this.setState({ constraintResults: tokens});
   }
 
-  /* 
+  /*
    * Handle the swapping of tokens in the editor (as when the user selects a token replacement in the sidebar).
    * First, we want to swap the tokens in the tokenManager.
    * Then, we want to change the text in the editor for the new token text.
+   * TODO: this seems to break things.
   */
   swapToken(originalToken, newToken) {
-    this.tokenManager.swapToken(originalToken, newToken)
+    this.tokenManager.swapToken(originalToken, newToken);
     this.editorRef.current.swapText(originalToken.start, originalToken.end, newToken.text);
   }
 

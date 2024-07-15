@@ -18,6 +18,11 @@ export class WordView extends Component {
     });
   }
 
+  onTokenClick(clickedToken) {
+    let originalToken = this.tokens[0]; // TODO this is a placeholder since we are currently only supporting one token
+    this.props.onSwapToken(originalToken, clickedToken)
+  }
+
   render() {
     let prism = this.prism;
     let start = this.props.startIndex;
@@ -25,19 +30,19 @@ export class WordView extends Component {
 
     let constraintResults = this.props.constraintResults;
 
-    let tokens = [];
+    this.tokens = [];
     if (start !== null) {
-      tokens = this.tokenManager.tokensAt(prism.name, start, end);
+      this.tokens = this.tokenManager.tokensAt(prism.name, start, end);
     }
 
-    let hidden = !prism.active || tokens.length == 0;
+    let hidden = !prism.active || this.tokens.length == 0;
 
     if (hidden) {
       return <div></div>;
     }
 
     return <div className={`prism`}>
-      <TokenRange tokens={tokens}
+      <TokenRange tokens={this.tokens}
         tokenManager={this.tokenManager}
         tokenType={prism.name}
         startIndex={start} endIndex={end}
@@ -48,7 +53,7 @@ export class WordView extends Component {
       })}
               
       {/* Constrained search results */}
-      <SearchResults tokens={this.props.constraintResults} />
+      <SearchResults tokens={constraintResults} onTokenClick={this.onTokenClick.bind(this)} />
 
     </div>;
 
