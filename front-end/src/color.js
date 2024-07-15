@@ -26,7 +26,6 @@ const probToColor = (prob) => {
 };
 
 const categoryToColor = (word) => {
-
   // Hash function to convert word to a number between 0 and 255
   if (!word) {
     return 'white';

@@ -7,8 +7,9 @@ export class Constraint {
     this.dataType = dataType;
     this.id = getUniqueUUID();
     this.span = null;
-    this.isPre = false; // can the constraint be computed quickly?
-    this.target = null; // what is the goal of the constraint 
+    this.isPre = false;     // can the constraint be computed quickly?
+    this.targetSpan = null; // what is the goal of the constraint 
+    this.range = null;      // what are the possible values of the constraint
   }
 
   /* 
@@ -56,17 +57,90 @@ export class TestConstraint extends Constraint {
   }
 }
 
-export class POSConstraint extends Constraint { // may want to make a 'categorical constraint'
+export class CategoricalConstraint extends Constraint {
+  constructor(name, dataType) {
+    super(name, dataType);
+    this.targetFeature = null;
+    this.range = null;
+  }
+
+  async evaluate(span, document) {
+    return 0;
+  }
+
+  updateTarget(index, newValue) {
+    console.log('updating target', index, newValue, 'from', this.targetSpan);
+    if (this.targetSpan == null || this.targetSpan.length === 0) {
+      console.log('no target span to update for constraint', this);
+      return;
+    }
+
+    this.targetSpan[index][this.targetFeature] = newValue;
+  }
+
+}
+
+export class POSConstraint extends CategoricalConstraint { // may want to make a 'categorical constraint'
   constructor(targetPOSPhrase) {
     super('POS', 'category');
-    this.target = targetPOSPhrase;
+    this.targetSpan = targetPOSPhrase.map((pos, i) => { return { pos: pos, index: i }; });
+    this.targetFeature = 'pos';
+    // https://github.com/explosion/spaCy/blob/master/spacy/glossary.py
+    this.range = Object.keys({ // get the keys from this
+      "AFX": "affix",
+      "CC": "conjunction, coordinating",
+      "CD": "cardinal number",
+      "DT": "determiner",
+      "EX": "existential there",
+      "FW": "foreign word",
+      "HYPH": "punctuation mark, hyphen",
+      "IN": "conjunction, subordinating or preposition",
+      "JJ": "adjective (English), other noun-modifier (Chinese)",
+      "JJR": "adjective, comparative",
+      "JJS": "adjective, superlative",
+      "LS": "list item marker",
+      "MD": "verb, modal auxiliary",
+      "NIL": "missing tag",
+      "NN": "noun, singular or mass",
+      "NNP": "noun, proper singular",
+      "NNPS": "noun, proper plural",
+      "NNS": "noun, plural",
+      "PDT": "predeterminer",
+      "POS": "possessive ending",
+      "PRP": "pronoun, personal",
+      "PRP$": "pronoun, possessive",
+      "RB": "adverb",
+      "RBR": "adverb, comparative",
+      "RBS": "adverb, superlative",
+      "RP": "adverb, particle",
+      "TO": 'infinitival "to"',
+      "UH": "interjection",
+      "VB": "verb, base form",
+      "VBD": "verb, past tense",
+      "VBG": "verb, gerund or present participle",
+      "VBN": "verb, past participle",
+      "VBP": "verb, non-3rd person singular present",
+      "VBZ": "verb, 3rd person singular present",
+      "WDT": "wh-determiner",
+      "WP": "wh-pronoun, personal",
+      "WP$": "wh-pronoun, possessive",
+      "WRB": "wh-adverb",
+      "SP": "space (English), sentence-final particle (Chinese)",
+      "ADD": "email",
+      "NFP": "superfluous punctuation",
+      "GW": "additional word in multi-word expression",
+      "XX": "unknown",
+      "BES": 'auxiliary "be"',
+      "HVS": 'forms of "have"',
+      "_SP": "whitespace",
+    })
   }
 
   async evaluate(tokens, document) {
     if (tokens.length === 0) {
       return 0;
     }
-    if (this.target === null || this.target.length === 0) {
+    if (this.targetSpan === null || this.targetSpan.length === 0) {
       return 0;
     }
 
@@ -94,9 +168,9 @@ export class POSConstraint extends Constraint { // may want to make a 'categoric
     let matches = 0;
     for (let i = 0; i < newWordTokens.length; i++) {
       let newToken = newWordTokens[i];
-      let baselineTag = this.target[i];
-      console.log('match', newToken.text, newToken.tag, baselineTag, newToken.tag === baselineTag);
-      if (newToken.tag == baselineTag) {
+      let baselineTag = this.targetSpan[i][this.targetFeature];
+      console.log('match', newToken.text, newToken.pos, baselineTag, newToken.pos === baselineTag);
+      if (newToken.pos == baselineTag) {
         matches += 1;
       }
     }

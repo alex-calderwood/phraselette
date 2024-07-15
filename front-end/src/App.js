@@ -50,7 +50,7 @@ class App extends Component {
       lenseToHighlight: initialLense,
       tokens: Object.keys(this.tokenManager.tokens),
       selection: null,
-      constraints: [new POSConstraint(['NN', 'ADJ', 'ADJ', 'ADJ'])],
+      constraints: [new POSConstraint(['NN', 'JJ'])],
       info: {},
      };
 
@@ -75,8 +75,12 @@ class App extends Component {
     }
   }
 
+  /* 
+   * Add the prism indicated by the drop down to the list of active lenses.
+   * Also make it currently highlighted lense. 
+   * Finally, attempt to tokenize by the selected lense in order to highlight based on its probabilities.
+  */
   handleAddLense() {
-    // const selectedLense = this.lenseSelect.value;
     const selectedLense = document.getElementById('add-lense').value;
 
     // set the prism to active
@@ -196,7 +200,7 @@ class App extends Component {
               {showSelection ? <div className="selection-info">{startIndex} - {endIndex}</div> : ""}
               
               {/* Display the selected span and some info about it */}
-              <WordView 
+              <WordView
                     key={"wordslense"}
                     tokenManager={this.tokenManager} 
                     prism={wordsLense}

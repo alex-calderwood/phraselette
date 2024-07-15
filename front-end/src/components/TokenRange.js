@@ -66,19 +66,14 @@ export class TokenRange extends Component {
                 let color = tokenType ? getColor(tokenType, token) : 'white';
 
                 let prob = null;
-                let pos = null;
+                let pos = token.pos;
 
                 let showProb = tokenType === 'probability' || tokenType === 'alternate';
                 if (showProb) {
                   prob = scientific(token.prob);
                 }
-
-                if (token.type === 'spacy') {
-                  pos = token.raw.pos; // id: 6, start: 27, end: 31, tag: NN, pos: NOUN, morph: Number=Sing, lemma: rain, dep: pobj, head: 5
-                }
-
+                
                 let onClick = this.props.onTokenClick ? this.props.onTokenClick : () => {};
-
                 let showCharRange = this.props.debugMode && token.start !== undefined && token.end !== undefined;
 
                 return <div key={token.id} className="token" onClick={() => { onClick(token) }}>

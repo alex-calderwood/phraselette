@@ -43,7 +43,7 @@ export async function spacyTokenize(text, data = {}) {
       'start': rawToken.start,     // inclusive
       'end':   rawToken.end,       // inclusive from server
       "text":  rawToken.text,
-      "tag":   rawToken.tag,
+      "pos":   rawToken.tag,       // Todo looks like there is also a '.pos' need to see if there is a difference
       "raw":   rawToken,
       "type":  "spacy",
     });
