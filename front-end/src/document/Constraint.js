@@ -175,42 +175,18 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
 
     console.log('evaluating', newSpan)
 
-    // TODO we can reuse spacy's tokenization
-    // https://stackoverflow.com/questions/53594690/is-it-possible-to-use-spacy-with-already-tokenized-input
-    // but for now let's just retokenize
-
-    // compute the text that results from adding the span we are evaluating to the rest of the prefix
-    let newText = document.prefixText + newSpan.reduce(
-      (acc, token) => {
-        return acc + token.text;
-      },
-      ''
-    );
-
-    // Let spacy figure out where the words are in the text that results from adding
-    // the span we are evaluating to the existing text
-    let wordTokens = await spacyTokenize(newText, { onToken: (token) => { } });
-
-    // now we need to split it back into the tokens that were in after the given text
-    let splitIndex = newSpan[0].start;
-    let newWordTokens = wordTokens.filter((token) => {
-      return token.start >= splitIndex;
-    });
-
-    console.log({wordTokens, newWordTokens, splitIndex, newSpan});
-
     // zip through the span tokens and the tokens to evaluate
     let matches = 0;
-    for (let i = 0; i < newWordTokens.length; i++) {
-      let newToken = newWordTokens[i];
+    for (let i = 0; i < newSpan.length; i++) {
+      let newToken = newSpan[i];
       let baselineTag = this.targetSpan[i][this.targetFeature];
       console.log('match', newToken.text, newToken.pos, baselineTag, newToken.pos === baselineTag);
       if (newToken.pos == baselineTag) {
         matches += 1;
       }
     }
-    let avg = matches / newWordTokens.length;
-    console.log("comparing", newWordTokens, this.targetSpan, avg);
+    let avg = matches / newSpan.length;
+    console.log("comparing", newSpan, this.targetSpan, avg);
     return avg;
   }
 }

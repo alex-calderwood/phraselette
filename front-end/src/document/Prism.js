@@ -1,4 +1,4 @@
-import {searchForward} from '../scripts/smarts.js';
+import {searchForward, spacyTokenize} from '../scripts/smarts.js';
 
 export class Prism {
   constructor(name, dataType) {
@@ -18,22 +18,22 @@ export class Prism {
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
     const postConstraints = constraints.filter((constraint) => { return !constraint.isPre; });
     
-    return searchForward(document, preConstraints).then(
+    return searchForward(document, preConstraints).then( // turn the predictions into words
+      async (predictions) => {
+        for (let prediction of predictions) {
+          prediction.span = await this.miscTokensToWordTokens(prediction.span, document);
+        }
+        return predictions;
+      }).then(
       async (predictions) => {
         for (let predictedSpan of predictions) {
+          console.log("predictedSpan", predictedSpan);
           let spanTotal = 0;
           for (let constraint of postConstraints) {
             if (constraint.applies(predictedSpan)) {
               const score = await constraint.evaluate(predictedSpan.span, document);
               predictedSpan.scores[constraint.name] = score;
               spanTotal += score;
-
-              // temp associate the POS with the new token
-              // TODO figure out where to do this / how to do it. need it for the UI
-              for (let i = 0; i < predictedSpan.span.length; i++) {
-                let token = predictedSpan.span[i];
-                token.pos = constraint.targetSpan[i].pos;
-              }
             }
           }
           predictedSpan.scores['total'] = spanTotal;
@@ -50,6 +50,42 @@ export class Prism {
         return sorted;
       }
     );
+  }
+
+  async miscTokensToWordTokens(tokenSpan, document) {
+    // // TODO we can reuse spacy's tokenization
+    // // https://stackoverflow.com/questions/53594690/is-it-possible-to-use-spacy-with-already-tokenized-input
+    // // but for now let's just retokenize
+
+    // compute the text that results from adding the span we are evaluating to the rest of the prefix
+    let newText = document.prefixText + tokenSpan.reduce(
+      (acc, token) => {
+        return acc + token.text;
+      },
+      ''
+    );
+
+    // Let spacy figure out where the words are in the text that results from adding
+    // the span we are evaluating to the existing text
+    let wordTokens = await spacyTokenize(newText, { onToken: (token) => { } });
+
+    // now we need to split it back into the tokens that were in after the given text
+    let splitIndex = tokenSpan[0].start;
+    let newWordTokens = wordTokens.filter((token) => {
+      return token.end >= splitIndex;
+    });
+
+    let firstWord = newWordTokens[0];
+    if (firstWord.start < splitIndex) { // TODO this needs to be tested
+      let diff = splitIndex - firstWord.start;
+      firstWord.text = firstWord.text.slice(diff);
+      firstWord.start = splitIndex;
+      firstWord.incomplete = true;
+    }
+
+    console.log({tokenSpan, wordTokens, newWordTokens, splitIndex});
+
+    return newWordTokens;
   }
 
   /* 
