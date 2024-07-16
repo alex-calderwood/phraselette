@@ -10,7 +10,7 @@ export class SearchResults extends Component {
   render() {
     let tokens = this.props.tokens;
     if (!tokens || tokens.length === 0) {
-      return <div></div>
+      return <div class='title'>No results</div>
     }
 
     return <div id={"search-results"}>
@@ -19,4 +19,3 @@ export class SearchResults extends Component {
     </div> 
   }
 }
-

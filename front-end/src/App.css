@@ -108,6 +108,7 @@ we will need to select the text children of the editor */
 }
 
 /* add a gradient to the right of the token range */
+/* not currently used */
 .overflowing::after {
   z-index: 2;
   content: "";
@@ -152,6 +153,19 @@ we will need to select the text children of the editor */
   font-size: 14px;
   /* font-weight: bold; */
   text-align: center;
+}
+
+.token-span {
+  display: inline-block;
+  padding: 4px;
+  margin-left: 2px;
+  margin-right: 2px;
+  background-color: #f1f1f1;
+  min-height: 100%;
+  height: 100%;
+  text-wrap: wrap;
+  /* make the cursor a pointer */
+  cursor: pointer;
 }
 
 .hidden {

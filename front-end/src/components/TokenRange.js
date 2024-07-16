@@ -54,39 +54,56 @@ export class TokenRange extends Component {
       [];
     tokens = tokens.sort((a, b) => { return a.start - b.start });
 
-    function scientific(num) {
-      return (num !== 0 && (num < 1e-3 || num >= 1e+7)) ? num.toExponential(2) : num.toPrecision(3);
-    }
+    console.log('<TokenRange>', tokens);
 
     return (
       <div className={"token-range-parent " + overflowing}>
           <div id={'tokenbar' + tokenType} className={`token-range`}>
               {tokens && tokens.map((token) => {
-
-                let color = tokenType ? getColor(tokenType, token) : 'white';
-
-                let prob = null;
-                let pos = token.pos;
-
-                let showProb = tokenType === 'probability' || tokenType === 'alternate';
-                if (showProb) {
-                  prob = scientific(token.prob);
+                let type = typeof token;
+                console.log("type", type)
+                if (Array.isArray(token)) {
+                  return <div className="token-span"> 
+                     {
+                      token.map((t) => {
+                        return this.renderToken(tokenType, t);
+                      })
+                     }
+                    </div>
+                } else {
+                  return this.renderToken(tokenType, token);
                 }
-                
-                let onClick = this.props.onTokenClick ? this.props.onTokenClick : () => {};
-                let showCharRange = this.props.debugMode && token.start !== undefined && token.end !== undefined;
-
-                return <div key={token.id} className="token" onClick={() => { onClick(token) }}>
-                        <div className="item heading">{token.text}</div>
-                        {showCharRange && <div className="item range">[{token.start}-{token.end}]</div> }
-                        {pos !== null && <div className="item" style={{backgroundColor: color}}>{pos}</div>}
-                        {prob !== null && <div className="item" style={{backgroundColor: color}}>{prob}</div>}
-                        {/* <div className="item">{singular(token.type)}</div> */}
-                      </div>;
               })}
         </div>
       </div>
     );
+  }
+
+  renderToken(tokenType, token) {
+    function scientific(num) {
+      return (num !== 0 && (num < 1e-3 || num >= 1e+7)) ? num.toExponential(2) : num.toPrecision(3);
+    }
+
+    let color = tokenType ? getColor(tokenType, token) : 'white';
+
+    let prob = null;
+    let pos = token.pos;
+
+    let showProb = tokenType === 'probability' || tokenType === 'alternate';
+    if (showProb) {
+      prob = scientific(token.prob);
+    }
+
+    let onClick = this.props.onTokenClick ? this.props.onTokenClick : () => { };
+    let showCharRange = this.props.debugMode && token.start !== undefined && token.end !== undefined;
+
+    return <div key={token.id} className="token" onClick={() => { onClick(token); } }>
+      <div className="item heading">{token.text}</div>
+      {showCharRange && <div className="item range">[{token.start}-{token.end}]</div>}
+      {pos !== null && <div className="item" style={{ backgroundColor: color }}>{pos}</div>}
+      {prob !== null && <div className="item" style={{ backgroundColor: color }}>{prob}</div>}
+      {/* <div className="item">{singular(token.type)}</div> */}
+    </div>;
   }
 }
 

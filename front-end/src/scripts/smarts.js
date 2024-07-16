@@ -238,47 +238,47 @@ async function* callSpacy(context, tokenizeRange) {
 
   returns: [Token] - a list of tokens spans that satisfy the constraints (each token span is a list of tokens)
 */
-export async function searchForward(document, constraints) {
+export async function searchForward(document, constraints, depth=2) {
   let alternates = 100;
-  let searchDepth = 1;
-  let tokenGenerator = callSearch(document.selectionText, document.prefixText, alternates, searchDepth);
+  let tokenGenerator = callSearch(document.prefixText, alternates, depth);
 
-  let rawTokenPromise = await tokenGenerator.next();
-  let predictions = [];
-  while (!rawTokenPromise.done) {
-    let rawToken = rawTokenPromise.value;
-    let alternates = rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
+  let spanPromise = await tokenGenerator.next();
+  let predictedSpans = [];
+  while (!spanPromise.done) {
+    let rawSpan = spanPromise.value;
+    console.log("searchForward span", rawSpan);
+
+    let span = rawSpan.map((alt) => { return new Token({
       "text": alt.token,
       "prob": alt.prob,
       "start": alt.span[0],
       "end": alt.span[1],
       "type": "alternate",
-    }) } ) : [];
+    }) } );
 
-    predictions.push(alternates);
-    rawTokenPromise = await tokenGenerator.next();
+    predictedSpans.push(span);
+    spanPromise = await tokenGenerator.next();
   }
 
-  return predictions[0].map((token, i) => {
+  return predictedSpans.map((span) => {
     return {
-      'span': [token],
+      'span': span,
       'scores': {},
     }
   });
 }
 
-async function* callSearch(text, prefix, alternates=0, searchDepth=10) {
+async function* callSearch(prefix, alternates=0, depth=1) {
   const data = {
-    context: prefix,
-    text: text,
+    text: prefix,
     top_k: alternates,
-    depth: searchDepth,
+    depth: depth,
   };
 
-  console.log("searching with data", data)
+  console.log("searching with data", data);
 
   try {
-    const response = await fetch("http://127.0.0.1:5000/probs", {
+    const response = await fetch("http://127.0.0.1:5000/search", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -313,8 +313,9 @@ async function* callSearch(text, prefix, alternates=0, searchDepth=10) {
 
       for (const line of lines) {
         if (line.trim()) {
-          const token = JSON.parse(line);
-          yield token;
+          const span = JSON.parse(line);
+          console.log("recieved span", span)
+          yield span;
         }
       }
     }

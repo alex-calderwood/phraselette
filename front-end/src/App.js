@@ -131,9 +131,10 @@ class App extends Component {
 
   onSearchResults(results) {
     // flatten the 2d array of single length arrays
-    let tokens =  results.map((result) => { return result ? result.span[0] : null});
-    console.log('search results im app', results);
+    // TODO this is where I am 
+    // let tokens =  results.map((result) => { return result ? result.span[0] : null});
 
+    let tokens =  results.map((result) => { return result ? result.span : null});
     this.setState({ constraintResults: tokens});
   }
 

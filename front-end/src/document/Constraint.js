@@ -70,19 +70,15 @@ export class CategoricalConstraint extends Constraint {
   }
 
   updateTarget(index, newValue) {
-    console.log('updating target', index, newValue, 'from', this.targetSpan);
     if (this.targetSpan == null || this.targetSpan.length === 0) {
       console.log('no target span to update for constraint', this);
       return;
     }
-
     this.targetSpan[index][this.targetFeature] = newValue;
-
     return this.targetSpan;
   }
 
   addTarget(newTarget=null) {
-    console.log('adding target', this.targetSpan);
     if (this.defaultTarget === null) {
       console.error('no default target for constraint', this);
       return;
@@ -103,12 +99,10 @@ export class CategoricalConstraint extends Constraint {
   }
 
   deleteTarget() {
-    console.log('deleting target', this.targetSpan);
     if (this.targetSpan == null || this.targetSpan.length === 0) {
       return;
     }
     this.targetSpan.pop();
-
     return this.targetSpan;
   }
 
@@ -171,33 +165,39 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
     })
   }
 
-  async evaluate(tokens, document) {
-    if (tokens.length === 0) {
+  async evaluate(newSpan, document) {
+    if (newSpan.length === 0) {
       return 0;
     }
     if (this.targetSpan === null || this.targetSpan.length === 0) {
       return 0;
     }
 
+    console.log('evaluating', newSpan)
+
     // TODO we can reuse spacy's tokenization
     // https://stackoverflow.com/questions/53594690/is-it-possible-to-use-spacy-with-already-tokenized-input
     // but for now let's just retokenize
-    let newText = document.prefixText + tokens.reduce(
+
+    // compute the text that results from adding the span we are evaluating to the rest of the prefix
+    let newText = document.prefixText + newSpan.reduce(
       (acc, token) => {
         return acc + token.text;
       },
       ''
     );
 
+    // Let spacy figure out where the words are in the text that results from adding
+    // the span we are evaluating to the existing text
     let wordTokens = await spacyTokenize(newText, { onToken: (token) => { } });
 
     // now we need to split it back into the tokens that were in after the given text
-    let splitIndex = tokens[0].start;
+    let splitIndex = newSpan[0].start;
     let newWordTokens = wordTokens.filter((token) => {
       return token.start >= splitIndex;
     });
 
-    console.log('wordTokens', wordTokens, 'newWordTokens', newWordTokens);
+    console.log({wordTokens, newWordTokens, splitIndex, newSpan});
 
     // zip through the span tokens and the tokens to evaluate
     let matches = 0;
@@ -209,7 +209,9 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
         matches += 1;
       }
     }
-    return matches / newWordTokens.length;
+    let avg = matches / newWordTokens.length;
+    console.log("comparing", newWordTokens, this.targetSpan, avg);
+    return avg;
   }
 }
 
