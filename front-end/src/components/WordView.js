@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { TokenRange } from "./TokenRange";
 import { Constraint } from "../document/Constraint";
-import { CategoricalConstraintView } from "./ConstraintWindow";
+import { CategoricalConstraintView } from "./ConstraintView";
 import { SearchResults } from "./SearchResults";
 
 
@@ -28,8 +28,6 @@ export class WordView extends Component {
     let start = this.props.startIndex;
     let end = this.props.endIndex;
 
-    let constraintResults = this.props.constraintResults;
-
     this.tokens = [];
     if (start !== null) {
       this.tokens = this.tokenManager.tokensAt(prism.name, start, end);
@@ -51,10 +49,6 @@ export class WordView extends Component {
       { this.props.constraints.map((constraint) => {
           return <CategoricalConstraintView key={constraint.id} constraint={constraint} />
       })}
-              
-      {/* Constrained search results */}
-      <SearchResults tokens={constraintResults} onTokenClick={this.onTokenClick.bind(this)} />
-
     </div>;
 
 

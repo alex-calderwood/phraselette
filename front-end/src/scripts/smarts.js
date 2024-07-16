@@ -323,3 +323,42 @@ async function* callSearch(prefix, alternates=0, depth=1) {
     console.error("There has been a problem with your fetch operation:", error);
   }
 }
+
+/*
+ * 
+*/
+export async function miscTokensToWordTokens(tokenSpan, document) {
+  // TODO to speed this up we can reuse spacy's tokenization
+  // https://stackoverflow.com/questions/53594690/is-it-possible-to-use-spacy-with-already-tokenized-input
+  // but for now let's just retokenize
+
+  // compute the text that results from adding the span we are evaluating to the rest of the prefix
+  let newText = document.prefixText + tokenSpan.reduce(
+    (acc, token) => {
+      return acc + token.text;
+    },
+    ''
+  );
+
+  // Let spacy figure out where the words are in the text that results from adding
+  // the span we are evaluating to the existing text
+  let wordTokens = await spacyTokenize(newText, { onToken: (token) => { } });
+
+  // now we need to split it back into the tokens that were in after the given text
+  let splitIndex = tokenSpan[0].start;
+  let newWordTokens = wordTokens.filter((token) => {
+    return token.end >= splitIndex;
+  });
+
+  let firstWord = newWordTokens[0];
+  if (firstWord.start < splitIndex) { // TODO this needs to be tested
+    let diff = splitIndex - firstWord.start;
+    firstWord.text = firstWord.text.slice(diff);
+    firstWord.start = splitIndex;
+    firstWord.incomplete = true;
+  }
+
+  console.log({tokenSpan, wordTokens, newWordTokens, splitIndex});
+
+  return newWordTokens;
+}

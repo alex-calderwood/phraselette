@@ -1,5 +1,4 @@
 import { overlaps, getUniqueUUID } from '../scripts/utils.js';
-import { spacyTokenize } from '../scripts/smarts.js';
 
 export class Constraint {
   constructor(name, dataType) {
@@ -57,6 +56,10 @@ export class TestConstraint extends Constraint {
   }
 }
 
+/*
+ * A categorical constraint is one that can restrict text based on a token's 'category'
+ * such as part of speech or rhyme scheme
+*/
 export class CategoricalConstraint extends Constraint {
   constructor(name, dataType) {
     super(name, dataType);
@@ -105,7 +108,6 @@ export class CategoricalConstraint extends Constraint {
     this.targetSpan.pop();
     return this.targetSpan;
   }
-
 }
 
 export class POSConstraint extends CategoricalConstraint { // may want to make a 'categorical constraint'
@@ -114,8 +116,7 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
     this.targetSpan = targetPOSPhrase.map((pos, i) => { return { pos: pos, index: i }; });
     this.targetFeature = 'pos';
     this.defaultTarget = 'NN';
-    // https://github.com/explosion/spaCy/blob/master/spacy/glossary.py
-    this.range = Object.keys({ // get the keys from this
+    this.range = Object.keys({// https://github.com/explosion/spaCy/blob/master/spacy/glossary.py
       "AFX": "affix",
       "CC": "conjunction, coordinating",
       "CD": "cardinal number",
@@ -173,20 +174,20 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
       return 0;
     }
 
-    console.log('evaluating', newSpan)
+    // console.log('evaluating', newSpan)
 
     // zip through the span tokens and the tokens to evaluate
     let matches = 0;
     for (let i = 0; i < newSpan.length; i++) {
       let newToken = newSpan[i];
       let baselineTag = this.targetSpan[i][this.targetFeature];
-      console.log('match', newToken.text, newToken.pos, baselineTag, newToken.pos === baselineTag);
+      // console.log('match', newToken.text, newToken.pos, baselineTag, newToken.pos === baselineTag);
       if (newToken.pos == baselineTag) {
         matches += 1;
       }
     }
     let avg = matches / newSpan.length;
-    console.log("comparing", newSpan, this.targetSpan, avg);
+    // console.log("comparing", newSpan, this.targetSpan, avg);
     return avg;
   }
 }

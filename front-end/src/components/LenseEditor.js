@@ -5,6 +5,7 @@ import { TokenManager } from "../document/TokenManager";
 import { getColor } from "../color";
 import { Document } from "../document/Document";
 import { POSConstraint} from "../document/Constraint";
+import { resolveConstraints } from "../document/Resolution";
 
 /* 
 * Given character span <span c="5" id="id14acbb15b7e0e"">f</span>
@@ -532,10 +533,13 @@ export class LenseEditor extends Component {
 
     let prism = this.props.testPrism;
     prism.search(document, this.props.constraints).then(
-      (predictions) => {
-        if (this.props.onSearchResults) {
-          this.props.onSearchResults(predictions);
-        }
+        (predictions) => {
+          return resolveConstraints(predictions, this.props.constraints);
+      }).then(
+        (predictions) => {
+          if (this.props.onSearchResults) {
+            this.props.onSearchResults(predictions);
+          }
       }
     );
   }

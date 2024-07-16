@@ -1,3 +1,9 @@
+:root {
+  /* transparant selection color */
+  --selection-color: rgba(255, 255, 255, 0.00);
+  --accent-color: rgb(229, 229, 229);
+}
+
 .App {
   text-align: center;
 }
@@ -195,15 +201,16 @@ label {
 
 select {
   font-size: 14px;
-  background-color: rgb(172, 172, 172);
+  background-color: var(--accent-color);
+  border: none;
   outline: none;
-  margin-top: 10px;
-  margin-bottom: 10px;
+  margin-left: 3px;
+  margin-right: 3px;
 }
 
 button {
   font-size: 14px;
-  background-color: rgb(172, 172, 172);
+  background-color: var(--accent-color);
   border: none;
   outline: none;
 }
@@ -238,12 +245,6 @@ button:hover {
   width: 2em;
 }
 
-
-/* Selection Highlighting */
-:root {
-  /* transparant selection color */
-  --selection-color: rgba(255, 255, 255, 0.00);
-}
 
 /*** Works on common browsers ***/
 ::selection {
