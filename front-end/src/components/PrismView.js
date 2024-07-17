@@ -68,10 +68,8 @@ export class PrismView extends Component {
       <div className="title" onClick={this.toggleHidden.bind(this)}>
         <span>{prism.name}</span>
       </div>
-      {show && tokens.length > 0      ? this.renderActiveView(prism, start, end, tokens) : ""}
+      {show && tokens.length > 0  ? this.renderActiveView(prism, start, end, tokens) : ""}
       {show && results.length > 0 ? <SearchResults results={results} /> : ""}
     </div>;
-
-
   }
 }

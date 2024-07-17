@@ -58,9 +58,18 @@ export class Prism {
   }
 }
 
+// TODO: how do I get prisms to share data?
+export class SoundPrism extends Prism {
+
+}
+
 export class LLMProbabilityPrism extends Prism {
   constructor() {
     super('likelihood', 'number');
+
+    // search settings
+    this.minDepth = 1;
+    this.maxDepth = 5;
   }
 
   /*
@@ -69,20 +78,21 @@ export class LLMProbabilityPrism extends Prism {
   async search(document, constraints) {
     let numWords = Math.max(...constraints.map((constraint) => { return constraint.targetSpan.length; }));
     
-    let searchDepth = Math.max(1, Math.min(2, numWords)); // eventually we want to go forward, but right now we're using greedy search so shouldnt...
-    // numWords = Math.max(1, numWords)
-    // let searchDepth = numWords; // eventually we want to go forward, but right now we're using greedy search so shouldnt...
+    let searchDepth = Math.max(this.minDepth, Math.min(this.maxDepth, numWords)); // eventually we want to go forward, but right now we're using greedy search so shouldnt...
 
-    console.log('search', searchDepth)
-    // let searchDepth = 2;
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
-    console.log("document", document)
-    let predictions = await searchForward(document, preConstraints, searchDepth).then( // turn the predictions into words
+    let predictions = await searchForward(document, preConstraints, searchDepth).then(
       async (predictions) => {
         for (let prediction of predictions) {
-          console.log('prediciotn', prediction.span);
+          prediction.scores = prediction.scores || {};
+          prediction.scores.likelihood = prediction.span.reduce((acc, token) => { return acc + token.prob; } , 0) / prediction.span.length;
+        }
+        return predictions;
+    }
+    ).then( // turn the predictions into words
+      async (predictions) => {
+        for (let prediction of predictions) {
           let words = await miscTokensToWordTokens(prediction.span, document);
-          console.log('words', words);
           // cap the number of words based on numWords
           // words = words.slice(0, numWords);
           prediction.span = words;

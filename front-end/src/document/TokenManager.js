@@ -298,7 +298,7 @@ export class TokenManager {
     let tokens = [];
       data = {  ...data, onToken: this.internalOnToken.bind(this) };
       for (let lense of lenses) {
-        console.log('tokenizing', lense);
+        // console.log('tokenizing', lense);
         switch (lense) {
           case 'words':
             // TODO this is not currently using onToken
@@ -312,7 +312,7 @@ export class TokenManager {
             spacyTokenize(text, data);
             break;
           default:
-            console.log('ignoring', lense);
+            // console.log('ignoring', lense);
             break;
       }
     }

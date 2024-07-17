@@ -1,5 +1,5 @@
 import React, { Component, createRef } from "react";
-import { getColor } from "../color";
+import { getColor, lengthNormedLogProbToColor } from "../color";
 import { getUniqueUUID } from "../scripts/utils";
 
 function singular(token) {
@@ -16,6 +16,10 @@ function singular(token) {
       console.error('no singular for', token);
       return token;
   }
+}
+
+function scientific(num) {
+  return (num !== 0 && (num < 1e-3 || num >= 1e+7)) ? num.toExponential(2) : num.toPrecision(3);
 }
 
 export class TokenRange extends Component {
@@ -57,22 +61,29 @@ export class TokenRange extends Component {
       [];
     tokens = tokens.sort((a, b) => { return a.start - b.start });
 
-    console.log('<TokenRange>', tokens);
+    let wrap = this.props.wrap ? ' wrap' : ' nowrap';
+
+    console.log('token range', tokens);
 
     return (
       <div className={"token-range-parent " + overflowing}>
-          <div id={'tokenbar' + tokenType} className={`token-range`}>
-              {tokens && tokens.map((token) => {
-                if (Array.isArray(token)) {
+          <div id={'tokenbar-' + tokenType} className={`token-range` + wrap}>
+              {tokens && tokens.map((tokenGroup) => {
+                if (tokenGroup.scores) {
+                  let score = tokenGroup.scores['likelihood'];
+                  let color = lengthNormedLogProbToColor(score);
                   return <div key={getUniqueUUID()} className="token-span"> 
                      {
-                      token.map((t) => {
-                        return this.renderToken(tokenType, t);
+                      tokenGroup.span.map((token) => {
+                        return this.renderToken(tokenType, token);
                       })
                      }
+                    <div className="item" style={{ backgroundColor: color }}>
+                      {scientific(score)}
+                    </div>
                     </div>
                 } else {
-                  return this.renderToken(tokenType, token);
+                  return this.renderToken(tokenType, tokenGroup);
                 }
               })}
         </div>
@@ -81,14 +92,9 @@ export class TokenRange extends Component {
   }
 
   renderToken(tokenType, token) {
-    function scientific(num) {
-      return (num !== 0 && (num < 1e-3 || num >= 1e+7)) ? num.toExponential(2) : num.toPrecision(3);
-    }
-
     let color = tokenType ? getColor(tokenType, token) : 'white';
-
     let prob = null;
-    let pos = token.pos;
+    let pos = this.props.suppressPOS ? null : token.pos;
 
     let showProb = tokenType === 'probability' || tokenType === 'alternate';
     if (showProb) {

@@ -293,7 +293,6 @@ async function* callSearch(prefix, alternates, depth) {
       return
     } else {
       if (!response.ok) {
-        // Some other error that we may need to deal with
         throw new Error("Network response was not ok");
       }
     }
@@ -323,13 +322,14 @@ async function* callSearch(prefix, alternates, depth) {
 }
 
 /*
+ * Turn the tokens into text and then call spacy to turn them into word tokens. 
+ * 
+ * TODO to speed this up we can reuse spacy's tokenization
+ * https://stackoverflow.com/questions/53594690/is-it-possible-to-use-spacy-with-already-tokenized-input
+ * but for now let's just retokenize
  * 
 */
 export async function miscTokensToWordTokens(tokenSpan, document) {
-  // TODO to speed this up we can reuse spacy's tokenization
-  // https://stackoverflow.com/questions/53594690/is-it-possible-to-use-spacy-with-already-tokenized-input
-  // but for now let's just retokenize
-
   // compute the text that results from adding the span we are evaluating to the rest of the prefix
   let newText = document.prefixText + tokenSpan.reduce(
     (acc, token) => {

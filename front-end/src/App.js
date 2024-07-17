@@ -6,7 +6,6 @@ import { TokenManager } from "./document/TokenManager";
 import { Prism, LLMProbabilityPrism } from "./document/Prism";
 import { WordView } from "./components/WordView";
 import { LenseEditor } from "./components/LenseEditor";
-import { POSConstraint } from "./document/Constraint";
 import { PrismView } from "./components/PrismView";
 import { SearchResults } from "./components/SearchResults";
 
@@ -51,18 +50,26 @@ class App extends Component {
       tokens: Object.keys(this.tokenManager.tokens),
       selection: null,
       constraints: [], // [new POSConstraint(['NN', 'JJ'])],
+      isSearching: false,
       info: {},
      };
 
      this.editorRef = React.createRef();
   }
 
+  /* 
+   * Called when the 
+  */
   setSelection(selection) {
     this.setState({ selection: selection });
+
+    if(this.automaticSearch) {
+
+    }
   }
 
-  setInfo(info) {
-    this.setState({ info: info });
+  setSearchingState(isSearching) {
+    this.setState({ isSearching: isSearching });
   }
 
   setText(text) {
@@ -130,8 +137,8 @@ class App extends Component {
   }
 
   onSearchResults(results) {
-    let tokens =  results.map((result) => { return result ? result.span : null});
-    this.setState({ searchResults: tokens});
+    this.setSearchingState(false);
+    this.setState({ searchResults: results});
   }
 
   addConstraint(constraint) {
@@ -180,6 +187,7 @@ class App extends Component {
               lenseToHighlight={this.state.prismToHighlight}
               ref={this.editorRef}
               testPrism={this.state.prisms['likelihood']}
+              onSearch={() => { this.setSearchingState(true); }}
               onSearchResults={this.onSearchResults.bind(this)}
               constraints={this.state.constraints}
               />
@@ -241,8 +249,7 @@ class App extends Component {
               })}
 
               {/* Constrained search results */}
-              <SearchResults results={searchResults} />   {/* onTokenClick={this.onTokenClick.bind(this)} /> */}
-
+              <SearchResults results={searchResults} isSearching={this.state.isSearching} wrap={false}/>   {/* onTokenClick={this.onTokenClick.bind(this)} /> */}
             </div>
           </div>
         </div>

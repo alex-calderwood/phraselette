@@ -525,6 +525,8 @@ export class LenseEditor extends Component {
   }
 
   manualSearchAction() {
+    this.props.onSearch();
+
     let document = new Document(
       this.getTextWithWhitespace(this.contentRef.current),
       this.selectionBeforeInput,

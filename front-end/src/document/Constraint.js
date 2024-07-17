@@ -6,7 +6,7 @@ export function makeConstraint(feature, target=null, dataType=null) {
   switch (feature) {
     case 'pos':
       // This should go elsewhere I'm sure
-      // target = target.filter((pos) => { return pos !== '_SP' });
+      // target = target.filter((pos) => { return pos !== '_SP' }); // filter out space tokens
       return new POSConstraint(target);
     default:
       return new Constraint(feature, dataType);
@@ -124,7 +124,6 @@ export class CategoricalConstraint extends Constraint {
 export class POSConstraint extends CategoricalConstraint { // may want to make a 'categorical constraint'
   constructor(targetPOSPhrase) {
     super('POS', 'category');
-    console.log('creating POS constraint', targetPOSPhrase);
     this.targetSpan = targetPOSPhrase.map((pos, i) => { return { pos: pos, index: i }; });
     this.targetFeature = 'pos';
     this.defaultTarget = 'NN';
@@ -186,7 +185,6 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
       return 0;
     }
 
-
     // zip through the span tokens and the tokens to evaluate
     let matches = 0;
     for (let i = 0; i < newSpan.length; i++) {
@@ -207,4 +205,15 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
   }
 }
 
+/* 
+ * Should this be responsible for both meter and rhyme?  
+*/
+class RhymeConstraint extends CategoricalConstraint {
+  constructor() {
+    super('rhyme', 'category');
+  }
 
+  async evaluate(span, document) {
+    return 0;
+  }
+}

@@ -112,6 +112,9 @@ we will need to select the text children of the editor */
   z-index: 2;
   width: 100%;
   margin-bottom: 4px;
+}
+
+.wrap {
   overflow-x: scroll;
   overflow-y: hidden;
   white-space: nowrap;
@@ -155,7 +158,7 @@ we will need to select the text children of the editor */
   cursor: pointer;
 }
 
-.token .item {
+.item {
   color: #777777;
   font-size: 10px;
 }
@@ -271,6 +274,24 @@ button:hover {
       1px -1px 0 #282c34,
     -1px  1px 0 #000,
       1px  1px 0 #000; Add a text shadow */
+}
+
+/* make the brackground gradient bounce left and right */
+/* Specific styles for the div when the searching class is added */
+div.searching {
+  background: linear-gradient(to right, #ffffff 0%, #b3b3b3 100%);
+  background-size: 200% 100%;
+  animation: slide 2s linear infinite;
+}
+
+/* Animation keyframes */
+@keyframes slide {
+  0%, 100% {
+    background-position: 100% 0%;
+  }
+  50% {
+    background-position: 50% 100%;
+  }
 }
 
 /*** Mozilla based browsers ***/

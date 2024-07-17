@@ -7,8 +7,8 @@ export function getColor(type, token) {
   switch (type) {
     case 'words':
       return categoryToColor(token.text);
-    case 'probability': case 'alternate':
-      return lengthNormedLogProbToColor(token);
+    case 'likelihood': case 'probability': case 'alternate':
+      return probColor(token);
     case 'spacy': case 'POS':
       return categoryToColor(token.pos);
     default:
@@ -45,17 +45,23 @@ const categoryToColor = (word) => {
   return hex;
 };
 
-const lengthNormedLogProbToColor = (token) => {
+const probColor = (token) => {
   if (!token.text) {
     console.error('no text for token', token);
     return 'white';
   }
 
+  return lengthNormedLogProbToColor(token);
+};
+
+export function lengthNormedLogProbToColor(token) {
   let prob = Math.log10(token.prob + 1e-12); // avoid log(0)
   let normalized = (prob + 6) / 6; // normalize to [0, 1] TODO don't understand this
-  // normalized /= token.text.length || 1; // normalize by length
 
+
+  // normalized /= token.text.length || 1; // normalize by length
   let alpha = 0.5;
   let hex = colorScale(normalized).alpha(alpha).css();
   return hex;
-};
+}
+
