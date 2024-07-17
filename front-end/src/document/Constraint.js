@@ -1,5 +1,18 @@
 import { overlaps, getUniqueUUID } from '../scripts/utils.js';
 
+export function makeConstraint(feature, target=null, dataType=null) {
+  console.log('making constraint', feature, dataType, target);
+  feature = feature.toLowerCase();
+  switch (feature) {
+    case 'pos':
+      // This should go elsewhere I'm sure
+      // target = target.filter((pos) => { return pos !== '_SP' });
+      return new POSConstraint(target);
+    default:
+      return new Constraint(feature, dataType);
+  }
+}
+
 export class Constraint {
   constructor(name, dataType) {
     this.name = name;
@@ -42,8 +55,6 @@ export class TestConstraint extends Constraint {
   }
 
   async evaluate(span, document) {
-    console.log('evaluating', span, document);
-
     // this is a placeholder
     let token = span.span[0];
     let letter = token.text && token.text.length > 0 ? token.text.trim()[0] : 'a';
@@ -61,11 +72,11 @@ export class TestConstraint extends Constraint {
  * such as part of speech or rhyme scheme
 */
 export class CategoricalConstraint extends Constraint {
-  constructor(name, dataType) {
+  constructor(name, dataType, defaultTarget=null) {
     super(name, dataType);
+    this.defaultTarget = defaultTarget;
     this.targetFeature = null;
     this.range = null;
-    this.defaultTarget = null;
   }
 
   async evaluate(span, document) {
@@ -113,6 +124,7 @@ export class CategoricalConstraint extends Constraint {
 export class POSConstraint extends CategoricalConstraint { // may want to make a 'categorical constraint'
   constructor(targetPOSPhrase) {
     super('POS', 'category');
+    console.log('creating POS constraint', targetPOSPhrase);
     this.targetSpan = targetPOSPhrase.map((pos, i) => { return { pos: pos, index: i }; });
     this.targetFeature = 'pos';
     this.defaultTarget = 'NN';
@@ -174,20 +186,23 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
       return 0;
     }
 
-    // console.log('evaluating', newSpan)
 
     // zip through the span tokens and the tokens to evaluate
     let matches = 0;
     for (let i = 0; i < newSpan.length; i++) {
       let newToken = newSpan[i];
-      let baselineTag = this.targetSpan[i][this.targetFeature];
-      // console.log('match', newToken.text, newToken.pos, baselineTag, newToken.pos === baselineTag);
+      let targetToken = this.targetSpan[i];
+      if (targetToken === undefined) {
+        console.error('target token is undefined mismatch in token lengths?', i, this.targetSpan, this.newSpan);
+        continue;
+      }
+      let baselineTag = targetToken[this.targetFeature];
       if (newToken.pos == baselineTag) {
         matches += 1;
       }
     }
     let avg = matches / newSpan.length;
-    // console.log("comparing", newSpan, this.targetSpan, avg);
+    console.log('evaluating', newSpan, this.targetSpan, avg);
     return avg;
   }
 }

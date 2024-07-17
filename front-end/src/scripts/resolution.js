@@ -2,7 +2,6 @@ export async function resolveConstraints(predictions, constraints) {
     const postConstraints = constraints.filter((constraint) => { return !constraint.isPre; });
 
     for (let predictedSpan of predictions) {
-        console.log("predictedSpan", predictedSpan);
         let spanTotal = 0;
         for (let constraint of postConstraints) {
             if (constraint.applies(predictedSpan)) {
@@ -15,7 +14,7 @@ export async function resolveConstraints(predictions, constraints) {
     }
 
     // filter out constraints that are lower than a threshold
-    const threshold = 0.0;
+    const threshold = 0;
     let finalPredictions = predictions.filter((prediction) => { return prediction.scores['total'] > threshold; });
 
     let sorted = finalPredictions.sort((a, b) => {

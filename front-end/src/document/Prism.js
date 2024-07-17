@@ -1,14 +1,19 @@
 import {searchForward, miscTokensToWordTokens} from '../scripts/smarts.js';
 
 export class Prism {
-  constructor(name, dataType) {
+  constructor(name, dataType, features=[]) {
     this.name = name;
     this.dataType = dataType;
     this.active = false;
     this.shouldHighlight = false;
 
     this.tokenManagerTokens = this.name; // which tokens to look up in the tokenManager
-    this.features = []; // a list of features?
+    this.features = features || [];
+
+    this.results = null;
+
+    // UI Variables
+    this.hidden = false;
   }
 
   /* 
@@ -55,21 +60,38 @@ export class Prism {
 
 export class LLMProbabilityPrism extends Prism {
   constructor() {
-    super('context', 'number');
+    super('likelihood', 'number');
   }
 
   /*
    * Given a document and a list of constraints, return a list of spans that maximally satisfy the constraints.
   */
   async search(document, constraints) {
-    const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
+    let numWords = Math.max(...constraints.map((constraint) => { return constraint.targetSpan.length; }));
     
-    return searchForward(document, preConstraints).then( // turn the predictions into words
+    let searchDepth = Math.max(1, Math.min(2, numWords)); // eventually we want to go forward, but right now we're using greedy search so shouldnt...
+    // numWords = Math.max(1, numWords)
+    // let searchDepth = numWords; // eventually we want to go forward, but right now we're using greedy search so shouldnt...
+
+    console.log('search', searchDepth)
+    // let searchDepth = 2;
+    const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
+    console.log("document", document)
+    let predictions = await searchForward(document, preConstraints, searchDepth).then( // turn the predictions into words
       async (predictions) => {
         for (let prediction of predictions) {
-          prediction.span = await miscTokensToWordTokens(prediction.span, document);
+          console.log('prediciotn', prediction.span);
+          let words = await miscTokensToWordTokens(prediction.span, document);
+          console.log('words', words);
+          // cap the number of words based on numWords
+          // words = words.slice(0, numWords);
+          prediction.span = words;
         }
         return predictions;
     });
+
+    this.results = predictions;
+    return predictions;
   }
+
 }

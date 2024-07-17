@@ -1,13 +1,13 @@
 // Used https://reactjs.org/docs/create-a-new-react-app.html
 import "./App.css";
 import React, { Component } from "react";
-import { PrismView } from "./components/PrismView";
+import { ActivePrismIndicator } from "./components/ActivePrismIndicator";
 import { TokenManager } from "./document/TokenManager";
 import { Prism, LLMProbabilityPrism } from "./document/Prism";
 import { WordView } from "./components/WordView";
 import { LenseEditor } from "./components/LenseEditor";
 import { POSConstraint } from "./document/Constraint";
-import { TokenLense } from "./components/TokenLense";
+import { PrismView } from "./components/PrismView";
 import { SearchResults } from "./components/SearchResults";
 
 const initialPrism = 'spacy';
@@ -30,8 +30,8 @@ class App extends Component {
   constructor(props) {
     super(props);
     let prisms = {
-      'context':      new LLMProbabilityPrism().setActive(true),
-      'spacy':        new Prism('spacy',       'string').setActive(true).setDoHighlight(true),                                                                 
+      'likelihood':      new LLMProbabilityPrism().setActive(true),
+      'spacy':        new Prism('spacy',       'string', ['pos']).setActive(true).setDoHighlight(true),                                                                 
       'words':        new Prism('words',       'string'),                                              
       'probability':  new Prism('probability', 'number'),
       'critic':       new Prism('critic',      'string'),
@@ -50,7 +50,7 @@ class App extends Component {
       prismToHighlight: initialPrism,
       tokens: Object.keys(this.tokenManager.tokens),
       selection: null,
-      constraints: [new POSConstraint(['NN', 'JJ'])],
+      constraints: [], // [new POSConstraint(['NN', 'JJ'])],
       info: {},
      };
 
@@ -134,6 +134,18 @@ class App extends Component {
     this.setState({ searchResults: tokens});
   }
 
+  addConstraint(constraint) {
+    this.setState({
+      constraints: this.state.constraints.concat([constraint])
+    });
+  }
+
+  removeConstraint(constraint) {
+    this.setState({
+      constraints: this.state.constraints.filter((c) => { return c !== constraint; })
+    });
+  }
+
   /*
    * Handle the swapping of tokens in the editor (as when the user selects a token replacement in the sidebar).
    * First, we want to swap the tokens in the tokenManager.
@@ -161,14 +173,13 @@ class App extends Component {
     return (
       <div className="context-container">
         <div className="editor-container">
-
           <div className="left"> {/* The text editor */}
             <LenseEditor tokenManager={this.tokenManager}
               setSelection={this.setSelection.bind(this)}
               setText={this.setText.bind(this)}
               lenseToHighlight={this.state.prismToHighlight}
               ref={this.editorRef}
-              testPrism={this.state.prisms['context']}
+              testPrism={this.state.prisms['likelihood']}
               onSearchResults={this.onSearchResults.bind(this)}
               constraints={this.state.constraints}
               />
@@ -188,43 +199,49 @@ class App extends Component {
                 {activePrisms.map((prism) => {
                   let shouldHighlight = prism.shouldHighlight;
                   let onHighlightChange = this.onHighlightChange.bind(this)
-                  return <PrismView key={prism.name} prism={prism} shouldHighlight={shouldHighlight} onHighlightChange={onHighlightChange}>{prism.name}</PrismView>
+                  return <ActivePrismIndicator 
+                            key={prism.name} 
+                            prism={prism} 
+                            shouldHighlight={shouldHighlight}
+                            onHighlightChange={onHighlightChange}>{prism.name}</ActivePrismIndicator>
                 })}
               </span>
             </div>
 
             <div className={`prism-inspector`}>
-              {selectionText && selectionText.length > 0 ? <div className="selection-text">"{selectionText}"</div> : ""}
+              {selectionText && selectionText.length > 0 ? <div className="selection-display">"{selectionText}"</div> : ""}
               {showSelection ? <div className="selection-info">{startIndex} - {endIndex}</div> : ""}
               
               {/* Display the selected span and some info about it */}
               <WordView
                 key={"wordslense"}
                 tokenManager={this.tokenManager} 
-                prism={wordsPrism}
+                wordsPrism={wordsPrism}
                 startIndex={startIndex} endIndex={endIndex} 
                 onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
                 debugMode={debugMode}
-                constraints={this.state.constraints}
               />
 
               {/* Display the active prisms */}
               {/* A bit distracting */}
               {activePrisms.map((prism) => {
                 return (
-                  <TokenLense 
+                  <PrismView
                     key={prism.name}
                     tokenManager={this.tokenManager} 
                     prism={prism}
                     startIndex={startIndex} endIndex={endIndex} 
                     onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
                     debugMode={debugMode}
+                    constraints={this.state.constraints.filter((constraint) => prism.features.includes(constraint.targetFeature))}
+                    addConstraint={this.addConstraint.bind(this)}
+                    removeConstraint={this.removeConstraint.bind(this)}
                   />
                 );
               })}
 
               {/* Constrained search results */}
-              <SearchResults tokens={searchResults} />   {/* onTokenClick={this.onTokenClick.bind(this)} /> */}
+              <SearchResults results={searchResults} />   {/* onTokenClick={this.onTokenClick.bind(this)} /> */}
 
             </div>
           </div>

@@ -1,5 +1,6 @@
 import React, { Component, createRef } from "react";
 import { getColor } from "../color";
+import { getUniqueUUID } from "../scripts/utils";
 
 function singular(token) {
   switch(token) {
@@ -46,11 +47,13 @@ export class TokenRange extends Component {
   render() {
     let tokenType = this.props.tokenType;
     let overflowing = this.state.overflowing ? "overflowing" : "";
+    let filterSpaces = this.props.filterSpaces || false;
 
     // filter out ' ' and &nbsp;
     let isSpace = (text) => { return text === ' ' || text === '\u00A0' };
-    let tokens = this.props.tokens && this.props.tokens.length > 0? 
-      this.props.tokens.filter((token) => { return !isSpace(token.text) }) :
+
+    let tokens = this.props.tokens && this.props.tokens.length > 0 ? 
+      this.props.tokens.filter((token) => { return !filterSpaces || !isSpace(token.text) }) :
       [];
     tokens = tokens.sort((a, b) => { return a.start - b.start });
 
@@ -60,10 +63,8 @@ export class TokenRange extends Component {
       <div className={"token-range-parent " + overflowing}>
           <div id={'tokenbar' + tokenType} className={`token-range`}>
               {tokens && tokens.map((token) => {
-                let type = typeof token;
-                console.log("type", type)
                 if (Array.isArray(token)) {
-                  return <div className="token-span"> 
+                  return <div key={getUniqueUUID()} className="token-span"> 
                      {
                       token.map((t) => {
                         return this.renderToken(tokenType, t);

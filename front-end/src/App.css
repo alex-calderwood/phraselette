@@ -52,6 +52,11 @@
   max-width: 50%; /* Ensure it doesn't grow beyond 50% */
 }
 
+.selection-display {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
 .editor {
   height: 100%;
   font-size: 14px;
@@ -94,6 +99,12 @@ we will need to select the text children of the editor */
   box-shadow: 0 3px 5px rgba(0,0,0,0.30), 0 3px 5px rgba(0,0,0,0.22);
   padding: 10px;
   margin: 10px;
+}
+
+.prism {
+  /* put a box around it */
+  border: 1px solid #f1f1f1;
+  margin-bottom: 10px;
 }
 
 .token-range {
@@ -163,7 +174,7 @@ we will need to select the text children of the editor */
 
 .token-span {
   display: inline-block;
-  padding: 4px;
+  /* padding: 4px; */
   margin-left: 2px;
   margin-right: 2px;
   background-color: #f1f1f1;
@@ -228,6 +239,10 @@ button:hover {
   font-size: 12px;
 }
 
+.constraint-creator {
+  display: inline-block;
+}
+
 .constraint {
   /* background-color: #f1f1f1; */
 
@@ -244,7 +259,6 @@ button:hover {
   height: 2em;
   width: 2em;
 }
-
 
 /*** Works on common browsers ***/
 ::selection {

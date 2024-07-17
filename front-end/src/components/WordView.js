@@ -2,19 +2,16 @@ import React, { Component } from "react";
 import { TokenRange } from "./TokenRange";
 import { Constraint } from "../document/Constraint";
 import { CategoricalConstraintView } from "./ConstraintView";
-import { SearchResults } from "./SearchResults";
-
 
 export class WordView extends Component {
   constructor(props) {
     super(props);
     this.tokenManager = this.props.tokenManager;
-    this.prism = this.props.prism;
   }
 
   handleAddConstraint() {
     this.setState({
-      constraints: this.state.constraints.concat([new Constraint('constraint', this.prism.dataType)])
+      constraints: this.state.constraints.concat([new Constraint('constraint', this.props.wordsPrism.dataType)])
     });
   }
 
@@ -24,33 +21,28 @@ export class WordView extends Component {
   }
 
   render() {
-    let prism = this.prism;
+    let wordsPrism = this.props.wordsPrism;
     let start = this.props.startIndex;
     let end = this.props.endIndex;
 
     this.tokens = [];
     if (start !== null) {
-      this.tokens = this.tokenManager.tokensAt(prism.name, start, end);
+      this.tokens = this.tokenManager.tokensAt(wordsPrism.name, start, end);
     }
 
-    let hidden = !prism.active || this.tokens.length == 0;
+    let hidden = this.tokens.length == 0;
 
     if (hidden) {
       return <div></div>;
     }
 
-    return <div className={`prism`}>
+    return <div className="word-view">
       <TokenRange tokens={this.tokens}
         tokenManager={this.tokenManager}
-        tokenType={prism.name}
+        tokenType={wordsPrism.name}
         startIndex={start} endIndex={end}
         debugMode={this.props.debugMode} />
-
-      { this.props.constraints.map((constraint) => {
-          return <CategoricalConstraintView key={constraint.id} constraint={constraint} />
-      })}
     </div>;
-
 
   }
 }

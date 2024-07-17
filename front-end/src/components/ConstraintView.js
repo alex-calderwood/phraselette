@@ -23,7 +23,6 @@ export class CategoricalConstraintView extends Component {
   handleChange = (event) => {
     const newValue = event.target.value;
     const index = event.target.id.split('-').pop();
-    console.log('newValue', newValue);
     let newTarget = this.props.constraint.updateTarget(index, newValue);
     this.setState({ target: newTarget });
   };
@@ -47,10 +46,6 @@ export class CategoricalConstraintView extends Component {
     let target = this.state.target;
 
     return  <div id={constraint.id} className="constraint">
-      <div>
-        <div className="title">Part of Speech Constraint</div>
-        {/* <TokenRange tokens={constraint.targetSpan} /> */}
-      </div>
       {target.map(tokenTarget => {
         return <select className="constraint-select" id={`constraint-select-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[feature]} onChange={this.handleChange}>
           {possibleConstraintValues.map(value => {

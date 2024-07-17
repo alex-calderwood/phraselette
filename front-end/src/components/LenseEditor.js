@@ -5,7 +5,7 @@ import { TokenManager } from "../document/TokenManager";
 import { getColor } from "../color";
 import { Document } from "../document/Document";
 import { POSConstraint} from "../document/Constraint";
-import { resolveConstraints } from "../document/Resolution";
+import { resolveConstraints } from "../scripts/resolution";
 
 /* 
 * Given character span <span c="5" id="id14acbb15b7e0e"">f</span>

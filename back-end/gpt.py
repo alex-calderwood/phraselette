@@ -89,7 +89,6 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): 
                 'alternates': alternates,     # top k alternates
             }
 
-            print('result', result)
             yield result
 
     except Exception as e:
@@ -126,17 +125,19 @@ def forward_search(text, top_k=1, depth=1):
     # the shape of the dictionary
     print('output', greedy_output_dict.scores, type(greedy_output_dict))
     offset = offsets[-1, -1, :].numpy().tolist()
-    offset = [offset[0], offset[1] - 1]
+    initial_offset = [offset[0], offset[1] - 1] # inclusive
 
+    offset = initial_offset
+    print("text", text, 'char', text[offset[1]])
+    print("initial offset", offset)
     spans = []
     for i in range(depth - 1):
-        print('i', i)
         softmax = tf.nn.softmax(greedy_output_dict.scores[i])[0]
         top_k_values, top_k_indices = tf.math.top_k(softmax, k=1)
 
         for index, prob in zip(top_k_indices, top_k_values):
             text = tokenizer.decode(index)
-            offset = [offset[1] + 1, offset[1] + len(text)]
+            offset = [offset[1] + 1, offset[1] + len(text)] # inclusive
             token = {
                 'token': text,
                 'prob': float(prob),
@@ -150,9 +151,11 @@ def forward_search(text, top_k=1, depth=1):
 
     final_offset = [offset[0], offset[1]]
 
+    print("final offset", final_offset)
+
     for index, prob in zip(top_k_indices, top_k_values):
         text = tokenizer.decode(index)
-        offset = [final_offset[1], final_offset[1] + len(text)]
+        offset = [final_offset[1] + 1, final_offset[1] + len(text)]
         token = {
             'token': text,
             'prob': float(prob),
@@ -167,6 +170,6 @@ if __name__ == "__main__":
     #     print(token)
     #     print(json.dumps(token))
 
-    for span in forward_search("The very best person is the", top_k=10, depth=20):
+    for span in forward_search("The very best person is the", top_k=10, depth=3):
         print(span)
         print(json.dumps(span))

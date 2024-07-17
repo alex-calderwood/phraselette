@@ -238,7 +238,7 @@ async function* callSpacy(context, tokenizeRange) {
 
   returns: [Token] - a list of tokens spans that satisfy the constraints (each token span is a list of tokens)
 */
-export async function searchForward(document, constraints, depth=2) {
+export async function searchForward(document, constraints, depth) {
   let alternates = 100;
   let tokenGenerator = callSearch(document.prefixText, alternates, depth);
 
@@ -246,7 +246,6 @@ export async function searchForward(document, constraints, depth=2) {
   let predictedSpans = [];
   while (!spanPromise.done) {
     let rawSpan = spanPromise.value;
-    console.log("searchForward span", rawSpan);
 
     let span = rawSpan.map((alt) => { return new Token({
       "text": alt.token,
@@ -268,7 +267,7 @@ export async function searchForward(document, constraints, depth=2) {
   });
 }
 
-async function* callSearch(prefix, alternates=0, depth=1) {
+async function* callSearch(prefix, alternates, depth) {
   const data = {
     text: prefix,
     top_k: alternates,
@@ -314,7 +313,6 @@ async function* callSearch(prefix, alternates=0, depth=1) {
       for (const line of lines) {
         if (line.trim()) {
           const span = JSON.parse(line);
-          console.log("recieved span", span)
           yield span;
         }
       }
@@ -357,8 +355,6 @@ export async function miscTokensToWordTokens(tokenSpan, document) {
     firstWord.start = splitIndex;
     firstWord.incomplete = true;
   }
-
-  console.log({tokenSpan, wordTokens, newWordTokens, splitIndex});
 
   return newWordTokens;
 }

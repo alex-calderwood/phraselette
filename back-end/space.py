@@ -23,5 +23,4 @@ def stream_parse(text, extra_context):
             'end': token.idx + max(len(token.text) - 1, 0), # exclusive -> inclusive
         }) + BREAK_TOKEN
 
-        print('token', response)
         yield response
