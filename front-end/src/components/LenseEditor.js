@@ -30,6 +30,7 @@ export class LenseEditor extends Component {
     this.contentRef = React.createRef();
     this.tokenManager = this.props.tokenManager;
     this.tokenManager.setOnToken(this.updateUITokens.bind(this));
+
     this.tokenManager.tokenize(originalText);
 
     if (this.props.setText) {
@@ -415,27 +416,28 @@ export class LenseEditor extends Component {
     }
   }
 
-  forceTokenize(lenses=this.tokenManager.activeLenseNames) {
-    let text = this.getTextWithWhitespace(this.contentRef.current);
-    let tokenizeRange  = [0, text.length - 1];
+  forceTokenize(prisms=this.tokenManager.activePrismNames) {
+
+    let document = new Document(
+      this.getTextWithWhitespace(this.contentRef.current),
+      this.selectionBeforeInput, // this may be out of date?
+      this.tokenManager
+    );
     
-    if (lenses.length < 1) {
+    if (prisms.length < 1) {
       return;
     }
 
-    let data = {
-      tokenizeRange: tokenizeRange,
-    };
-
-    let lense = lenses[0];
-    let remainingLenses = lenses.slice(1);
+    let data = { tokenizeRange: document.range, document: document }; // old versions of tokenizers still use tokenizeRange, should be depracated
+    let lense = prisms[0];
+    let remainingLenses = prisms.slice(1);
 
     if (remainingLenses && remainingLenses.length > 0) {
       let onFinished = () => { this.forceTokenize(remainingLenses); };
       data['onFinished']= onFinished.bind(this);
     }
 
-    this.tokenManager.tokenize(text, data, lenses=[lense]);
+    this.tokenManager.tokenize(document.text, data, prisms=[lense]);
   }
 
   /*

@@ -24,4 +24,9 @@ export class Document {
     get withoutSuffix() {
         return this.prefixText + this.selectionText;
     }
+
+    // Character inclusive range indices
+    get range() {
+        return [0, this.text.length - 1];
+    }
 }

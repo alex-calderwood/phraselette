@@ -8,7 +8,7 @@ export class ConstraintCreator extends Component {
 
   addConstraint = () => {
     let type = this.props.prism.features[0];
-    let target = this.props.tokens.map(token => token.pos);
+    let target = this.props.tokens;
     let constraint = makeConstraint(type, target=target) 
     this.props.onAdd(constraint);
   }

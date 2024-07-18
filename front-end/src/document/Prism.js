@@ -1,13 +1,15 @@
 import {searchForward, miscTokensToWordTokens} from '../scripts/smarts.js';
 
 export class Prism {
-  constructor(name, dataType, features=[]) {
+  constructor(name, dataType, features=[], parentToken=null) {
     this.name = name;
     this.dataType = dataType;
     this.active = false;
     this.shouldHighlight = false;
 
-    this.tokenManagerTokens = this.name; // which tokens to look up in the tokenManager
+    // which tokens to look up in the tokenManager
+    this.parentToken = parentToken ? parentToken : this.name;  
+    
     this.features = features || [];
 
     this.results = null;
@@ -76,7 +78,7 @@ export class LLMProbabilityPrism extends Prism {
    * Given a document and a list of constraints, return a list of spans that maximally satisfy the constraints.
   */
   async search(document, constraints) {
-    let numWords = Math.max(...constraints.map((constraint) => { return constraint.targetSpan.length; }));
+    let numWords = Math.max(...constraints.map((constraint) => { return constraint.targetSequence.length; }));
     
     let searchDepth = Math.max(this.minDepth, Math.min(this.maxDepth, numWords)); // eventually we want to go forward, but right now we're using greedy search so shouldnt...
 

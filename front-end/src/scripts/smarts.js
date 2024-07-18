@@ -11,6 +11,7 @@ function badData(text) {
   return false;
 }
 
+// todo eventually we want to calculate this based on data.document
 function makeTokenizationRange(text, data) {
   if(data.tokenizeRange) { // 'tokenizeRange' is not defined
     return data.tokenizeRange;
@@ -19,18 +20,62 @@ function makeTokenizationRange(text, data) {
   }
 }
 
+async function* streamFromServer(endpoint, data) {
+  try {
+    const response = await fetch(`http://127.0.0.1:5000/${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split(breakToken);
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (line.trim()) {
+          const token = JSON.parse(line);
+          yield token;
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`There has been a problem with your ${endpoint} fetch operation:`, error);
+  }
+}
+
 /* 
  * Turn the text into a list of tokens using spacy in the backend. 
  * TODO to speed this up we would like to be able to pass in the beginning of a sentence
- * and have it only tokenize the end.
+ * and have it only tokenize the end. 
+ * 
+ * We currently tokenize the entire text regardless of the data.tokenizationRange parameter
+ * 
+ * Calls onToken when each token is recieved.
+ *
 */ 
 export async function spacyTokenize(text, data = {}) {
   if (badData(text)) return;
 
   let onToken = data.onToken;
-  delete data.tokenizationRange // right now we tokenize the whoel thing
+  let requests = data.requests || [];
+  delete data.tokenizationRange // right now we tokenize the whole thing
   let tokenizeRange = makeTokenizationRange(text, data);
-  let tokenGenerator = callSpacy(text, tokenizeRange);
+  let tokenGenerator = callSpacy(text, tokenizeRange, requests);
 
   let tokens = [];
 
@@ -39,14 +84,25 @@ export async function spacyTokenize(text, data = {}) {
   let rawTokenPromise = await tokenGenerator.next();
   while (!rawTokenPromise.done) {
     let rawToken = rawTokenPromise.value;
-    let token = new Token({
+    let tokenData = {
       'start': rawToken.start,     // inclusive
       'end':   rawToken.end,       // inclusive from server
       "text":  rawToken.text,
       "pos":   rawToken.tag,       // Todo looks like there is also a '.pos' need to see if there is a difference
-      "raw":   rawToken,
       "type":  "spacy",
-    });
+      "isWord": true,
+    }
+    if (rawToken.extra && typeof rawToken.extra === 'object') {
+      for (let key in rawToken.extra) {
+        if (rawToken.extra.hasOwnProperty(key)) {
+          tokenData[key] = rawToken.extra[key];
+        }
+      }
+      delete rawToken.extra;
+    }
+    tokenData['raw'] = rawToken;
+    
+    let token = new Token(tokenData);
     tokens.push(token);
     if (onToken) {
       onToken(token);
@@ -128,7 +184,6 @@ export function splitWordTokenize(text, data = {}) {
   tokenizeRange: [int, int] - the range of text to tokenize (inclusive)
 */
 async function* callGPT2(context, tokenizeRange, alternates=0) {
-
   // get the text to tokenize based on the inclusive range
   const text = context.substring(tokenizeRange[0], tokenizeRange[1] + 1);
   const preContext = context.substring(0, tokenizeRange[0]);
@@ -139,50 +194,10 @@ async function* callGPT2(context, tokenizeRange, alternates=0) {
     top_k: alternates,
   };
 
-  try {
-    const response = await fetch("http://127.0.0.1:5000/probs", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    // Error handling
-    if (response.status === 409) { // busy
-      return // We expect a busy signal, so try again later
-    } else {
-      if (!response.ok) {
-        // Some other error that we may need to deal with
-        throw new Error("Network response was not ok");
-      }
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split(breakToken);
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        if (line.trim()) {
-          const token = JSON.parse(line);
-          yield token;
-        }
-      }
-    }
-  } catch (error) {
-    console.error("There has been a problem with your fetch operation:", error);
-  }
+  await (yield* streamFromServer("probs", data));
 }
 
-async function* callSpacy(context, tokenizeRange) {
+async function* callSpacy(context, tokenizeRange, additionalRequests) {
   // get the text to tokenize based on the inclusive range
   const text = context.substring(tokenizeRange[0], tokenizeRange[1] + 1);
   const preContext = context.substring(0, tokenizeRange[0]);
@@ -190,44 +205,14 @@ async function* callSpacy(context, tokenizeRange) {
   const data = {
     // context: preContext,
     text: preContext + text,
+    requests: additionalRequests,
   };
 
-  try {
-    const response = await fetch("http://127.0.0.1:5000/spacy", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
+  console.log("calling spacy with data", data);
 
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split(breakToken);
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        if (line.trim()) {
-          const token = JSON.parse(line);
-          yield token;
-        }
-      }
-    }
-  } catch (error) {
-    console.error("There has been a problem with your fetch operation:", error);
-  }
+  await (yield* streamFromServer('spacy', data));
 }
+
 
 /* 
   This function takes a document and a set of constraints.
@@ -275,51 +260,39 @@ async function* callSearch(prefix, alternates, depth) {
   };
 
   console.log("searching with data", data);
-
-  try {
-    const response = await fetch("http://127.0.0.1:5000/search", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    // Error handling
-    if (response.status === 409) { // busy
-      // We expect a busy signal, so try again later
-      // Don't need to throw an error
-      // console.log("Server busy");
-      return
-    } else {
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split(breakToken);
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        if (line.trim()) {
-          const span = JSON.parse(line);
-          yield span;
-        }
-      }
-    }
-  } catch (error) {
-    console.error("There has been a problem with your fetch operation:", error);
-  }
+  await (yield* streamFromServer('search', data)); // TODO I'm not sure if this await is going to batch everything?
 }
+
+export async function getPhones(words) {
+  let tokenGenerator = callPhones(words);
+
+  let tokens = [];
+  let rawTokenPromise = await tokenGenerator.next();
+  while (!rawTokenPromise.done) {
+    let rawToken = rawTokenPromise.value;
+    let token = new Token({
+      'start': rawToken.start,     // inclusive
+      'end':   rawToken.end,       // inclusive from server
+      "text":  rawToken.text,
+      "pos":   rawToken.tag,       // Todo looks like there is also a '.pos' need to see if there is a difference
+      "raw":   rawToken,
+      "type":  "phone",
+    });
+    tokens.push(token);
+    rawTokenPromise = await tokenGenerator.next();
+  }
+
+  return tokens;
+}
+
+async function* callPhones(text) {
+  const data = {
+    text: text
+  };
+
+  await (yield* streamFromServer('phones', data));
+}
+
 
 /*
  * Turn the tokens into text and then call spacy to turn them into word tokens. 
@@ -340,7 +313,7 @@ export async function miscTokensToWordTokens(tokenSpan, document) {
 
   // Let spacy figure out where the words are in the text that results from adding
   // the span we are evaluating to the existing text
-  let wordTokens = await spacyTokenize(newText, { onToken: (token) => { } });
+  let wordTokens = await spacyTokenize(newText, { onToken: (token) => { }, requests: document.activeLenses });
 
   // now we need to split it back into the tokens that were in after the given text
   let splitIndex = tokenSpan[0].start;

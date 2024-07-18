@@ -1,4 +1,3 @@
-// Used https://reactjs.org/docs/create-a-new-react-app.html
 import "./App.css";
 import React, { Component } from "react";
 import { ActivePrismIndicator } from "./components/ActivePrismIndicator";
@@ -29,12 +28,12 @@ class App extends Component {
   constructor(props) {
     super(props);
     let prisms = {
-      'likelihood':      new LLMProbabilityPrism().setActive(true),
+      'likelihood':   new LLMProbabilityPrism().setActive(true),
       'spacy':        new Prism('spacy',       'string', ['pos']).setActive(true).setDoHighlight(true),                                                                 
+      'sound':        new Prism('sound',       'list',   ['sound', 'rhyme'], 'spacy'),
       'words':        new Prism('words',       'string'),                                              
       'probability':  new Prism('probability', 'number'),
       'critic':       new Prism('critic',      'string'),
-      'sound':        new Prism('sound',       'list'  ),
     }
     let activePrisms = Prism.getActive(prisms);
 
@@ -142,6 +141,7 @@ class App extends Component {
   }
 
   addConstraint(constraint) {
+    console.log('adding constraint', constraint);
     this.setState({
       constraints: this.state.constraints.concat([constraint])
     });
@@ -193,8 +193,8 @@ class App extends Component {
               />
           </div>
           
-          <div className="right"> {/* Everything on the right hand side of the screen */}
-            <div className="lenses"> {/* A list of each active lense and a checkbox to activate/deactivate them */}
+          <div className="right"> { /* Everything on the right hand side of the screen */}
+            <div className="lenses"> { /* A list of each active lense and a checkbox to activate/deactivate them */}
               <select title="add a lense" id="add-lense">
                 {Object.entries(this.state.prisms).map(([name, lense]) => {
                   return <option key={lense.name} value={lense.name}>{lense.name}</option>;

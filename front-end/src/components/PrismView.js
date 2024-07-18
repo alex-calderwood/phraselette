@@ -1,6 +1,5 @@
 import React, { Component } from "react";
 import { TokenRange } from "./TokenRange";
-import { Constraint } from "../document/Constraint";
 import { TokenAlternates } from "./Alternates";
 import { CategoricalConstraintView } from "./ConstraintView";
 import { ConstraintCreator } from "./ConstraintCreator";
@@ -57,12 +56,16 @@ export class PrismView extends Component {
 
     let tokens = [];
     if (start !== null) {
-      tokens = this.tokenManager.tokensAt(prism.name, start, end);
+      tokens = this.tokenManager.tokensAt(prism.parentToken, start, end);
     }
 
     let show = prism.active && !prism.hidden;
 
     let results = prism.results || [];
+
+    if(prism.name == 'sound') {
+      console.log('sound', prism, tokens);
+    }
 
     return <div className="prism">
       <div className="title" onClick={this.toggleHidden.bind(this)}>

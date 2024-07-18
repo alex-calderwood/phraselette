@@ -1,4 +1,5 @@
 import spacy, json
+from words import get_additional_word_data
 from network import BREAK_TOKEN
 
 nlp = spacy.load("en_core_web_sm")
@@ -7,10 +8,10 @@ nlp = spacy.load("en_core_web_sm")
 BREAK_TOKEN = "&&VE*A=]"
 
 # Generator for tokenizing and calcultating probabilities of each token in a phrase
-def stream_parse(text, extra_context):
+def stream_parse(text, extra_context, requests):
     doc = nlp(text)
     for token in doc:
-        response = json.dumps({
+        token_data = {
             'text': token.text,
             'lemma': token.lemma_,
             'pos': token.pos_,
@@ -21,6 +22,16 @@ def stream_parse(text, extra_context):
             'is_stop': token.is_stop,
             'start': token.idx,
             'end': token.idx + max(len(token.text) - 1, 0), # exclusive -> inclusive
-        }) + BREAK_TOKEN
+        }
+        if requests:
+            extra_data = {}
+            for request in requests:
+                make_request = get_additional_word_data.get(request)
+                print(request, make_request)
+                if make_request:
+                    extra_data[request] = make_request(token_data)
+            token_data['extra'] = extra_data
+
+        response = json.dumps(token_data) + BREAK_TOKEN
 
         yield response

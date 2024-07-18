@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 import { TokenRange } from "./TokenRange";
 import { Constraint } from "../document/Constraint";
-import { CategoricalConstraintView } from "./ConstraintView";
 
 export class WordView extends Component {
   constructor(props) {
@@ -27,7 +26,7 @@ export class WordView extends Component {
 
     this.tokens = [];
     if (start !== null) {
-      this.tokens = this.tokenManager.tokensAt(wordsPrism.name, start, end);
+      this.tokens = this.tokenManager.tokensAt(wordsPrism.parentToken, start, end);
     }
 
     let hidden = this.tokens.length == 0;

@@ -5,9 +5,13 @@ export function makeConstraint(feature, target=null, dataType=null) {
   feature = feature.toLowerCase();
   switch (feature) {
     case 'pos':
-      // This should go elsewhere I'm sure
-      // target = target.filter((pos) => { return pos !== '_SP' }); // filter out space tokens
+      target = target.map(token => token.pos);
       return new POSConstraint(target);
+    case 'sound':
+      target = target.map(token => token.sound.rhyme);
+      let r =  new RhymeConstraint(target);
+      console.log("rhyme constra", r)
+      return r;
     default:
       return new Constraint(feature, dataType);
   }
@@ -20,16 +24,16 @@ export class Constraint {
     this.id = getUniqueUUID();
     this.span = null;
     this.isPre = false;     // can the constraint be computed quickly?
-    this.targetSpan = null; // what is the goal of the constraint 
+    this.targetSequence = null; // what is the goal of the constraint 
     this.range = null;      // what are the possible values of the constraint
   }
 
   /* 
-  * Return a [0-1] score indicating how much the span coheres to the constraint target. 
+  * Return a [0-1] score indicating how much the token sequence coheres to the constraint target. 
   * 0 means the span does not match the constraint
   * 1 means the span perfectly coheres to the constraint
   */
-  async evaluate(span, document) {
+  async evaluate(sequence, document) {
     return 0;
   }
 
@@ -49,17 +53,25 @@ export class Constraint {
   }
 }
 
-export class TestConstraint extends Constraint {
-  constructor() {
+export class AlliterationConstraint extends Constraint {
+  constructor(targetToken) {
     super('test', 'test');
+    this.targetLetter = this.firstLetterInToken(targetToken);
   }
 
-  async evaluate(span, document) {
+  firstLetterInToken(token) {
+    let letter = token.text && token.text.length > 0 ? token.text.trim()[0] : '';
+    return letter;
+  }
+
+  async evaluate(sequence, document) {
     // this is a placeholder
-    let token = span.span[0];
-    let letter = token.text && token.text.length > 0 ? token.text.trim()[0] : 'a';
-    let number = parseInt(letter, 36);
-    return number || 0;
+    let token = sequence.span[0];
+    let letter = this.firstLetterInToken(token);
+    if (letter === this.targetLetter) {
+      return 1;
+    }
+    return 0;
   }
 
   applies(span) {
@@ -79,17 +91,46 @@ export class CategoricalConstraint extends Constraint {
     this.range = null;
   }
 
-  async evaluate(span, document) {
-    return 0;
+  async evaluate(sequence, document) {
+    if (this.targetFeature === null) {
+      console.error('Must specify a feature constrain for:', this);
+      return 0;
+    }
+
+    if (sequence.length === 0) {
+      return 0;
+    }
+    if (this.targetSequence === null || this.targetSequence.length === 0) {
+      return 0;
+    }
+
+    // zip through the span tokens and the tokens to evaluate
+    let matches = 0;
+    for (let i = 0; i < sequence.length; i++) {
+      let newToken = sequence[i];
+      let targetToken = this.targetSequence[i];
+      if (targetToken === undefined) {
+        console.error('target token is undefined mismatch in token lengths?', i, this.targetSequence, this.newSpan);
+        continue;
+      }
+      let baselineTag = targetToken[this.targetFeature];
+      let newTokenTag = newToken[this.targetFeature];
+      if (newTokenTag === baselineTag) {
+        matches += 1;
+      }
+    }
+    let avg = matches / sequence.length;
+    console.log('evaluating', sequence, this.targetSequence, avg);
+    return avg;
   }
 
   updateTarget(index, newValue) {
-    if (this.targetSpan == null || this.targetSpan.length === 0) {
+    if (this.targetSequence == null || this.targetSequence.length === 0) {
       console.log('no target span to update for constraint', this);
       return;
     }
-    this.targetSpan[index][this.targetFeature] = newValue;
-    return this.targetSpan;
+    this.targetSequence[index][this.targetFeature] = newValue;
+    return this.targetSequence;
   }
 
   addTarget(newTarget=null) {
@@ -98,33 +139,33 @@ export class CategoricalConstraint extends Constraint {
       return;
     }
 
-    if (this.targetSpan == null) {
-      this.targetSpan = [];
+    if (this.targetSequence == null) {
+      this.targetSequence = [];
     }
 
     if (newTarget === null) {
       newTarget = this.defaultTarget;
     }
 
-    let newIndex = this.targetSpan.length;
-    this.targetSpan.push({ [this.targetFeature]: newTarget, index: newIndex });
+    let newIndex = this.targetSequence.length;
+    this.targetSequence.push({ [this.targetFeature]: newTarget, index: newIndex });
 
-    return this.targetSpan;
+    return this.targetSequence;
   }
 
   deleteTarget() {
-    if (this.targetSpan == null || this.targetSpan.length === 0) {
+    if (this.targetSequence == null || this.targetSequence.length === 0) {
       return;
     }
-    this.targetSpan.pop();
-    return this.targetSpan;
+    this.targetSequence.pop();
+    return this.targetSequence;
   }
 }
 
 export class POSConstraint extends CategoricalConstraint { // may want to make a 'categorical constraint'
   constructor(targetPOSPhrase) {
     super('POS', 'category');
-    this.targetSpan = targetPOSPhrase.map((pos, i) => { return { pos: pos, index: i }; });
+    this.targetSequence = targetPOSPhrase.map((pos, i) => { return { pos: pos, index: i }; });
     this.targetFeature = 'pos';
     this.defaultTarget = 'NN';
     this.range = Object.keys({// https://github.com/explosion/spaCy/blob/master/spacy/glossary.py
@@ -176,44 +217,17 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
       "_SP": "whitespace",
     })
   }
-
-  async evaluate(newSpan, document) {
-    if (newSpan.length === 0) {
-      return 0;
-    }
-    if (this.targetSpan === null || this.targetSpan.length === 0) {
-      return 0;
-    }
-
-    // zip through the span tokens and the tokens to evaluate
-    let matches = 0;
-    for (let i = 0; i < newSpan.length; i++) {
-      let newToken = newSpan[i];
-      let targetToken = this.targetSpan[i];
-      if (targetToken === undefined) {
-        console.error('target token is undefined mismatch in token lengths?', i, this.targetSpan, this.newSpan);
-        continue;
-      }
-      let baselineTag = targetToken[this.targetFeature];
-      if (newToken.pos == baselineTag) {
-        matches += 1;
-      }
-    }
-    let avg = matches / newSpan.length;
-    console.log('evaluating', newSpan, this.targetSpan, avg);
-    return avg;
-  }
 }
 
 /* 
  * Should this be responsible for both meter and rhyme?  
 */
 class RhymeConstraint extends CategoricalConstraint {
-  constructor() {
+  constructor(targetPhones) {
     super('rhyme', 'category');
-  }
-
-  async evaluate(span, document) {
-    return 0;
+    this.targetFeature = 'rhyme';
+    this.defaultTarget = 'AA1'; // TODO
+    this.targetSequence = targetPhones.map((rhyme, i) => { return { rhyme: rhyme, index: i }; });
+    this.range = ["AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY", "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY", "UH", "UW", "UX", "B", "CH", "D", "DH", "DX", "EL", "EM", "EN", "F", "G", "HH", "JH", "K", "L", "M", "N", "NX", "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V", "W", "WH", "Y", "Z", "ZH"];
   }
 }

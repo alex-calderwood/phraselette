@@ -1,30 +1,30 @@
-import { splitWordTokenize, gpt2Tokenize, spacyTokenize } from '../scripts/smarts.js';
+import { splitWordTokenize, gpt2Tokenize, spacyTokenize, getPhones} from '../scripts/smarts.js';
 
 export class TokenManager {
-  constructor(activeLenses, tokens) {
+  constructor(activePrisms, tokens) {
     this.tokens = {
       'probability': [],
       'words': [],
       'spacy': [],
-    }; 
-    this.activeLenseNames = activeLenses; // which lenses are currently active
+    };
+    this.activePrismNames = activePrisms; // which lenses are currently active
     this.externalOnToken = (token) => {}; // a callback to call when a token is created
     this.wordsLense = 'spacy';
   }
 
-  /* 
+  activeTokenizations() { // should this be efficient?
+    return this.activePrismNames.filter(prism => this.tokens.hasOwnProperty(prism)) // set intersection
+  }
+
+  /*
    * Toggle TokenManager's understanding of which lenses should be actively tokenized.
   */
   setActiveLense(lense, active=true) {
-    if (!this.tokens[lense]) {
-      console.error("No label of lense type", lense);
-      return;
+    if (active && !this.activePrismNames.includes(lense) ) {
+      this.activePrismNames.push(lense);
     }
-    if (active && !this.activeLenseNames.includes(lense) ) {
-      this.activeLenseNames.push(lense);
-    }
-    if (!active && this.activeLenseNames.includes(lense)) {
-      this.activeLenseNames = this.activeLenseNames.filter(l => l !== lense);
+    if (!active && this.activePrismNames.includes(lense)) {
+      this.activePrismNames = this.activePrismNames.filter(l => l !== lense);
     }
   }
 
@@ -51,13 +51,15 @@ export class TokenManager {
   * with the edits that were made by {event} to the text in the contenteditable div (which is already updated);
   */
   synchronizeTokens(selection, beforeEventSelection, event) {
-    for (let lense of this.activeLenseNames) {
+    let tokensToSync = this.activeTokenizations();
+
+    for (let tokenType of tokensToSync) {
       switch (event.inputType) {
         case 'insertText':
-          this.addCharToToken(lense, selection, event);
+          this.addCharToToken(tokenType, selection, event);
           break;
         case 'deleteContentBackward':
-          this.removeCharsFromToken(lense, beforeEventSelection, event);
+          this.removeCharsFromToken(tokenType, beforeEventSelection, event);
           break;
         case 'deleteContentForward':
           console.error('deleteContentForward not implemented');
@@ -183,7 +185,7 @@ export class TokenManager {
   swapToken(token, newToken) {
     console.log("Swapping token", token, "with", newToken)
 
-    // for (let lense of this.activeLenseNames) {
+    // for (let lense of this.activePrismNames) {
     let lense = token.type;
     let index = this.tokens[lense].findIndex(t => t.id === token.id);
     if (index === -1) {
@@ -287,33 +289,37 @@ export class TokenManager {
   }
 
   /**
-    * Asynchonously turn the incoming text into a list of 'tokens' based on the current lenses' 
+    * Asynchonously turn the incoming text into a list of 'tokens' based on the current prisms' 
     * tokenization strategy.
     * 
     * @param {string} text - the text to tokenize (should be the entire context)
     * @param {object} data - extra arguments to the tokenizer call such as the range of 
     *                        the text that should be processed
+    *                        data.tokenizeRange is a [int, int] representing where to tokenize
+    *                        data.document is the full document
+    * @param {object} prisms - the list of prisms that should be tokenized
   */
-  tokenize(text, data = {}, lenses=this.activeLenseNames) {
+  tokenize(text, data = {}, prisms=this.activePrismNames) {
     let tokens = [];
-      data = {  ...data, onToken: this.internalOnToken.bind(this) };
-      for (let lense of lenses) {
-        // console.log('tokenizing', lense);
-        switch (lense) {
-          case 'words':
-            // TODO this is not currently using onToken
-            tokens = splitWordTokenize(text, data);
-            this.tokens.words = tokens; 
-            break;
-          case 'probability':
-            gpt2Tokenize(text, data);
-            break;
-          case 'spacy':
-            spacyTokenize(text, data);
-            break;
-          default:
-            // console.log('ignoring', lense);
-            break;
+
+    data = {  ...data, onToken: this.internalOnToken.bind(this), requests: this.activePrismNames};
+    
+    for (let prism of prisms) {
+      switch (prism) {
+        case 'words':
+          // TODO this is not currently using onToken
+          tokens = splitWordTokenize(text, data);
+          this.tokens.words = tokens; 
+          break;
+        case 'probability':
+          gpt2Tokenize(text, data);
+          break;
+        case 'spacy':
+          spacyTokenize(text, data);
+          break;
+        default:
+          // console.log('ignoring', lense);
+          break;
       }
     }
 

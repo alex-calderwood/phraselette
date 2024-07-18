@@ -20,8 +20,6 @@ export class SearchResults extends Component {
       return <div className='title'>No results</div>
     }
 
-    console.log("results", results);
-
     if (!results || results.length === 0) {
       return <div className='title'>No results</div>
     }

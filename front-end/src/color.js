@@ -11,6 +11,8 @@ export function getColor(type, token) {
       return probColor(token);
     case 'spacy': case 'POS':
       return categoryToColor(token.pos);
+    case 'sound':
+      return categoryToColor(token.sound?.rhyming_part?.join(' '));
     default:
       return probToColor(prob);
   }

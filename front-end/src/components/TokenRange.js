@@ -93,13 +93,20 @@ export class TokenRange extends Component {
 
   renderToken(tokenType, token) {
     let color = tokenType ? getColor(tokenType, token) : 'white';
-    let prob = null;
-    let pos = this.props.suppressPOS ? null : token.pos;
 
+    let prob = null;
     let showProb = tokenType === 'probability' || tokenType === 'alternate';
     if (showProb) {
       prob = scientific(token.prob);
     }
+
+    let sound = null;
+    let showSound = tokenType === 'sound';
+    if (showSound) {
+      sound = token.sound.phonemes.join(' ');
+    }
+
+    let pos = this.props.suppressPOS || tokenType === 'sound' ? null : token.pos;
 
     let onClick = this.props.onTokenClick ? this.props.onTokenClick : () => { };
     let showCharRange = this.props.debugMode && token.start !== undefined && token.end !== undefined;
@@ -109,7 +116,7 @@ export class TokenRange extends Component {
       {showCharRange && <div className="item range">[{token.start}-{token.end}]</div>}
       {pos !== null && <div className="item" style={{ backgroundColor: color }}>{pos}</div>}
       {prob !== null && <div className="item" style={{ backgroundColor: color }}>{prob}</div>}
-      {/* <div className="item">{singular(token.type)}</div> */}
+      {sound !== null && <div className="item" style={{ backgroundColor: color }}>{sound}</div>}
     </div>;
   }
 }

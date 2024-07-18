@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from gpt import pluck_probs, tokenizer, forward_search
 from space import stream_parse
-from phones import phonemes_for
+from phones import sound_out
 from network import BREAK_TOKEN
 
 # global variable to keep track of whether the server is working on something
@@ -93,9 +93,9 @@ if __name__ == "__main__":
 
 @app.route("/spacy", methods=["POST"])
 def spacy():
-    def stream_spacy_with_lock(text, extra_context):
+    def stream_spacy_with_lock(text, extra_context, requests):
         try:
-            return stream_parse(text, extra_context)
+            return stream_parse(text, extra_context, requests)
         finally:
             with lock:
                 global working
@@ -113,9 +113,10 @@ def spacy():
     data = request.get_json()
     text = data["text"]
     extra_context = data.get("context", "")
+    additionalRequests = data.get("requests", [])
     # print('request', data, 'working', working)
 
-    return Response(stream_spacy_with_lock(text, extra_context), content_type='application/json')
+    return Response(stream_spacy_with_lock(text, extra_context, additionalRequests), content_type='application/json')
 
 @app.route("/phones", methods=["POST"])
 def phones():
@@ -128,6 +129,5 @@ def phones():
 
     data = request.get_json()
     words = data["words"]
-    # print('request', data, 'working', working)
 
-    return Response(json.dumps(phonemes_for(words)), content_type='application/json')
+    return Response(json.dumps(sound_out(words)), content_type='application/json')
