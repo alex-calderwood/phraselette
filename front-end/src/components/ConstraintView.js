@@ -51,7 +51,7 @@ export class CategoricalConstraintView extends Component {
       {target.map(tokenTarget => {
         return <select className="constraint-select" id={`constraint-select-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[feature]} onChange={this.handleChange}>
           {possibleConstraintValues.map(value => {
-            return <option value={value}>{value}</option>
+            return <option key={value} value={value}>{value}</option>
           })}
         </select>
       })}

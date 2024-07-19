@@ -67,3 +67,11 @@ export function lengthNormedLogProbToColor(token) {
   return hex;
 }
 
+
+export function zeroToOneColor(val) {
+  let alpha = 0.5;
+  let hex = colorScale(val).alpha(alpha).css();
+  return hex;
+}
+
+

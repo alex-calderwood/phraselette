@@ -1,5 +1,5 @@
 import React, { Component, createRef } from "react";
-import { getColor, lengthNormedLogProbToColor } from "../color";
+import { getColor, zeroToOneColor } from "../color";
 import { getUniqueUUID } from "../scripts/utils";
 
 function singular(token) {
@@ -71,7 +71,7 @@ export class TokenRange extends Component {
               {tokens && tokens.map((tokenGroup) => {
                 if (tokenGroup.scores) {
                   let score = tokenGroup.scores['likelihood'];
-                  let color = lengthNormedLogProbToColor(score);
+                  let color = zeroToOneColor(score);
                   return <div key={getUniqueUUID()} className="token-span"> 
                      {
                       tokenGroup.span.map((token) => {
