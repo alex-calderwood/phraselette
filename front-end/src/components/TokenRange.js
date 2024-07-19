@@ -103,7 +103,7 @@ export class TokenRange extends Component {
     let sound = null;
     let showSound = tokenType === 'sound';
     if (showSound) {
-      sound = token.sound.phonemes.join(' ');
+      sound = token?.sound?.phonemes ? token.sound.phonemes.join(' ') : null;
     }
 
     let pos = this.props.suppressPOS || tokenType === 'sound' ? null : token.pos;

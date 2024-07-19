@@ -1,5 +1,4 @@
 import React, { Component } from "react";
-import { TokenRange } from "./TokenRange";
 
 export class CategoricalConstraintView extends Component {
   constructor(props) {
