@@ -4,9 +4,25 @@ import { TokenAlternates } from "./Alternates";
 import { CategoricalConstraintView } from "./ConstraintView";
 import { ConstraintCreator } from "./ConstraintCreator";
 import { SearchResults } from "./SearchResults";
+import { TokenManager } from "../document/TokenManager";
+import { Prism } from "../document/Prism";
+
+/**
+ * @typedef {Object} PrismViewProps
+ * @property {TokenManager} tokenManager - The global token manager used by the App
+ * @property {Prism} prism - the prism instance
+ */
 
 
+/**
+ * PrismView component
+ * @extends {Component<PrismViewProps>}
+ */
 export class PrismView extends Component {
+
+  /**
+   * @param {PrismViewProps} props
+   */
   constructor(props) {
     super(props);
     this.tokenManager = this.props.tokenManager;
@@ -17,7 +33,7 @@ export class PrismView extends Component {
   }
 
   toggleHidden() {
-    this.props.prism.hidden = !this.props.prism.hidden;
+    this.prism.hidden = !this.prism.hidden;
     this.forceUpdate();
   }
 

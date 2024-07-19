@@ -2,22 +2,6 @@ import React, { Component, createRef } from "react";
 import { getColor, zeroToOneColor } from "../color";
 import { getUniqueUUID } from "../scripts/utils";
 
-function singular(token) {
-  switch(token) {
-    case 'words':
-      return 'word';
-    case 'spacy':
-      return 'spacy';
-    case 'probability':
-      return 'token';
-    case 'alternate':
-      return 'alternate';
-    default:
-      console.error('no singular for', token);
-      return token;
-  }
-}
-
 function scientific(num) {
   return (num !== 0 && (num < 1e-3 || num >= 1e+7)) ? num.toExponential(2) : num.toPrecision(3);
 }
@@ -63,14 +47,14 @@ export class TokenRange extends Component {
 
     let wrap = this.props.wrap ? ' wrap' : ' nowrap';
 
-    console.log('token range', tokens);
+    let scoreLookup = tokenType === 'search' ? 'total' : tokenType;
 
     return (
       <div className={"token-range-parent " + overflowing}>
           <div id={'tokenbar-' + tokenType} className={`token-range` + wrap}>
               {tokens && tokens.map((tokenGroup) => {
                 if (tokenGroup.scores) {
-                  let score = tokenGroup.scores['likelihood'];
+                  let score = tokenGroup.scores[scoreLookup];
                   let color = zeroToOneColor(score);
                   return <div key={getUniqueUUID()} className="token-span"> 
                      {

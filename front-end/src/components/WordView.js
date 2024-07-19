@@ -1,17 +1,10 @@
 import React, { Component } from "react";
 import { TokenRange } from "./TokenRange";
-import { Constraint } from "../document/Constraint";
 
 export class WordView extends Component {
   constructor(props) {
     super(props);
     this.tokenManager = this.props.tokenManager;
-  }
-
-  handleAddConstraint() {
-    this.setState({
-      constraints: this.state.constraints.concat([new Constraint('constraint', this.props.wordsPrism.dataType)])
-    });
   }
 
   onTokenClick(clickedToken) {

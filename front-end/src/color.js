@@ -5,11 +5,11 @@ const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple']).
 export function getColor(type, token) {
   let prob = token.prob || 0;
   switch (type) {
-    case 'words':
+    case 'basic':
       return categoryToColor(token.text);
     case 'likelihood': case 'probability': case 'alternate':
       return probColor(token);
-    case 'spacy': case 'POS':
+    case 'words': case 'POS':
       return categoryToColor(token.pos);
     case 'sound':
       return categoryToColor(token.sound?.rhyming_part?.join(' '));

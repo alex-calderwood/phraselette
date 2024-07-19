@@ -1,5 +1,10 @@
+/* 
+ * Score each prediction based on all available constraints. 
+*/
 export async function resolveConstraints(predictions, constraints) {
     const postConstraints = constraints.filter((constraint) => { return !constraint.isPre; });
+
+    console.log('predictions', predictions, constraints);
 
     for (let predictedSpan of predictions) {
         let spanTotal = 0;

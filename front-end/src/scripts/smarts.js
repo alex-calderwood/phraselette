@@ -1,4 +1,5 @@
 import { Token } from "../document/Token.js";
+import { Sequence } from "../document/Sequence.js";
 
 // Something unlikely to be seen, must match the tokenization in the backend (server.py)
 const breakToken = "&&VE*A=]";
@@ -89,7 +90,7 @@ export async function spacyTokenize(text, data = {}) {
       'end':   rawToken.end,       // inclusive from server
       "text":  rawToken.text,
       "pos":   rawToken.tag,       // Todo looks like there is also a '.pos' need to see if there is a difference
-      "type":  "spacy",
+      "type":  "words",
       "isWord": true,
     }
     if (rawToken.extra && typeof rawToken.extra === 'object') {
@@ -149,7 +150,7 @@ export async function gpt2Tokenize(text, data = {}) {
 }
 
 export function splitWordTokenize(text, data = {}) {
-  let type = "words";
+  let type = "basic";
   let tokens = [];
   let tokenStart = 0;
   let curToken = "";
@@ -227,12 +228,12 @@ export async function searchForward(document, constraints, depth) {
   let alternates = 100;
   let tokenGenerator = callSearch(document.prefixText, alternates, depth);
 
-  let spanPromise = await tokenGenerator.next();
-  let predictedSpans = [];
-  while (!spanPromise.done) {
-    let rawSpan = spanPromise.value;
+  let promise = await tokenGenerator.next();
+  let predictedSequence = [];
+  while (!promise.done) {
+    let rawSequence = promise.value;
 
-    let span = rawSpan.map((alt) => { return new Token({
+    let sequence = rawSequence.map((alt) => { return new Token({
       "text": alt.token,
       "prob": alt.prob,
       "start": alt.span[0],
@@ -240,16 +241,11 @@ export async function searchForward(document, constraints, depth) {
       "type": "alternate",
     }) } );
 
-    predictedSpans.push(span);
-    spanPromise = await tokenGenerator.next();
+    predictedSequence.push(new Sequence(sequence));
+    promise = await tokenGenerator.next();
   }
 
-  return predictedSpans.map((span) => {
-    return {
-      'span': span,
-      'scores': {},
-    }
-  });
+  return predictedSequence;
 }
 
 async function* callSearch(prefix, alternates, depth) {
@@ -330,4 +326,10 @@ export async function miscTokensToWordTokens(tokenSpan, document) {
   }
 
   return newWordTokens;
+}
+
+export async function dictionary(word, description) {
+  return [
+    new Sequence([new Token({text: 'follower'})])
+  ];
 }

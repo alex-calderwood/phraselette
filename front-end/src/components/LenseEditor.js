@@ -4,8 +4,6 @@ import { getUniqueUUID, insertAfter } from "../scripts/utils";
 import { TokenManager } from "../document/TokenManager";
 import { getColor } from "../color";
 import { Document } from "../document/Document";
-import { POSConstraint} from "../document/Constraint";
-import { resolveConstraints } from "../scripts/resolution";
 
 /* 
 * Given character span <span c="5" id="id14acbb15b7e0e"">f</span>
@@ -243,7 +241,7 @@ export class LenseEditor extends Component {
     child.setAttribute('c', c);
     this.setIdIfNotPresent(child);
     if (child.tagName === 'SPAN') {
-      if (this.props.lenseToHighlight === 'words') { // TODO make wordsTokenize use onToken callback so that we don't have to do this
+      if (this.props.lenseToHighlight === 'basic') { // TODO make basicTokenize use onToken callback so that we don't have to do this
         this.colorCharacterByProb(child, c);
       }
     }
@@ -286,7 +284,7 @@ export class LenseEditor extends Component {
         let token = tokensAt[0];
         color = getColor(this.props.lenseToHighlight, token);
       } else {
-        color = getColor('words', {});
+        color = getColor('basic', {});
       }
       child.style.backgroundColor = color;
 
@@ -449,7 +447,6 @@ export class LenseEditor extends Component {
 
   manualSearchAction() {
     console.log('manually searching');
-    this.props.onSearch();
 
     let document = new Document(
       this.getTextWithWhitespace(this.contentRef.current),
@@ -457,17 +454,7 @@ export class LenseEditor extends Component {
       this.tokenManager
     );
 
-    let prism = this.props.testPrism;
-    prism.search(document, this.props.constraints).then(
-        (predictions) => {
-          return resolveConstraints(predictions, this.props.constraints);
-      }).then(
-        (predictions) => {
-          if (this.props.onSearchResults) {
-            this.props.onSearchResults(predictions);
-          }
-      }
-    );
+    this.props.doSearch(document);
   }
 
   /*

@@ -2,13 +2,14 @@ import "./App.css";
 import React, { Component } from "react";
 import { ActivePrismIndicator } from "./components/ActivePrismIndicator";
 import { TokenManager } from "./document/TokenManager";
-import { Prism, LLMProbabilityPrism } from "./document/Prism";
+import { Prism, LLMProbabilityPrism, DictionaryPrism } from "./document/Prism";
 import { WordView } from "./components/WordView";
 import { LenseEditor } from "./components/LenseEditor";
 import { PrismView } from "./components/PrismView";
 import { SearchResults } from "./components/SearchResults";
+import { resolveConstraints } from "./scripts/resolution";
 
-const initialPrism = 'spacy';
+const initialPrism = 'words';
 const debugMode = false;
 
 //         _-_.
@@ -29,16 +30,17 @@ class App extends Component {
     super(props);
     let prisms = {
       'likelihood':   new LLMProbabilityPrism().setActive(true),
-      'spacy':        new Prism('spacy',       'string', ['pos']).setActive(true).setDoHighlight(true),                                                                 
-      'sound':        new Prism('sound',       'list',   ['sound', 'rhyme'], 'spacy'),
-      'words':        new Prism('words',       'string'),                                              
+      'words':        new Prism('words',       'string', ['pos']).setActive(true).setDoHighlight(true),                                                                 
+      'sound':        new Prism('sound',       'list',   ['sound', 'rhyme'], 'words'),
+      'basic':        new Prism('basic',       'string'),                                              
       'probability':  new Prism('probability', 'number'),
-      'critic':       new Prism('critic',      'string'),
+      'dictionary':   new DictionaryPrism(),
+      // 'critic':       new Prism('critic',      'string'),
     }
     let activePrisms = Prism.getActive(prisms);
 
-    // TODO move the token management in the prisms themselves
-    this.tokenManager = new TokenManager(activePrisms);
+    // TODO move the token management to the prisms themselves... it's a mess at the moment
+    this.tokenManager = new TokenManager(activePrisms.map((prism) => prism.name));
     window.tokenManager = this.tokenManager; // for debugging
 
     this.text = null;
@@ -98,7 +100,7 @@ class App extends Component {
     this.onHighlightChange(selectedLense, true);
     
     // update the state
-    this.setState({ activeLenses: Prism.getActive(prisms) });
+    this.setState({ activePrisms: Prism.getActive(prisms) });
 
     // update the tokenManager
     this.tokenManager.setActiveLense(selectedLense, true);
@@ -119,15 +121,14 @@ class App extends Component {
   }
 
   onHighlightChange(prismName, shouldHighlight) {
-    let prisms = this.state.prisms;
-
     // for now, we only allow one highlighted lense, so we need to uncheck all the other ones
-    let activeLenses = Prism.getActive(prisms);
-    for (let lense of activeLenses) {
-      if (lense === prismName) {
-        prisms[lense].setDoHighlight(shouldHighlight)
+    let prisms = Prism.getActive(this.state.prisms);
+    console.log('prisms', prisms);
+    for (let prism of prisms) {
+      if (prism.name === prismName) {
+        prism.setDoHighlight(shouldHighlight)
       } else {
-        prisms[lense].setDoHighlight(false);
+        prism.setDoHighlight(false);
       }
     }
 
@@ -135,9 +136,26 @@ class App extends Component {
     this.setState({ lenseToHighlight: prismName});
   }
 
-  onSearchResults(results) {
-    this.setSearchingState(false);
-    this.setState({ searchResults: results});
+  async doSearch(document) {
+    this.setSearchingState(true);
+
+    try {
+      let constraints = this.state.constraints;
+      let prisms = Prism.getActive(this.state.prisms);
+
+      const searches = prisms.map((prism) => { return prism.search(document, constraints) });
+      
+      const results = await Promise.all(searches);
+      console.log('results', results);
+      let predictions = results.flat();
+      let filteredPredictions = await resolveConstraints(predictions, constraints);
+      
+      this.setState({ searchResults: filteredPredictions});
+    } catch (error) {
+      console.error(error);
+    } finally {
+      this.setSearchingState(false);
+    }
   }
 
   addConstraint(constraint) {
@@ -171,8 +189,8 @@ class App extends Component {
 
     let showSelection = debugMode && startIndex !== null && endIndex !== null;
 
-    let activePrisms = Object.entries(this.state.prisms).filter(([key, prism]) => prism.active).map(([key, prism]) => prism);
-    window.activeLenses = activePrisms; // for debugging
+    let activePrisms = Prism.getActive(this.state.prisms);
+    window.activePrisms = activePrisms; // for debugging
     
     let wordsPrism = this.state.prisms[this.tokenManager.wordsLense]; // which prism represents word breaks
     let searchResults = this.state.searchResults ? this.state.searchResults : [];
@@ -186,10 +204,7 @@ class App extends Component {
               setText={this.setText.bind(this)}
               lenseToHighlight={this.state.prismToHighlight}
               ref={this.editorRef}
-              testPrism={this.state.prisms['likelihood']}
-              onSearch={() => { this.setSearchingState(true); }}
-              onSearchResults={this.onSearchResults.bind(this)}
-              constraints={this.state.constraints}
+              doSearch={this.doSearch.bind(this)}
               />
           </div>
           

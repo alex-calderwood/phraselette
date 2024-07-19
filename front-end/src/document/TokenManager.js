@@ -5,11 +5,11 @@ export class TokenManager {
     this.tokens = {
       'probability': [],
       'words': [],
-      'spacy': [],
+      'basic': [],
     };
     this.activePrismNames = activePrisms; // which lenses are currently active
     this.externalOnToken = (token) => {}; // a callback to call when a token is created
-    this.wordsLense = 'spacy';
+    this.wordsLense = 'words';
   }
 
   activeTokenizations() { // should this be efficient?
@@ -303,7 +303,7 @@ export class TokenManager {
     
     for (let prism of prisms) {
       switch (prism) {
-        case 'words':
+        case 'basic':
           // TODO this is not currently using onToken
           tokens = splitWordTokenize(text, data);
           this.tokens.words = tokens; 
@@ -311,7 +311,7 @@ export class TokenManager {
         case 'probability':
           gpt2Tokenize(text, data);
           break;
-        case 'spacy':
+        case 'words':
           spacyTokenize(text, data);
           break;
         default:

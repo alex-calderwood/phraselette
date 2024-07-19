@@ -44,9 +44,6 @@ export class CategoricalConstraintView extends Component {
     let possibleConstraintValues = constraint.range;
     let target = this.state.target;
 
-    console.log("CONSTRAINT VIEW", possibleConstraintValues, target)
-
-    console.log("CONSTRAINT VIEW", constraint, target)
     return  <div id={constraint.id} className="constraint">
       {target.map(tokenTarget => {
         return <select className="constraint-select" id={`constraint-select-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[feature]} onChange={this.handleChange}>
