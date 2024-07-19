@@ -79,7 +79,6 @@ export class LLMProbabilityPrism extends Prism {
   */
   async search(document, constraints) {
     let numWords = Math.max(...constraints.map((constraint) => { return constraint.targetSequence.length; }));
-    
     let searchDepth = Math.max(this.minDepth, Math.min(this.maxDepth, numWords)); // eventually we want to go forward, but right now we're using greedy search so shouldnt...
 
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });

@@ -1,7 +1,6 @@
 import { overlaps, getUniqueUUID } from '../scripts/utils.js';
 
-export function makeConstraint(feature, target=null, dataType=null) {
-  console.log('making constraint', feature, dataType, target);
+export function makeConstraint(feature, target, dataType) {
   feature = feature.toLowerCase();
   switch (feature) {
     case 'pos':
@@ -9,9 +8,7 @@ export function makeConstraint(feature, target=null, dataType=null) {
       return new POSConstraint(target);
     case 'sound':
       target = target.map(token => token.sound.rhyme);
-      let r =  new RhymeConstraint(target);
-      console.log("rhyme constra", r)
-      return r;
+      return new RhymeConstraint(target);
     default:
       return new Constraint(feature, dataType);
   }

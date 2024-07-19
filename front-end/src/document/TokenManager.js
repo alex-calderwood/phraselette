@@ -1,7 +1,7 @@
 import { splitWordTokenize, gpt2Tokenize, spacyTokenize, getPhones} from '../scripts/smarts.js';
 
 export class TokenManager {
-  constructor(activePrisms, tokens) {
+  constructor(activePrisms) {
     this.tokens = {
       'probability': [],
       'words': [],
@@ -127,20 +127,17 @@ export class TokenManager {
     }
 
     let startIndex = selection.startIndex - event.data.length; // because we added a token TODO we want to use the keydown
-
     let tokensAt = this.tokensAt(lense, startIndex)
+
+    if (tokensAt.length === 0) {
+      // We may be at the end of the text so logic elsewhere will add the token (splitSpan I think)
+      // console.error("editToken called with no tokens at", startIndex); // doesn't seem to actually be a problem...
+      return;
+    }
 
     if (tokensAt.length > 1) {
       console.error("editToken called with", tokensAt.length, "tokens at", startIndex);
       return;
-    }
-
-    if (tokensAt.length === 0) {
-      // We may be at the end of the text so logic elsewhere will add the token (splitSpan I think)
-      console.error("editToken called with no tokens at", startIndex); // doesn't seem to actually be a problem...
-      return;
-      // let endIndex = this.getEndOfLenseChar(this.tokens[lense])
-      // console.log('end', endIndex, 'start', startIndex);
     }
 
     // add the character to the token

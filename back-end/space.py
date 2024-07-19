@@ -23,6 +23,8 @@ def stream_parse(text, extra_context, requests):
             'start': token.idx,
             'end': token.idx + max(len(token.text) - 1, 0), # exclusive -> inclusive
         }
+        print("token", token, token_data)
+
         if requests:
             extra_data = {}
             for request in requests:

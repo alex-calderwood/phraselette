@@ -31,7 +31,7 @@ export class LenseEditor extends Component {
     this.tokenManager = this.props.tokenManager;
     this.tokenManager.setOnToken(this.updateUITokens.bind(this));
 
-    this.tokenManager.tokenize(originalText);
+    if (originalText?.length > 0) this.tokenManager.tokenize(originalText);
 
     if (this.props.setText) {
       this.props.setText(originalText); // give the new text to the parent
@@ -65,7 +65,9 @@ export class LenseEditor extends Component {
   }
 
   /* 
-  * Return the current cursor selection to restore it after processing input
+  * Return the current cursor selection. Used to restore the cursor after user input. Also used for
+  * other calculations, such as determining which tokens the user is editing and to construct prompts
+  * for the various tokenizations / LLM interactions.
   */
   currentSelection = () => {
     let rangySelection = rangy.getSelection();
@@ -417,7 +419,6 @@ export class LenseEditor extends Component {
   }
 
   forceTokenize(prisms=this.tokenManager.activePrismNames) {
-
     let document = new Document(
       this.getTextWithWhitespace(this.contentRef.current),
       this.selectionBeforeInput, // this may be out of date?
@@ -440,6 +441,35 @@ export class LenseEditor extends Component {
     this.tokenManager.tokenize(document.text, data, prisms=[lense]);
   }
 
+  manualRetokenizeAction() {
+    console.log('manually tokenizing');
+    this.forceTokenize();
+    this.splitIntoCharactersAndStyle(this.contentRef.current);
+  }
+
+  manualSearchAction() {
+    console.log('manually searching');
+    this.props.onSearch();
+
+    let document = new Document(
+      this.getTextWithWhitespace(this.contentRef.current),
+      this.selectionBeforeInput,
+      this.tokenManager
+    );
+
+    let prism = this.props.testPrism;
+    prism.search(document, this.props.constraints).then(
+        (predictions) => {
+          return resolveConstraints(predictions, this.props.constraints);
+      }).then(
+        (predictions) => {
+          if (this.props.onSearchResults) {
+            this.props.onSearchResults(predictions);
+          }
+      }
+    );
+  }
+
   /*
    * Handles keydown events to save the selection before the input event is processed and the text changed.
   */
@@ -450,6 +480,7 @@ export class LenseEditor extends Component {
     }
 
     if (event.metaKey && event.key === '\'') {
+      this.manualRetokenizeAction();
       return this.manualSearchAction();
     }
   }
@@ -526,34 +557,6 @@ export class LenseEditor extends Component {
     this.splitIntoCharactersAndStyle(this.contentRef.current);
   }
 
-  manualSearchAction() {
-    this.props.onSearch();
-
-    let document = new Document(
-      this.getTextWithWhitespace(this.contentRef.current),
-      this.selectionBeforeInput,
-      this.tokenManager
-    );
-
-    let prism = this.props.testPrism;
-    prism.search(document, this.props.constraints).then(
-        (predictions) => {
-          return resolveConstraints(predictions, this.props.constraints);
-      }).then(
-        (predictions) => {
-          if (this.props.onSearchResults) {
-            this.props.onSearchResults(predictions);
-          }
-      }
-    );
-  }
-
-  manualRetokenizeAction() {
-    console.log('manually tokenizing');
-    this.forceTokenize();
-    this.splitIntoCharactersAndStyle(this.contentRef.current);
-    return;
-  }
 
   render() {
     this.colorAllCharactersByProb(); // TODO this shouldn't called here

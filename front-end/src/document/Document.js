@@ -29,4 +29,6 @@ export class Document {
     get range() {
         return [0, this.text.length - 1];
     }
+
+    
 }

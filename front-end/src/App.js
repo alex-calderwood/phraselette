@@ -76,7 +76,7 @@ class App extends Component {
   }
 
   attemptInitialTokenization() {
-    if (this.tokenManager && this.text) {
+    if (this.tokenManager && this.text?.length > 0) {
       this.tokenManager.tokenize(this.text);
     }
   }

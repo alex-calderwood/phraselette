@@ -40,7 +40,9 @@ export class PrismView extends Component {
       <ConstraintCreator tokens={tokens} prism={prism} onAdd={this.props.addConstraint} onRemove={this.removeConstraint.bind(this)}/>
 
       {tokens.map((token) => {
-        return <TokenAlternates token={token}
+        return <TokenAlternates 
+          token={token}
+          key={token.id}
           alternates={token.alternates}
           tokenManager={this.tokenManager}
           prism={prism}

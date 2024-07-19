@@ -203,16 +203,12 @@ async function* callSpacy(context, tokenizeRange, additionalRequests) {
   const preContext = context.substring(0, tokenizeRange[0]);
 
   const data = {
-    // context: preContext,
     text: preContext + text,
     requests: additionalRequests,
   };
 
-  console.log("calling spacy with data", data);
-
   await (yield* streamFromServer('spacy', data));
 }
-
 
 /* 
   This function takes a document and a set of constraints.
@@ -224,6 +220,10 @@ async function* callSpacy(context, tokenizeRange, additionalRequests) {
   returns: [Token] - a list of tokens spans that satisfy the constraints (each token span is a list of tokens)
 */
 export async function searchForward(document, constraints, depth) {
+  if (document.prefixText.length === 0) {
+    return [];
+  }
+
   let alternates = 100;
   let tokenGenerator = callSearch(document.prefixText, alternates, depth);
 
@@ -313,16 +313,16 @@ export async function miscTokensToWordTokens(tokenSpan, document) {
 
   // Let spacy figure out where the words are in the text that results from adding
   // the span we are evaluating to the existing text
-  let wordTokens = await spacyTokenize(newText, { onToken: (token) => { }, requests: document.activeLenses });
+  let documentWordTokens = await spacyTokenize(newText, { onToken: (token) => { }, requests: document.activeLenses });
 
   // now we need to split it back into the tokens that were in after the given text
   let splitIndex = tokenSpan[0].start;
-  let newWordTokens = wordTokens.filter((token) => {
+  let newWordTokens = documentWordTokens.filter((token) => {
     return token.end >= splitIndex;
   });
 
-  let firstWord = newWordTokens[0];
-  if (firstWord.start < splitIndex) { // TODO this needs to be tested
+  let firstWord = newWordTokens[0]; // it is possible for this to be undefined if the tokenSpan was just empty space (' ') token(s)
+  if (firstWord && firstWord.start < splitIndex) { // TODO this needs to be tested
     let diff = splitIndex - firstWord.start;
     firstWord.text = firstWord.text.slice(diff);
     firstWord.start = splitIndex;
