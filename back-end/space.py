@@ -23,17 +23,15 @@ def stream_parse(text, extra_context, requests):
             'start': token.idx,
             'end': token.idx + max(len(token.text) - 1, 0), # exclusive -> inclusive
         }
-        print("token", token, token_data)
+        # print("token", token, token_data)
 
         if requests:
             extra_data = {}
             for request in requests:
                 make_request = get_additional_word_data.get(request)
-                print(request, make_request)
                 if make_request:
                     extra_data[request] = make_request(token_data)
             token_data['extra'] = extra_data
 
         response = json.dumps(token_data) + BREAK_TOKEN
-
         yield response

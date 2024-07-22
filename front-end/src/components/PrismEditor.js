@@ -15,7 +15,7 @@ function charIndex(span) {
 
 // A text editor that tracks all sorts of information about the words as they are typed
 // And provides affordances for pulling in information from different sources, reconciling their tokens
-export class LenseEditor extends Component {
+export class PrismEditor extends Component {
   constructor(props) {
     super(props);
     let originalText = "";
@@ -446,13 +446,14 @@ export class LenseEditor extends Component {
   }
 
   manualSearchAction() {
-    console.log('manually searching');
 
     let document = new Document(
       this.getTextWithWhitespace(this.contentRef.current),
       this.selectionBeforeInput,
       this.tokenManager
     );
+
+    console.log('manually searching', document.selectionText);
 
     this.props.doSearch(document);
   }
@@ -462,15 +463,9 @@ export class LenseEditor extends Component {
   */
   onKeyDown(event) {
     this.selectionBeforeInput = this.currentSelection();
-    if (event.metaKey && event.key === 'k') {
-      return this.manualRetokenizeAction();
-    }
-
-    if (event.metaKey && event.key === '\'') {
-      this.manualRetokenizeAction();
-      return this.manualSearchAction();
-    }
   }
+
+  
 
   onClick = (event) => {
     this.selectionBeforeInput = this.currentSelection();

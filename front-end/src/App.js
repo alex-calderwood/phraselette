@@ -4,7 +4,7 @@ import { ActivePrismIndicator } from "./components/ActivePrismIndicator";
 import { TokenManager } from "./document/TokenManager";
 import { Prism, LLMProbabilityPrism, DictionaryPrism } from "./document/Prism";
 import { WordView } from "./components/WordView";
-import { LenseEditor } from "./components/LenseEditor";
+import { PrismEditor } from "./components/PrismEditor";
 import { PrismView } from "./components/PrismView";
 import { SearchResults } from "./components/SearchResults";
 import { resolveConstraints } from "./scripts/resolution";
@@ -39,7 +39,7 @@ class App extends Component {
     }
     let activePrisms = Prism.getActive(prisms);
 
-    // TODO move the token management to the prisms themselves... it's a mess at the moment
+    // eventually move the token management to the prisms themselves... it's a mess at the moment
     this.tokenManager = new TokenManager(activePrisms.map((prism) => prism.name));
     window.tokenManager = this.tokenManager; // for debugging
 
@@ -50,12 +50,13 @@ class App extends Component {
       prismToHighlight: initialPrism,
       tokens: Object.keys(this.tokenManager.tokens),
       selection: null,
-      constraints: [], // [new POSConstraint(['NN', 'JJ'])],
+      constraints: [],
       isSearching: false,
       info: {},
      };
 
      this.editorRef = React.createRef();
+     this.containerRef = React.createRef();
   }
 
   /* 
@@ -118,6 +119,13 @@ class App extends Component {
     highlightPrism = highlightPrism.length > 0 ? highlightPrism[0] : null;
     if (highlightPrism)
       this.onHighlightChange(highlightPrism, true);
+
+    // Add top level keystroke listeners
+    document.addEventListener('keydown', this.onKeyDown.bind(this));
+  }
+
+  componentWillUnmount() {
+    document.removeEventListener('keydown', this.onKeyDown);
   }
 
   onHighlightChange(prismName, shouldHighlight) {
@@ -135,9 +143,12 @@ class App extends Component {
     // after the update print out the new state
     this.setState({ lenseToHighlight: prismName});
   }
-
+  /* 
+   * Saearch for alternate words using each prism.
+   * Aggregate them and display them.
+  */
   async doSearch(document) {
-    this.setSearchingState(true);
+    this.setSearchingState(true); // UI update
 
     try {
       let constraints = this.state.constraints;
@@ -146,15 +157,15 @@ class App extends Component {
       const searches = prisms.map((prism) => { return prism.search(document, constraints) });
       
       const results = await Promise.all(searches);
-      console.log('results', results);
       let predictions = results.flat();
+      // console.log('results', results);
       let filteredPredictions = await resolveConstraints(predictions, constraints);
       
       this.setState({ searchResults: filteredPredictions});
     } catch (error) {
       console.error(error);
     } finally {
-      this.setSearchingState(false);
+      this.setSearchingState(false);  // UI update
     }
   }
 
@@ -182,6 +193,16 @@ class App extends Component {
     this.editorRef.current.swapText(originalToken.start, originalToken.end, newToken.text);
   }
 
+  onKeyDown(event) {
+    if (event.metaKey && event.key === 'k') {
+      return this.editorRef.current.manualRetokenizeAction();
+    }
+
+    if (event.metaKey && event.key === '\'') {
+      return this.editorRef.current.manualSearchAction();
+    }
+  }
+
   render() {
     let startIndex    = this.state.selection ? this.state.selection.startIndex : null;
     let endIndex      = this.state.selection ? this.state.selection.endIndex: null;
@@ -196,10 +217,10 @@ class App extends Component {
     let searchResults = this.state.searchResults ? this.state.searchResults : [];
 
     return (
-      <div className="context-container">
+      <div className="context-container" ref={this.containerRef}>
         <div className="editor-container">
           <div className="left"> {/* The text editor */}
-            <LenseEditor tokenManager={this.tokenManager}
+            <PrismEditor tokenManager={this.tokenManager}
               setSelection={this.setSelection.bind(this)}
               setText={this.setText.bind(this)}
               lenseToHighlight={this.state.prismToHighlight}
@@ -246,7 +267,6 @@ class App extends Component {
               />
 
               {/* Display the active prisms */}
-              {/* A bit distracting */}
               {activePrisms.map((prism) => {
                 return (
                   <PrismView

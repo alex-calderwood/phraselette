@@ -6,6 +6,18 @@ function scientific(num) {
   return (num !== 0 && (num < 1e-3 || num >= 1e+7)) ? num.toExponential(2) : num.toPrecision(3);
 }
 
+function fieldsToShow(tokenType) {
+  let show = {
+    'probability': ['prob'],
+    'likelihood': [],
+    'alternate': ['prob'],
+    'sound': ['sound'],
+    'search': ['pos'],
+    'words': ['pos'],
+  };
+  return show[tokenType] || [];
+}
+
 export class TokenRange extends Component {
   constructor(props) {
     super(props);
@@ -45,10 +57,11 @@ export class TokenRange extends Component {
       [];
     tokens = tokens.sort((a, b) => { return a.start - b.start });
 
-    let wrap = this.props.wrap ? ' wrap' : ' nowrap';
 
+    let wrap = this.props.wrap ? ' wrap' : ' nowrap';
     let scoreLookup = tokenType === 'search' ? 'total' : tokenType;
 
+    console.log('TokenRange', tokenType, tokens);
     return (
       <div className={"token-range-parent " + overflowing}>
           <div id={'tokenbar-' + tokenType} className={`token-range` + wrap}>
@@ -57,15 +70,11 @@ export class TokenRange extends Component {
                   let score = tokenGroup.scores[scoreLookup];
                   let color = zeroToOneColor(score);
                   return <div key={getUniqueUUID()} className="token-span"> 
-                     {
-                      tokenGroup.span.map((token) => {
-                        return this.renderToken(tokenType, token);
-                      })
-                     }
+                     { tokenGroup.span.map((token) => { return this.renderToken(tokenType, token); }) }
                     <div className="item" style={{ backgroundColor: color }}>
                       {scientific(score)}
                     </div>
-                    </div>
+                  </div>
                 } else {
                   return this.renderToken(tokenType, tokenGroup);
                 }
@@ -78,9 +87,10 @@ export class TokenRange extends Component {
   renderToken(tokenType, token) {
     let color = tokenType ? getColor(tokenType, token) : 'white';
 
+    let fields = fieldsToShow(tokenType);
+
     let prob = null;
-    let showProb = tokenType === 'probability' || tokenType === 'alternate';
-    if (showProb) {
+    if (fields.includes('prob') && token.prob !== undefined) {
       prob = scientific(token.prob);
     }
 
@@ -90,16 +100,19 @@ export class TokenRange extends Component {
       sound = token?.sound?.phonemes ? token.sound.phonemes.join(' ') : null;
     }
 
-    let pos = this.props.suppressPOS || tokenType === 'sound' ? null : token.pos;
+    let pos = null;
+    if (fields.includes('pos') && token.pos !== undefined) {
+      pos = token.pos;
+    }
 
     let onClick = this.props.onTokenClick ? this.props.onTokenClick : () => { };
     let showCharRange = this.props.debugMode && token.start !== undefined && token.end !== undefined;
 
     return <div key={token.id} className="token" onClick={() => { onClick(token); } }>
       <div className="item heading">{token.text}</div>
-      {showCharRange && <div className="item range">[{token.start}-{token.end}]</div>}
-      {pos !== null && <div className="item" style={{ backgroundColor: color }}>{pos}</div>}
-      {prob !== null && <div className="item" style={{ backgroundColor: color }}>{prob}</div>}
+      {showCharRange  && <div className="item range">[{token.start}-{token.end}]</div>}
+      {pos !== null   && <div className="item" style={{ backgroundColor: color }}>{pos}</div>}
+      {prob !== null  && <div className="item" style={{ backgroundColor: color }}>{prob}</div>}
       {sound !== null && <div className="item" style={{ backgroundColor: color }}>{sound}</div>}
     </div>;
   }

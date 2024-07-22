@@ -105,13 +105,15 @@ def calculate_offset(offset, extra_context, start_token_offset):
 
 
 # Really boring-basic greedy forward search with multiple tokens
-def forward_search(text, top_k=1, depth=1):
+def forward_search(text, top_k=1, depth=1, eos=tokenizer.eos_token):
+    # s`pace_token = 1849
+    
     encoding = tokenizer.encode_plus(
         text,
         return_offsets_mapping=True,  # This will return the token offsets
         return_tensors='tf'
     )
-    
+
     input_ids = encoding['input_ids'] # Extract input_ids and offsets
     offsets   = encoding['offset_mapping']
     max_length = len(input_ids[0]) + depth
@@ -119,19 +121,24 @@ def forward_search(text, top_k=1, depth=1):
     greedy_output_dict = model.generate( # should be of type GenerateDecoderOnlyOutput but is actually TFGreedySearchDecoderOnlyOutput
         input_ids, max_length=max_length, output_scores=True, return_dict_in_generate=True, 
         do_sample=False,
+        # eos_token_id=[space_token],
+        # num_beams=4,
+        # do_sample=True,
         # num_return_sequences=top_k,
     )
 
+    length = len(greedy_output_dict.scores)
+
     # the shape of the dictionary
-    print('output', greedy_output_dict.scores, type(greedy_output_dict))
+    # print('output', greedy_output_dict.scores, type(greedy_output_dict))
     offset = offsets[-1, -1, :].numpy().tolist()
     initial_offset = [offset[0], offset[1] - 1] # inclusive
 
     offset = initial_offset
-    print("text", text, 'char', text[offset[1]])
-    print("initial offset", offset)
+    # print("text", text, 'char', text[offset[1]])
+    # print("initial offset", offset)
     spans = []
-    for i in range(depth - 1):
+    for i in range(length - 1):
         softmax = tf.nn.softmax(greedy_output_dict.scores[i])[0]
         top_k_values, top_k_indices = tf.math.top_k(softmax, k=1)
 
@@ -145,13 +152,13 @@ def forward_search(text, top_k=1, depth=1):
             }
             spans.append(token)
 
-    i = depth - 1
+    i = length - 1
     softmax = tf.nn.softmax(greedy_output_dict.scores[i])[0]
     top_k_values, top_k_indices = tf.math.top_k(softmax, k=top_k)
 
     final_offset = [offset[0], offset[1]]
 
-    print("final offset", final_offset)
+    # print("final offst", final_offset)
 
     for index, prob in zip(top_k_indices, top_k_values):
         text = tokenizer.decode(index)
@@ -162,6 +169,7 @@ def forward_search(text, top_k=1, depth=1):
             'span': offset,
         }
         up_to = spans + [token]
+        print("yielding", up_to)
         yield up_to
 
 if __name__ == "__main__":

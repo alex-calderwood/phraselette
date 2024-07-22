@@ -4,6 +4,8 @@ A text editor for viewing your text in many different ways...
 
 # Start the Front End
 
+You will need a credential.json (move `credential.json` into `front-end/src`)
+
     cd front-end/
     npm start
 

@@ -79,8 +79,10 @@ def search():
 
     data = request.get_json()
     text = data["text"]
-    top_k = int(data.get("top_k", 0))
-    depth = int(data.get("depth", 1))
+    top_k = data.get("top_k", 0)
+    depth = data.get("depth", 1)
+    top_k = int(top_k) if top_k is not None else 0
+    depth = int(depth) if depth is not None else 1
 
     print('SEARCH request', data, 'text', text, 'depth', depth)
 

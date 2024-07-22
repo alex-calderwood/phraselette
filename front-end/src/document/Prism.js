@@ -90,8 +90,8 @@ export class LLMProbabilityPrism extends Prism {
     super('likelihood', 'number');
 
     // search settings
-    this.minDepth = 1;
-    this.maxDepth = 5;
+    this.minTokens = 1;
+    this.maxTokens = 15;
   }
 
   /*
@@ -99,27 +99,36 @@ export class LLMProbabilityPrism extends Prism {
   */
   async search(document, constraints) {
     let numWords = Math.max(...constraints.map((constraint) => { return constraint.targetSequence.length; }));
-    let searchDepth = Math.max(this.minDepth, Math.min(this.maxDepth, numWords)); // eventually we want to go forward, but right now we're using greedy search so shouldnt...
+    numWords = Math.max(numWords, 1);
 
-    console.log("LLM searching")
+    let numTokens = numWords;
+    if (numWords > 1) {
+      let numTokens = Math.floor(numWords * 4/3 + 4);                            // enough tokens to approximate the correct word count
+      numTokens = Math.max(this.minTokens, Math.min(this.maxTokens, numTokens)); // clamp it
+    }
+
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
-    let predictions = await searchForward(document, preConstraints, searchDepth).then(
+    let predictions = await searchForward(document, preConstraints, numTokens).then(
       async (predictions) => {
-        console.log('search predictions 1', predictions)
-
         for (let prediction of predictions) {
           prediction.scores = prediction.scores || {};
           prediction.scores.likelihood = prediction.span.reduce((acc, token) => { return acc + token.prob; } , 0) / prediction.span.length;
         }
         return predictions;
-    }).then( // turn the predictions into words
+    }).then( // turn the predictions into words and truncate them to numWords
       async (predictions) => {
         for (let prediction of predictions) {
-          let words = await miscTokensToWordTokens(prediction.span, document);
+          let words = await miscTokensToWordTokens(prediction.span, document, numWords);
           prediction.span = words;
         }
-        console.log('search predictions', predictions)
         return predictions;
+    });
+
+    // remove NaN
+    predictions = predictions.filter((prediction) => { return !isNaN(prediction.scores.likelihood); });
+
+    predictions = predictions.sort((a, b) => {
+      return a.scores['total'] - b.scores['total'];
     });
 
     this.results = predictions;

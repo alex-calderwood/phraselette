@@ -5,11 +5,11 @@ export class SearchResults extends Component {
   constructor(props) {
     super(props);
     this.prism = this.props.prism;
+    this.tokenType = this.props.tokenType || 'search';
   }
 
   render() {
-    // default to true
-    let wrap = this.props.wrap !== false;
+    let wrap = this.props.wrap !== false; // default to true
 
     if (this.props.isSearching) {
       return <div className="search-results searching">Searching</div>
@@ -25,7 +25,7 @@ export class SearchResults extends Component {
     }
 
     return <div id={"search-results"}>
-      <TokenRange tokenType="search" tokens={results} onTokenClick={this.props.onTokenClick} suppressPOS={true} wrap={wrap} />
+      <TokenRange tokenType={this.tokenType} tokens={results} onTokenClick={this.props.onTokenClick} suppressPOS={true} wrap={wrap} />
     </div> 
   }
 }

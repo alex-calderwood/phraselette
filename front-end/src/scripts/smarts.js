@@ -1,6 +1,10 @@
 import { Token } from "../document/Token.js";
 import { Sequence } from "../document/Sequence.js";
 
+import { fetchJSONResponse } from "./infinite-canvas-utils.js";
+import apiCreds from "../credentials.json";
+
+
 // Something unlikely to be seen, must match the tokenization in the backend (server.py)
 const breakToken = "&&VE*A=]";
 
@@ -225,7 +229,12 @@ export async function searchForward(document, constraints, depth) {
     return [];
   }
 
-  let alternates = 100;
+  if (!depth || depth < 1) {
+    console.error("searchForward called with invalid depth", depth);
+    return [];
+  }
+
+  let alternates = 200;
   let tokenGenerator = callSearch(document.prefixText, alternates, depth);
 
   let promise = await tokenGenerator.next();
@@ -255,7 +264,6 @@ async function* callSearch(prefix, alternates, depth) {
     depth: depth,
   };
 
-  console.log("searching with data", data);
   await (yield* streamFromServer('search', data)); // TODO I'm not sure if this await is going to batch everything?
 }
 
@@ -289,7 +297,6 @@ async function* callPhones(text) {
   await (yield* streamFromServer('phones', data));
 }
 
-
 /*
  * Turn the tokens into text and then call spacy to turn them into word tokens. 
  * 
@@ -298,7 +305,11 @@ async function* callPhones(text) {
  * but for now let's just retokenize
  * 
 */
-export async function miscTokensToWordTokens(tokenSpan, document) {
+export async function miscTokensToWordTokens(tokenSpan, document, maxWords) {
+  if (tokenSpan.length === 0 || maxWords === 0) {
+    return [];
+  }
+
   // compute the text that results from adding the span we are evaluating to the rest of the prefix
   let newText = document.prefixText + tokenSpan.reduce(
     (acc, token) => {
@@ -317,6 +328,20 @@ export async function miscTokensToWordTokens(tokenSpan, document) {
     return token.end >= splitIndex;
   });
 
+  // only take the first maxWords words, not counting spaces // TODO
+  // let wordCount = 0;
+  // newWordTokens = newWordTokens.filter((token) => {
+  //   if (token.text.match(/\s+/g)) { wordCount++; }
+  //   return wordCount <= maxWords;
+  // });
+
+  // temp
+  let wordCount = 0;
+  newWordTokens = newWordTokens.filter((token) => {
+    wordCount++; 
+    return wordCount <= maxWords;
+  });
+
   let firstWord = newWordTokens[0]; // it is possible for this to be undefined if the tokenSpan was just empty space (' ') token(s)
   if (firstWord && firstWord.start < splitIndex) { // TODO this needs to be tested
     let diff = splitIndex - firstWord.start;
@@ -333,3 +358,52 @@ export async function dictionary(word, description) {
     new Sequence([new Token({text: 'follower'})])
   ];
 }
+
+
+/// *** non-handler functions ***
+const anthropicHostname = "api.anthropic.com";
+// const {fetchJSONResponse, apiCreds} = require("./infinite-canvas-utils.js");
+
+// make a request to Claude on the Anthropic API with proper headers.
+// partialPayload should include "prompt".
+// Note: this function has been adapted from the old `/v1/complete` endpoint
+// to the new `/v1/messages` endpoint, and therefore has to reshape its
+// `partialPayload` into a single message. We should maybe refactor this
+// function to separate its "conveniently make a one-instruction Claude request
+// with no additional chat context" behavior from a more general "invoke the
+// messages API with arbitrary chat context" behavior that exposes the API's
+// full capabilities.
+async function sendClaudeReq(partialPayload) {
+  console.log("sv->claude", partialPayload);
+  // construct headers
+  const opts = {
+    method: "POST",
+    hostname: anthropicHostname,
+    path: "/v1/messages",
+    headers: {
+      "anthropic-version": "2023-06-01",
+      "x-api-key": apiCreds.anthropicKey
+    },
+  };
+  // handle payload
+  if (!partialPayload?.prompt) {
+    console.error("sendClaudeReq() must have a nonempty prompt in its partialPayload");
+  }
+  const prompt = partialPayload.prompt;
+  delete partialPayload.prompt; // so we don't splice "prompt" into the API req
+  const payload = {
+    "model": "claude-3-sonnet-20240229",
+    "messages": [{role: "user", content: prompt}],
+    "max_tokens": 250,
+    ...partialPayload
+  };
+  const payloadString = JSON.stringify(payload);
+  // put payload-related headers on request
+  opts.headers["Content-Type"] = "application/json";
+  // opts.headers["Content-Length"] = Buffer.byteLength(payloadString); // buffer is not defined
+  opts.headers["Content-Length"] = new TextEncoder().encode(payloadString).length;
+  // send the request and handle any response 
+  // make it a promise so we can await it
+  return fetchJSONResponse(opts, payloadString);
+}
+window.sendClaudeReq = sendClaudeReq; // for debugging

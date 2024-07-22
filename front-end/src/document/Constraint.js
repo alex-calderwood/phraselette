@@ -117,7 +117,6 @@ export class CategoricalConstraint extends Constraint {
       }
     }
     let avg = matches / sequence.length;
-    console.log('evaluating', sequence, this.targetSequence, avg);
     return avg;
   }
 

@@ -1,6 +1,6 @@
 import chroma from "chroma-js";
-const colorScale = chroma.scale(['red', 'white', 'green']).mode('lab');
-const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple']).mode('lab');
+const colorScale = chroma.scale(['red', 'white', 'green', 'green']).mode('lab');
+const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple', 'cyan', 'coral', 'teal', 'orange', 'skyblue', 'burlywood']).mode('lab');
 
 export function getColor(type, token) {
   let prob = token.prob || 0;
