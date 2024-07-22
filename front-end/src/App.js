@@ -1,5 +1,4 @@
 import "./App.css";
-import { hot } from 'react-hot-loader/root';
 import React, { Component } from "react";
 import { ActivePrismIndicator } from "./components/ActivePrismIndicator";
 import { TokenManager } from "./document/TokenManager";
@@ -294,4 +293,4 @@ class App extends Component {
   }
 }
 
-export default hot(App);
+export default App;
