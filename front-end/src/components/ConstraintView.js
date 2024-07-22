@@ -44,6 +44,8 @@ export class CategoricalConstraintView extends Component {
     let possibleConstraintValues = constraint.range;
     let target = this.state.target;
 
+    let id = `${constraint.id}-constraint`
+
     return  <div id={constraint.id} className="constraint">
       {target.map(tokenTarget => {
         return <select className="constraint-select" id={`constraint-select-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[feature]} onChange={this.handleChange}>
@@ -52,6 +54,8 @@ export class CategoricalConstraintView extends Component {
           })}
         </select>
       })}
+      <label for={id}>comparator</label>
+      <input id={id} className="info-item" value={"=="}></input>
       <button onClick={this.addTarget}>+</button>
       <button onClick={this.deleteTarget}>-</button>
     </div>;

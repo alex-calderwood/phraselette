@@ -3,7 +3,7 @@ import { getColor, zeroToOneColor } from "../color";
 import { getUniqueUUID } from "../scripts/utils";
 
 function scientific(num) {
-  return (num !== 0 && (num < 1e-3 || num >= 1e+7)) ? num.toExponential(2) : num.toPrecision(3);
+  return (num !== 0 && (num < 1e-3 || num >= 1e+7)) ? num.toExponential(3) : num.toPrecision(4);
 }
 
 function fieldsToShow(tokenType) {
@@ -12,7 +12,7 @@ function fieldsToShow(tokenType) {
     'likelihood': [],
     'alternate': ['prob'],
     'sound': ['sound'],
-    'search': ['pos'],
+    'search': ['pos', 'sound'],
     'words': ['pos'],
   };
   return show[tokenType] || [];
@@ -95,8 +95,7 @@ export class TokenRange extends Component {
     }
 
     let sound = null;
-    let showSound = tokenType === 'sound';
-    if (showSound) {
+    if (fields.includes('sound') && token.sound !== undefined) {
       sound = token?.sound?.phonemes ? token.sound.phonemes.join(' ') : null;
     }
 

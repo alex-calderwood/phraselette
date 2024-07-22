@@ -33,6 +33,7 @@ export class WordView extends Component {
         tokenManager={this.tokenManager}
         tokenType={wordsPrism.name}
         startIndex={start} endIndex={end}
+        filterSpaces={true}
         debugMode={this.props.debugMode} />
     </div>;
 

@@ -112,6 +112,7 @@ export class LLMProbabilityPrism extends Prism {
       async (predictions) => {
         for (let prediction of predictions) {
           prediction.scores = prediction.scores || {};
+          // average score (to account for different span lengths)
           prediction.scores.likelihood = prediction.span.reduce((acc, token) => { return acc + token.prob; } , 0) / prediction.span.length;
         }
         return predictions;

@@ -417,16 +417,14 @@ export class PrismEditor extends Component {
   }
 
   forceTokenize(prisms=this.tokenManager.activePrismNames) {
+    if (prisms.length < 1) { return; }
+
     let document = new Document(
       this.getTextWithWhitespace(this.contentRef.current),
       this.selectionBeforeInput, // this may be out of date?
       this.tokenManager
     );
     
-    if (prisms.length < 1) {
-      return;
-    }
-
     let data = { tokenizeRange: document.range, document: document }; // old versions of tokenizers still use tokenizeRange, should be depracated
     let lense = prisms[0];
     let remainingLenses = prisms.slice(1);

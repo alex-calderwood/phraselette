@@ -19,10 +19,10 @@ export async function resolveConstraints(predictions, constraints) {
     }
 
     // filter out constraints that are lower than a threshold
-    const threshold = 0;
-    let finalPredictions = predictions.filter((prediction) => { return prediction.scores['total'] > threshold; });
+    // const threshold = 0;
+    // predictions = predictions.filter((prediction) => { return prediction.scores['total'] > threshold; });
 
-    let sorted = finalPredictions.sort((a, b) => {
+    let sorted = predictions.sort((a, b) => {
         return b.scores['total'] - a.scores['total'];
     });
 
