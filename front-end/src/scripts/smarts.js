@@ -1,10 +1,6 @@
 import { Token } from "../document/Token.js";
 import { Sequence } from "../document/Sequence.js";
 
-import { fetchJSONResponse } from "./infinite-canvas-utils.js";
-import apiCreds from "../credentials.json";
-
-
 // Something unlikely to be seen, must match the tokenization in the backend (server.py)
 const breakToken = "&&VE*A=]";
 
@@ -358,52 +354,3 @@ export async function dictionary(word, description) {
     new Sequence([new Token({text: 'follower'})])
   ];
 }
-
-
-/// *** non-handler functions ***
-const anthropicHostname = "api.anthropic.com";
-// const {fetchJSONResponse, apiCreds} = require("./infinite-canvas-utils.js");
-
-// make a request to Claude on the Anthropic API with proper headers.
-// partialPayload should include "prompt".
-// Note: this function has been adapted from the old `/v1/complete` endpoint
-// to the new `/v1/messages` endpoint, and therefore has to reshape its
-// `partialPayload` into a single message. We should maybe refactor this
-// function to separate its "conveniently make a one-instruction Claude request
-// with no additional chat context" behavior from a more general "invoke the
-// messages API with arbitrary chat context" behavior that exposes the API's
-// full capabilities.
-async function sendClaudeReq(partialPayload) {
-  console.log("sv->claude", partialPayload);
-  // construct headers
-  const opts = {
-    method: "POST",
-    hostname: anthropicHostname,
-    path: "/v1/messages",
-    headers: {
-      "anthropic-version": "2023-06-01",
-      "x-api-key": apiCreds.anthropicKey
-    },
-  };
-  // handle payload
-  if (!partialPayload?.prompt) {
-    console.error("sendClaudeReq() must have a nonempty prompt in its partialPayload");
-  }
-  const prompt = partialPayload.prompt;
-  delete partialPayload.prompt; // so we don't splice "prompt" into the API req
-  const payload = {
-    "model": "claude-3-sonnet-20240229",
-    "messages": [{role: "user", content: prompt}],
-    "max_tokens": 250,
-    ...partialPayload
-  };
-  const payloadString = JSON.stringify(payload);
-  // put payload-related headers on request
-  opts.headers["Content-Type"] = "application/json";
-  // opts.headers["Content-Length"] = Buffer.byteLength(payloadString); // buffer is not defined
-  opts.headers["Content-Length"] = new TextEncoder().encode(payloadString).length;
-  // send the request and handle any response 
-  // make it a promise so we can await it
-  return fetchJSONResponse(opts, payloadString);
-}
-window.sendClaudeReq = sendClaudeReq; // for debugging

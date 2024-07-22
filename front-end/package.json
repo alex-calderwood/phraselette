@@ -1,6 +1,6 @@
 {
   "name": "prisma-editor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^5.16.4",
@@ -13,15 +13,13 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
-    "slate": "^0.81.1",
-    "slate-react": "^0.81.0",
     "styled-components": "^6.1.11",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "node server.js",
+    "prod": "node server.js",
     "build": "webpack --mode production",
-    "dev": "nodemon server.js"
+    "start": "nodemon server.js"
   },
   "eslintConfig": {
     "extends": [

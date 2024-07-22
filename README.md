@@ -17,7 +17,6 @@ To use a specific node version
     npm install yarn
     yarn add react react-dom
 
-
 # Start the backend
 
 I recommend you create a new python environment because this uses transformers, tensorflow, and spacy. Requires Python 3.10.
