@@ -3,17 +3,20 @@ import { getColor, zeroToOneColor } from "../color";
 import { getUniqueUUID } from "../scripts/utils";
 
 function scientific(num) {
-  return (num !== 0 && (num < 1e-3 || num >= 1e+7)) ? num.toExponential(3) : num.toPrecision(4);
+  console.log("num", num, typeof num)
+  if (num !== 0 && (num < 1e-3 || num >= 1e+7)) return num.toExponential(3);
+  if (num?.toPrecision) return num.toPrecision(3);
+  return num;
 }
 
 function fieldsToShow(tokenType) {
   let show = {
-    'probability': ['prob'],
     'likelihood': [],
+    'probability': ['prob'],
     'alternate': ['prob'],
     'sound': ['sound'],
-    'search': ['pos', 'sound'],
     'words': ['pos'],
+    'search': ['pos', 'sound'],
   };
   return show[tokenType] || [];
 }
@@ -57,7 +60,6 @@ export class TokenRange extends Component {
       [];
     tokens = tokens.sort((a, b) => { return a.start - b.start });
 
-
     let wrap = this.props.wrap ? ' wrap' : ' nowrap';
     let scoreLookup = tokenType === 'search' ? 'total' : tokenType;
 
@@ -68,6 +70,7 @@ export class TokenRange extends Component {
               {tokens && tokens.map((tokenGroup) => {
                 if (tokenGroup.scores) {
                   let score = tokenGroup.scores[scoreLookup];
+                  console.log("scores", score, tokenGroup.scores, scoreLookup)
                   let color = zeroToOneColor(score);
                   return <div key={getUniqueUUID()} className="token-span"> 
                      { tokenGroup.span.map((token) => { return this.renderToken(tokenType, token); }) }

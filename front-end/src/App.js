@@ -195,11 +195,11 @@ class App extends Component {
 
   onKeyDown(event) {
     if (event.metaKey && event.key === 'k') {
-      return this.editorRef.current.manualRetokenizeAction();
+      return this.editorRef.current?.manualRetokenizeAction();
     }
 
     if (event.metaKey && event.key === '\'') {
-      return this.editorRef.current.manualSearchAction();
+      return this.editorRef.current?.manualSearchAction();
     }
   }
 

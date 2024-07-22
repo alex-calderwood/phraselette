@@ -43,7 +43,6 @@ export class PrismView extends Component {
   }
 
   renderActiveView(prism, start, end, tokens) {
-    console.log("rendering", prism.name)
     return <div className="prism-contents">
       <TokenRange 
         tokens={tokens}
@@ -73,21 +72,10 @@ export class PrismView extends Component {
     let prism = this.prism;
     let start = this.props.startIndex;
     let end = this.props.endIndex;
-
-    let tokens = [];
-    if (start !== null) {
-      tokens = this.tokenManager.tokensAt(prism.parentToken, start, end);
-    }
-
     let show = prism.active && !prism.hidden;
 
+    let tokens = start !== null ? this.tokenManager.tokensAt(prism.parentToken, start, end) : [];
     let results = prism.results || [];
-
-    // if(prism.name == 'sound') {
-    //   console.log('sound', prism, tokens);
-    // }
-
-    console.log('prism', prism.name, 'tokens', tokens.length, 'results', results.length);
 
     return <div className="prism">
       <div className="title" onClick={this.toggleHidden.bind(this)}>

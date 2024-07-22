@@ -444,6 +444,7 @@ export class PrismEditor extends Component {
   }
 
   manualSearchAction() {
+    this.onKeyDown();
 
     let document = new Document(
       this.getTextWithWhitespace(this.contentRef.current),
@@ -460,10 +461,10 @@ export class PrismEditor extends Component {
    * Handles keydown events to save the selection before the input event is processed and the text changed.
   */
   onKeyDown(event) {
+    console.log("calling this.onKeyDown")
     this.selectionBeforeInput = this.currentSelection();
   }
 
-  
 
   onClick = (event) => {
     this.selectionBeforeInput = this.currentSelection();

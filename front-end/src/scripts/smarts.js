@@ -351,6 +351,7 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords) {
 
 export async function dictionary(word, description) {
   return [
-    new Sequence([new Token({text: 'follower'})])
+    new Sequence([new Token({text: 'follower'})]),
+    new Sequence([new Token({text: 'given'})]),
   ];
 }
