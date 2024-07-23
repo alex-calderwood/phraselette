@@ -7,6 +7,28 @@ import { SearchResults } from "./SearchResults";
 import { TokenManager } from "../document/TokenManager";
 import { Prism } from "../document/Prism";
 
+
+class PrismEditableTextFeature extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      text: this.props.feature.text,
+    };
+  }
+
+  editTextFeature() {
+    let value = // TODO
+    this.setState({ text: value });
+    this.props.feature.text = value;
+  }
+
+  render() {
+    return <div className={`text-feature`}>
+      <textarea className={'text-edit'} id={`text-feature-area-` + this.props.feature.name} value={this.state.text} onChange={this.editTextFeature.bind(this)}></textarea>
+    </div>
+  }
+}
+
 /**
  * @typedef {Object} PrismViewProps
  * @property {TokenManager} tokenManager - The global token manager used by the App
@@ -44,6 +66,7 @@ export class PrismView extends Component {
 
   renderActiveView(prism, start, end, tokens) {
     return <div className="prism-contents">
+
       <TokenRange 
         tokens={tokens}
         tokenType={prism.name}
@@ -77,10 +100,17 @@ export class PrismView extends Component {
     let tokens = start !== null ? this.tokenManager.tokensAt(prism.parentToken, start, end) : [];
     let results = prism.results || [];
 
+    console.log(prism);
+
     return <div className="prism">
       <div className="title" onClick={this.toggleHidden.bind(this)}>
         <span>{prism.name}</span>
       </div>
+
+      {prism.textFeatures.map((feature) => {
+        return <PrismEditableTextFeature key={feature.text} feature={feature} />
+      })}
+
       {show && tokens.length > 0  ? this.renderActiveView(prism, start, end, tokens) : ""}
       {show && results.length > 0 ? <SearchResults tokenType={prism.name} results={results} /> : ""}
     </div>;

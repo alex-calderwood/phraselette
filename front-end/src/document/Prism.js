@@ -21,6 +21,7 @@ export class Prism {
     this.parentToken = parentToken ? parentToken : this.name;  
     
     this.features = features || [];
+    this.textFeatures = [];
     this.results = null;
 
     // UI Variables
@@ -70,14 +71,14 @@ export class Prism {
 }
 
 export class DictionaryPrism extends Prism {
-  constructor() {
+  constructor(description) {
     super('dictionary', 'string');
+    this.textFeatures = [{text: description, name: 'description'}];
   }
 
   async search(document, constraints) {
     let tokens = ["dog", "cat"]; // TODO
-    let description = "like a spacefarer";
-
+    let description = this.textFeatures[0].description;
     let results = await dictionary(tokens, description);
 
     this.results = results;

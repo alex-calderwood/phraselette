@@ -8,6 +8,7 @@ import { PrismEditor } from "./components/PrismEditor";
 import { PrismView } from "./components/PrismView";
 import { SearchResults } from "./components/SearchResults";
 import { resolveConstraints } from "./scripts/resolution";
+import { assignSocket, sendMessage } from "./scripts/socket";
 
 const initialPrism = 'words';
 const debugMode = false;
@@ -34,7 +35,7 @@ class App extends Component {
       'sound':        new Prism('sound',       'list',   ['sound', 'rhyme'], 'words'),
       'basic':        new Prism('basic',       'string'),                                              
       'probability':  new Prism('probability', 'number'),
-      'dictionary':   new DictionaryPrism(),
+      'dictionary':   new DictionaryPrism("Like a spacefarer"),
       // 'critic':       new Prism('critic',      'string'),
     }
     let activePrisms = Prism.getActive(prisms);
@@ -57,6 +58,21 @@ class App extends Component {
 
      this.editorRef = React.createRef();
      this.containerRef = React.createRef();
+
+    // wire up websocket connection to server, should prob not be done in a component...
+    const loc = window.location;
+    const socketProtocol = {"http:": "ws", "https:": "wss"}[loc.protocol];
+    console.log("attempting to assign socket", socketProtocol, loc.host+'/'+loc.hash.replace('#', '?'));
+    assignSocket(socketProtocol, loc.host+'/'+loc.hash.replace('#', '?'))
+    window.query = this.query.bind(this);
+    
+  }
+
+  query() {
+    sendMessage({
+      type: "query",
+      text: "some text",
+    })
   }
 
   /* 

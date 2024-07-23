@@ -3,7 +3,6 @@ import { getColor, zeroToOneColor } from "../color";
 import { getUniqueUUID } from "../scripts/utils";
 
 function scientific(num) {
-  console.log("num", num, typeof num)
   if (num !== 0 && (num < 1e-3 || num >= 1e+7)) return num.toExponential(3);
   if (num?.toPrecision) return num.toPrecision(3);
   return num;
@@ -70,7 +69,6 @@ export class TokenRange extends Component {
               {tokens && tokens.map((tokenGroup) => {
                 if (tokenGroup.scores) {
                   let score = tokenGroup.scores[scoreLookup];
-                  console.log("scores", score, tokenGroup.scores, scoreLookup)
                   let color = zeroToOneColor(score);
                   return <div key={getUniqueUUID()} className="token-span"> 
                      { tokenGroup.span.map((token) => { return this.renderToken(tokenType, token); }) }
