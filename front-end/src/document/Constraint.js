@@ -4,10 +4,10 @@ export function makeConstraint(feature, target, dataType) {
   feature = feature.toLowerCase();
   switch (feature) {
     case 'pos':
-      target = target.map(token => token.pos);
+      target = target.map(token => token?.pos);
       return new POSConstraint(target);
     case 'sound':
-      target = target.map(token => token.sound.rhyme);
+      target = target.map(token => token?.sound?.rhyme || RhymeConstraint.defaultTarget);
       return new RhymeConstraint(target);
     default:
       return new Constraint(feature, dataType);
@@ -159,11 +159,13 @@ export class CategoricalConstraint extends Constraint {
 }
 
 export class POSConstraint extends CategoricalConstraint { // may want to make a 'categorical constraint'
+  defaultTarget = 'NN';
+  
   constructor(targetPOSPhrase) {
     super('POS', 'category');
     this.targetSequence = targetPOSPhrase.map((pos, i) => { return { pos: pos, index: i }; });
     this.targetFeature = 'pos';
-    this.defaultTarget = 'NN';
+    this.defaultTarget = POSConstraint.defaultTarget;
     this.range = Object.keys({// https://github.com/explosion/spaCy/blob/master/spacy/glossary.py
       "AFX": "affix",
       "CC": "conjunction, coordinating",
@@ -219,10 +221,12 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
  * Should this be responsible for both meter and rhyme?  
 */
 class RhymeConstraint extends CategoricalConstraint {
+  defaultTarget = 'AA'; // TODO
+
   constructor(targetPhones) {
     super('rhyme', 'category');
     this.targetFeature = 'rhyme';
-    this.defaultTarget = 'AA1'; // TODO
+    this.defaultTarget = RhymeConstraint.defaultTarget;
     this.targetSequence = targetPhones.map((rhyme, i) => { return { rhyme: rhyme, index: i }; });
     this.range = ["AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY", "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY", "UH", "UW", "UX", "B", "CH", "D", "DH", "DX", "EL", "EM", "EN", "F", "G", "HH", "JH", "K", "L", "M", "N", "NX", "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V", "W", "WH", "Y", "Z", "ZH"];
   }
