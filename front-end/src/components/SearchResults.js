@@ -12,7 +12,7 @@ export class SearchResults extends Component {
     let wrap = this.props.wrap !== false; // default to true
 
     if (this.props.isSearching) {
-      return <div className="search-results searching">Searching</div>
+      return <div className="search-results searching"></div>
     }
 
     let results = this.props.results;

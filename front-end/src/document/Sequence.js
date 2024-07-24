@@ -1,9 +1,9 @@
 import { getUniqueUUID } from '../scripts/utils';
 
 export class Sequence {
-    constructor(tokens=[]) {
+    constructor(tokens=[], scores={}) {
         this.span = tokens;
-        this.scores = {};
+        this.scores = scores;
         this.id = getUniqueUUID();
     }
 }

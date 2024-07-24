@@ -6,16 +6,16 @@ export async function resolveConstraints(predictions, constraints) {
 
     console.log('predictions', predictions, constraints);
 
-    for (let predictedSpan of predictions) {
-        let spanTotal = 0;
+    for (let sequence of predictions) {
+        let sequenceTotal = 0;
         for (let constraint of postConstraints) {
-            if (constraint.applies(predictedSpan)) {
-            const score = await constraint.evaluate(predictedSpan.span, document);
-            predictedSpan.scores[constraint.name] = score;
-            spanTotal += score;
+            if (constraint.applies(sequence)) {
+                const score = await constraint.evaluate(sequence.span, document);
+                sequence.scores[constraint.name] = score;
+                sequenceTotal += score;
             }
         }
-        predictedSpan.scores['total'] = spanTotal;
+        sequence.scores['total'] = sequenceTotal;
     }
 
     // filter out constraints that are lower than a threshold

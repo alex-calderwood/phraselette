@@ -35,9 +35,14 @@ class App extends Component {
       'sound':        new Prism('sound',       'list',   ['sound', 'rhyme'], 'words'),
       'basic':        new Prism('basic',       'string'),                                              
       'probability':  new Prism('probability', 'number'),
-      'dictionary':   new DictionaryPrism("Like a spacefarer"),
+      'dictionary':   new DictionaryPrism("the Spacefarer's Almanac").setActive(true),
       // 'critic':       new Prism('critic',      'string'),
     }
+    // bind a UI state callback to the prisms
+    for(let prism of Object.values(prisms)) {
+      prism.onSearchComplete = this.onSearchComplete.bind(this);
+    }
+
     let activePrisms = Prism.getActive(prisms);
 
     // eventually move the token management to the prisms themselves... it's a mess at the moment
@@ -62,28 +67,18 @@ class App extends Component {
     // wire up websocket connection to server, should prob not be done in a component...
     const loc = window.location;
     const socketProtocol = {"http:": "ws", "https:": "wss"}[loc.protocol];
-    console.log("attempting to assign socket", socketProtocol, loc.host+'/'+loc.hash.replace('#', '?'));
-    assignSocket(socketProtocol, loc.host+'/'+loc.hash.replace('#', '?'))
-    window.query = this.query.bind(this);
-    
-  }
 
-  query() {
-    sendMessage({
-      type: "query",
-      text: "some text",
-    })
+    let handlers = {
+      "dictionaryResponse": (msg) => {prisms.dictionary.onSearchResults(msg)}
+    }
+    assignSocket(socketProtocol, loc.host+'/'+loc.hash.replace('#', '?'), handlers)
   }
 
   /* 
-   * Called when the 
+   * Called when the user selects new text.
   */
   setSelection(selection) {
     this.setState({ selection: selection });
-
-    if(this.automaticSearch) {
-
-    }
   }
 
   setSearchingState(isSearching) {
@@ -147,7 +142,6 @@ class App extends Component {
   onHighlightChange(prismName, shouldHighlight) {
     // for now, we only allow one highlighted lense, so we need to uncheck all the other ones
     let prisms = Prism.getActive(this.state.prisms);
-    console.log('prisms', prisms);
     for (let prism of prisms) {
       if (prism.name === prismName) {
         prism.setDoHighlight(shouldHighlight)
@@ -166,23 +160,39 @@ class App extends Component {
   async doSearch(document) {
     this.setSearchingState(true); // UI update
 
-    try {
-      let constraints = this.state.constraints;
-      let prisms = Prism.getActive(this.state.prisms);
+    // try {
+    let constraints = this.state.constraints;
+    let prisms = Prism.getActive(this.state.prisms);
 
-      const searches = prisms.map((prism) => { return prism.search(document, constraints) });
-      
-      const results = await Promise.all(searches);
-      let predictions = results.flat();
-      // console.log('results', results);
-      let filteredPredictions = await resolveConstraints(predictions, constraints);
-      
-      this.setState({ searchResults: filteredPredictions});
-    } catch (error) {
-      console.error(error);
-    } finally {
-      this.setSearchingState(false);  // UI update
+    for (let prism of prisms) {
+      prism.search(document, constraints)
     }
+
+    // const searches = prisms.map((prism) => { return prism.search(document, constraints) });
+      // we should only send out the searches here
+      
+      // we need to also register prism.onSearchResult() which will set the result of the search. this will create a message that we should be listening for elsewhere
+      
+    //   // const results = await Promise.all(searches);
+    //   let predictions = results.flat();
+    //   let filteredPredictions = await resolveConstraints(predictions, constraints);
+      
+    //   this.setState({ searchResults: filteredPredictions});
+    // } catch (error) {
+    //   console.error(error);
+    // } finally {
+    //   this.setSearchingState(false);  // UI update
+    // }
+  }
+  
+  async onSearchComplete() {
+    let constraints = this.state.constraints;
+    let prisms = Prism.getActive(this.state.prisms);
+    let predictions = prisms.map(p => p.results).filter(r => r && r.length > 0).flat()
+    console.log("predictions", predictions)
+    let filteredPredictions = await resolveConstraints(predictions, constraints);
+    this.setState({ searchResults: filteredPredictions});
+    this.setSearchingState(false);  // UI update
   }
 
   addConstraint(constraint) {
@@ -289,6 +299,7 @@ class App extends Component {
                     key={prism.name}
                     tokenManager={this.tokenManager} 
                     prism={prism}
+                    isSearching={prism.isSearching} 
                     startIndex={startIndex} endIndex={endIndex} 
                     onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
                     debugMode={debugMode}

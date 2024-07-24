@@ -119,7 +119,6 @@ export class PrismEditor extends Component {
   restoreSelectionFromCharId = (charId, givenOffset, event) => {
     let node = document.getElementById(charId);
     let range = document.createRange();
-    console.log('node', node)
     if (!node) {
       console.error('No node found with id', charId);
       // restore to the end of the editor, there is a more elegant way...
@@ -130,13 +129,11 @@ export class PrismEditor extends Component {
       let charsToOffset = givenOffset - editLength;
       let tokensToOffset = givenOffset - charsToOffset;
       let restoreTo = node;
-      console.log("edit length", editLength, "chars to offset", charsToOffset, "tokens to offset", tokensToOffset);
+      // console.log("edit length", editLength, "chars to offset", charsToOffset, "tokens to offset", tokensToOffset);
       for (let i = 0; i < tokensToOffset; i++) {
         restoreTo = restoreTo.nextSibling;
         // for some reason when this gives an error, it actually breaks and allows it to work okay?
-        console.log('intermediate', restoreTo);
       }
-      console.log('resttore to', restoreTo);  
       range.setStart(restoreTo, charsToOffset);
       range.setEnd(restoreTo, charsToOffset);
     }

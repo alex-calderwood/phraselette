@@ -54,8 +54,8 @@ export class CategoricalConstraintView extends Component {
           })}
         </select>
       })}
-      <label for={id}>comparator</label>
-      <input id={id} className="info-item" value={"=="}></input>
+      {/* <label for={id}>comparator</label> */}
+      {/* <input id={id} className="info-item" value={"=="}></input> */}
       <button onClick={this.addTarget}>+</button>
       <button onClick={this.deleteTarget}>-</button>
     </div>;

@@ -1,5 +1,7 @@
-import {searchForward, miscTokensToWordTokens, dictionary} from '../scripts/smarts.js';
-import {Sequence} from './Sequence.js';
+import {searchForward, miscTokensToWordTokens} from '../scripts/smarts.js';
+import { Sequence } from './Sequence.js';
+import { Token } from './Token.js'
+import { sendMessage } from "../scripts/socket";
 
 export class Prism {
 
@@ -26,6 +28,8 @@ export class Prism {
 
     // UI Variables
     this.hidden = false;
+    this.isSearching = false;
+    this.onSearchComplete = () => {};
   }
 
   /* 
@@ -35,6 +39,18 @@ export class Prism {
   setActive(value) {
     this.active = value;
     return this;
+  }
+
+  onSearch() {
+    this.isSearching = true;
+  }
+
+  onSearchResults(predictions) {
+    this.results = predictions.sort((a, b) => {
+      return a.scores['total'] - b.scores['total'];
+    });
+    this.isSearching = false;
+    this.onSearchComplete(this);
   }
 
   /* 
@@ -73,16 +89,28 @@ export class Prism {
 export class DictionaryPrism extends Prism {
   constructor(description) {
     super('dictionary', 'string');
-    this.textFeatures = [{text: description, name: 'description'}];
+    this.textFeatures = {
+      'description': {text: description, name: 'description'}
+    }
   }
 
   async search(document, constraints) {
-    let tokens = ["dog", "cat"]; // TODO
-    let description = this.textFeatures[0].description;
-    let results = await dictionary(tokens, description);
+    this.onSearch();
+    let description = this.textFeatures.description.text;
+    console.log('searching with description', description)
+    sendMessage({
+      type: "dictionary",
+      word: document.selectionText,
+      description: description,
+    });
+  
+  }
 
-    this.results = results;
-    return results;
+  async onSearchResults(message) {
+    console.log("message in dict", message)
+    let definitions = message.definitions;
+    let predictions = definitions.map((def) => {return new Sequence([new Token({text: def})])})
+    super.onSearchResults(predictions);
   }
 }
 
@@ -99,6 +127,8 @@ export class LLMProbabilityPrism extends Prism {
    * Given a document and a list of constraints, return a list of sequences that maximally satisfy the constraints.
   */
   async search(document, constraints) {
+    this.onSearch();
+    
     let numWords = Math.max(...constraints.map((constraint) => { return constraint.targetSequence.length; }));
     numWords = Math.max(numWords, 1);
 
@@ -109,31 +139,27 @@ export class LLMProbabilityPrism extends Prism {
     }
 
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
-    let predictions = await searchForward(document, preConstraints, numTokens).then(
-      async (predictions) => {
-        for (let prediction of predictions) {
-          prediction.scores = prediction.scores || {};
-          // average score (to account for different span lengths)
-          prediction.scores.likelihood = prediction.span.reduce((acc, token) => { return acc + token.prob; } , 0) / prediction.span.length;
-        }
-        return predictions;
-    }).then( // turn the predictions into words and truncate them to numWords
-      async (predictions) => {
-        for (let prediction of predictions) {
-          let words = await miscTokensToWordTokens(prediction.span, document, numWords);
-          prediction.span = words;
-        }
-        return predictions;
-    });
+    await searchForward(document, preConstraints, numTokens).then(
+      (predictions) => {
+        this.onSearchResults(predictions, document, numWords)
+      }
+    )
+  }
 
+  async onSearchResults(predictions, document, numWords) {
+    for (let prediction of predictions) {
+      // average score (to account for different span lengths)
+      prediction.scores.likelihood = prediction.span.reduce((acc, token) => { return acc + token.prob; } , 0) / prediction.span.length;
+    }
+  ``
+    for (let prediction of predictions) {
+      let words = await miscTokensToWordTokens(prediction.span, document, numWords);
+      prediction.span = words;
+    }
+    
     // remove NaN
     predictions = predictions.filter((prediction) => { return !isNaN(prediction.scores.likelihood); });
 
-    predictions = predictions.sort((a, b) => {
-      return a.scores['total'] - b.scores['total'];
-    });
-
-    this.results = predictions;
-    return predictions;
+    super.onSearchResults(predictions);
   }
 }

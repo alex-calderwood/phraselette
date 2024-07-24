@@ -230,7 +230,7 @@ export async function searchForward(document, constraints, depth) {
     return [];
   }
 
-  let alternates = 200;
+  let alternates = 2;
   let tokenGenerator = callSearch(document.prefixText, alternates, depth);
 
   let promise = await tokenGenerator.next();
@@ -349,9 +349,15 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords) {
   return newWordTokens;
 }
 
-export async function dictionary(word, description) {
-  return [
-    new Sequence([new Token({text: 'follower'})]),
-    new Sequence([new Token({text: 'given'})]),
-  ];
-}
+// export async function dictionary(word, description) {
+//   sendMessage({
+//     type: "dictionary",
+//     word: word,
+//     description: description,
+//   });
+
+//   return [
+//     new Sequence([new Token({text: 'follower'})]),
+//     new Sequence([new Token({text: 'given'})]),
+//   ];
+// }

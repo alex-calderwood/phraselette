@@ -291,6 +291,8 @@ div.searching {
   background: linear-gradient(to right, #ffffff 0%, #b3b3b3 100%);
   background-size: 200% 100%;
   animation: slide 2s linear infinite;
+  width: 100%;
+  min-height: 1.5em;
 }
 
 /* Animation keyframes */

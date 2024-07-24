@@ -1,3 +1,5 @@
+// mostly ported from infinite-canvas
+
 // This will hold our websocket connection to the server;
 // it's null to begin with but initialized after connect
 let socket = null;
@@ -8,22 +10,19 @@ function sendMessage(message) {
   socket.send(JSON.stringify(message));
 }
 
-// import {updateScrap, updateScraps, deleteScrap, deleteScraps, updateAddInventoryItem, updateClientInfo, handlePortalTravel, handleMousemove, handleLeave} from "./handlers.js";
-
-function assignSocket(socketProtocol, host){
+function assignSocket(socketProtocol, host, extraHandlers){
   socket = new WebSocket(`${socketProtocol}://${host}`);
   socket.addEventListener("open", (event) => {
-    sendMessage({type: "chat", text: "meowdy server"});
-    // testMakeScraps();
+    // sendMessage({type: "chat", text: "meowdy server"});
   });
   socket.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
-    if (msg.type !== "mousemove") {
-      console.log("ws:got", msg);
-    }
+    console.log("ws:got", msg);
     const handlers = {
-      "test": msg => console.log("test", msg)
+      "test": msg => console.log("test", msg),
+      ...extraHandlers
     };
+
     const handler = handlers[msg.type];
     if (!handler) {
       console.error("ws:nohandler", event.data);
@@ -31,7 +30,6 @@ function assignSocket(socketProtocol, host){
     }
     handler(msg);
   });
-  console.log("socket assigned", socket);
 }
 
 function checkAndRefreshSocket(){

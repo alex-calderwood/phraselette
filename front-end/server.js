@@ -8,18 +8,17 @@ const path = require('path');
 const http = require('http');
 const ws = require("ws");
 
+// import dictionary
+const {handleDictionary, testClaude} = require('./src/server/dictionary.js');
+
 // config
 const myHostname = "localhost";
 const myPort = 5001;
-
-// import text generation scrap handlers
-const {handleQueryLLM, sendClaudeReq, claudeReplyText} = require("./src/server/textgen.js");
 
 const app = express();
 const server = http.createServer(app);
 const wss = new ws.Server({ server });
 console.log(`prism-server-wss listening at ${myHostname}:${myPort}...`);
-
 
 const compiler = webpack(config);
 
@@ -41,10 +40,6 @@ app.get('/api/external', async (req, res) => {
   try {
     // const response = await axios.get('https://api.example.com/data');
     console.log("external")
-
-    // const response = await sendClaudeReq({prompt: "this is a test"})
-    // console.log(response);
-
     res.json({});
   } catch (error) {
     res.status(500).json({ error: 'Error fetching data' });
@@ -66,26 +61,14 @@ server.listen(myPort, () => {
 // WebSocket connection handling
 wss.on('connection', (clientSocket, req) => {
     console.log('New WebSocket connection');
-
-    async function testClaude(message) {
-      console.log("handleQuery", message);
-      const claudeJSON = await sendClaudeReq({
-        prompt: "tell me a joke about driving from San Francisco to Santa Cruz that will actually make me laugh."
-      });
-      console.log("completion", claudeJSON);
-      let reply = claudeReplyText(claudeJSON);
-      clientSocket.send(JSON.stringify({
-        type: "test",
-        text: reply,
-      }))
-    }
   
     clientSocket.on('message', (data) => {
       // infinite-canvas has a whole client nickname thing going on that we could port
       const message = JSON.parse(data.toString());
       console.log("msg", message);
       const handlers = {
-        query: testClaude
+        query: testClaude,
+        dictionary: (message) => handleDictionary(message, clientSocket),
       };
       const handler = handlers[message.type];
       if (!handler) {
