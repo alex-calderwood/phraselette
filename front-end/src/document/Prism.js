@@ -14,7 +14,8 @@ export class Prism {
    *                                           Defaults to {name}.
    */
   constructor(name, dataType, features=[], parentToken=null) {
-    this.name = name;
+    this.name = name;     // eventually this should be type
+    this.subTitle = name; // eventually this should be name
     this.dataType = dataType;
     this.active = false;
     this.shouldHighlight = false;
@@ -92,6 +93,12 @@ export class DictionaryPrism extends Prism {
     this.textFeatures = {
       'description': {text: description, name: 'description'}
     }
+    this.subTitle = description;
+  }
+
+  updateTextFeature(featureName, value) {
+    this.textFeatures[featureName].text = value;
+    this.subTitle = value;
   }
 
   async search(document, constraints) {

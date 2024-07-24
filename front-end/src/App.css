@@ -93,7 +93,7 @@ we will need to select the text children of the editor */
   justify-content: center;
 }
 
-.prism-inspector {
+.inspector {
   justify-content: center;
   background-color: white;
   box-shadow: 0 3px 5px rgba(0,0,0,0.30), 0 3px 5px rgba(0,0,0,0.22);
@@ -103,8 +103,46 @@ we will need to select the text children of the editor */
 
 .prism {
   /* put a box around it */
-  border: 1px solid #f1f1f1;
   margin-bottom: 10px;
+  display: flex;
+
+  .title.rotated {
+    writing-mode: vertical-lr; /* Rotates the text 90 degrees */
+    transform: rotate(180deg); /* Flips the text to the right orientation */
+    /* margin-right: 20px; Spacing between the title and the prism div */
+  }
+
+  .prism-content.border {
+    border: 1px solid #f1f1f1;
+    flex: 1;
+    /* flex-grow: 1; */
+    min-width: 0;
+    overflow: hidden;
+    width: 100%;
+    display: block;
+  }
+
+  .text-feature {
+    width: 100%;
+  }
+}
+
+.search-results {
+  width: 100%;
+}
+
+
+.title {
+  color:rgb(172, 172, 172);
+  font-size: 14px;
+  padding-right: 2px;
+  cursor: pointer;
+}
+
+.subtitle {
+  color:rgb(172, 172, 172);
+  font-size: 10px;
+  padding-right: 2px;
 }
 
 .token-range {
@@ -200,11 +238,6 @@ label {
   padding-right: 2px;
 }
 
-.title {
-  color:rgb(172, 172, 172);
-  font-size: 14px;
-  padding-right: 2px;
-}
 
 .info {
   color:rgb(172, 172, 172);
@@ -264,7 +297,6 @@ textarea {
   width: 100%;
   height: 1.5em;
 }
-
 
 /* input of type checkbox */
 .input[type="checkbox"] {

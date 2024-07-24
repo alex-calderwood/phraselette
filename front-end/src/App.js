@@ -278,7 +278,7 @@ class App extends Component {
               </span>
             </div>
 
-            <div className={`prism-inspector`}>
+            <div className={`inspector`}>
               {selectionText && selectionText.length > 0 ? <div className="selection-display">"{selectionText}"</div> : ""}
               {showSelection ? <div className="selection-info">{startIndex} - {endIndex}</div> : ""}
               

@@ -24,7 +24,7 @@ export class SearchResults extends Component {
       return <div className='title'>No results</div>
     }
 
-    return <div id={"search-results"}>
+    return <div className={"search-results"}>
       <TokenRange tokenType={this.tokenType} tokens={results} onTokenClick={this.props.onTokenClick} suppressPOS={true} wrap={wrap} />
     </div> 
   }

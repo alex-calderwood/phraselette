@@ -230,7 +230,7 @@ export async function searchForward(document, constraints, depth) {
     return [];
   }
 
-  let alternates = 2;
+  let alternates = 200;
   let tokenGenerator = callSearch(document.prefixText, alternates, depth);
 
   let promise = await tokenGenerator.next();

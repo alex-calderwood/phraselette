@@ -20,13 +20,13 @@ class PrismEditableTextFeature extends Component {
     let value = document.getElementById(this.id).value || '';
     this.setState({ text: value });
     let featureName = this.props.feature.name;
-    this.props.prism.textFeatures[featureName].text = value;
+    this.props.prism.updateTextFeature(featureName, value);
     console.log('value', this.props.prism)
   }
 
   render() {
     return <div className={`text-feature`}>
-      <textarea className={'text-edit'} id={this.id} value={this.state.text} onChange={this.editTextFeature.bind(this)}></textarea>
+      <textarea id={this.id} value={this.state.text} onChange={this.editTextFeature.bind(this)}></textarea>
     </div>
   }
 }
@@ -66,53 +66,71 @@ export class PrismView extends Component {
     this.props.removeConstraint(constraint);
   }
 
-  renderActiveView(prism, start, end, tokens) {
-    return <div className="prism-contents">
+  additionalContent(prism, start, end, tokens) {
+    return <div className="additional-content">
+        <TokenRange 
+          tokens={tokens}
+          tokenType={prism.name}
+          startIndex={start} endIndex={end}
+          debugMode={this.props.debugMode} /> 
+              
+        {this.props.constraints.map((constraint) => {
+          return <CategoricalConstraintView key={constraint.id} constraint={constraint} />
+        })}
+          
+        <ConstraintCreator 
+          tokens={tokens} 
+          prism={prism} 
+          onAdd={this.props.addConstraint} 
+          onRemove={this.removeConstraint.bind(this)}/>
 
-      <TokenRange 
-        tokens={tokens}
-        tokenType={prism.name}
-        startIndex={start} endIndex={end}
-        debugMode={this.props.debugMode} />
-
-      { this.props.constraints.map((constraint) => {
-        return <CategoricalConstraintView key={constraint.id} constraint={constraint} />
-      })}
-
-      <ConstraintCreator tokens={tokens} prism={prism} onAdd={this.props.addConstraint} onRemove={this.removeConstraint.bind(this)}/>
-
-      {tokens.map((token) => {
-        return <TokenAlternates 
-          token={token}
-          key={token.id}
-          alternates={token.alternates}
-          tokenManager={this.tokenManager}
-          prism={prism}
-          onTokenClick={this.props.onSwapToken} />;
-      })}
-    </div>;
+        {tokens.map((token) => {
+          return <TokenAlternates 
+            token={token}
+            key={token.id}
+            alternates={token.alternates}
+            tokenManager={this.tokenManager}
+            prism={prism}
+            onTokenClick={this.props.onSwapToken} />;
+        })}
+      </div>
   }
 
   render() {
     let prism = this.prism;
     let start = this.props.startIndex;
     let end = this.props.endIndex;
-    let show = prism.active && !prism.hidden;
 
     let tokens = start !== null ? this.tokenManager.tokensAt(prism.parentToken, start, end) : [];
     let results = prism.results || [];
 
-    return <div className="prism">
-      <div className="title" onClick={this.toggleHidden.bind(this)}>
-        <span>{prism.name}</span>
+    let activeNotHidden = prism.active && !prism.hidden;
+    let collapsed       = activeNotHidden && tokens.length > 0;
+    let showResults     = activeNotHidden && (results.length > 0 || this.props.isSearching)
+    let displayingFull  = collapsed || showResults;
+
+    let rotated = activeNotHidden ? "rotated" : "";
+    let border  = activeNotHidden ? "border"  : "";
+
+    let subtitle = prism.subTitle != prism.name && !activeNotHidden ? 
+      <span className="subtitle"> ({prism.subTitle})</span> : ""
+
+    return <div className={`prism`}>
+        <div className={`title ${rotated}`} onClick={this.toggleHidden.bind(this)}>
+          {prism.name} {subtitle}
+        </div>
+
+        <div className={`prism-content ${border}`}>
+          {activeNotHidden ? Object.values(prism.textFeatures).map((feature) => {
+            return <PrismEditableTextFeature key={feature.text} feature={feature} prism={prism} />
+          }) : ""}
+
+          {showResults ? <SearchResults 
+            isSearching={this.props.isSearching} 
+            tokenType={prism.name} results={results} /> : ""}
+
+          {collapsed ? this.additionalContent(prism, start, end, tokens) : ""}
       </div>
-
-      {Object.values(prism.textFeatures).map((feature) => {
-        return <PrismEditableTextFeature key={feature.text} feature={feature} prism={prism} />
-      })}
-
-      {show && tokens.length > 0  ? this.renderActiveView(prism, start, end, tokens) : ""}
-      {show && (results.length > 0 || this.props.isSearching) ? <SearchResults isSearching={this.props.isSearching} tokenType={prism.name} results={results} /> : ""}
     </div>;
   }
 }
