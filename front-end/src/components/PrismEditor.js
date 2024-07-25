@@ -9,7 +9,8 @@ import { Document } from "../document/Document";
 * Given character span <span c="5" id="id14acbb15b7e0e"">f</span>
 * return our previously computed character offset based on the 'c' attribute
 */
-function charIndex(span) {
+function getCharIndex(span) {
+  if (span === null) return null;
   return parseInt(span.getAttribute('c'));
 }
 
@@ -36,9 +37,13 @@ export class PrismEditor extends Component {
     }
   }
 
+  /*
+   * Color all the characters between token.start and token.end based on token.prob
+   * Force the component to update.
+  */
   updateUITokens(token) {
     if (this.props.lenseToHighlight === token.type) {
-      this.colorTokenByProb(token);
+      this.colorCharSpanByToken(token);
       this.forceUpdate(); // trigger a rerender of the editor
     }
   }
@@ -73,8 +78,8 @@ export class PrismEditor extends Component {
       let anchorParent = rangySelection.anchorNode.parentNode;
       let focusParent = rangySelection.focusNode.parentNode;
 
-      let startIndex = charIndex(anchorParent) + rangySelection.anchorOffset;
-      let endIndex = charIndex(focusParent) + rangySelection.focusOffset;
+      let startIndex = getCharIndex(anchorParent) + rangySelection.anchorOffset;
+      let endIndex = getCharIndex(focusParent) + rangySelection.focusOffset;
 
       let selection = {
         charId: rangySelection.anchorNode.parentNode.id,
@@ -116,39 +121,78 @@ export class PrismEditor extends Component {
     }
   };
 
-  restoreSelectionFromCharId = (charId, givenOffset, event) => {
+  restoreSelectionFromCharId = (charId, originalOffset, event) => {
     let node = document.getElementById(charId);
     let range = document.createRange();
-    if (!node) {
-      console.error('No node found with id', charId);
-      // restore to the end of the editor, there is a more elegant way...
+    if (node === null) {
+      console.error('restore->No node found with id', charId);
+      // restore to the end of the editor
       range.selectNodeContents(this.contentRef.current);
       range.collapse(false);
     } else {
+      // let editLength = event.data ? event.data.length : 0;
+      // console.log(editLength)
+      // let restoreTo = node;event
+      // if (originalOffset == 0) {
+      //   restoreTo = node;
+      //   finalOffset = 0;
+      //   range.setStart(restoreTo, finalOffset);
+      //   range.setEnd(restoreTo, finalOffset);
+      // } else if (originalOffset == 1){
+      //   restoreTo = node.nextSibling;
+      //   finalOffset = 1;
+      //   range.setStart(restoreTo, finalOffset);
+      //   range.setEnd(restoreTo, finalOffset);
+      // } else {
+      //   console.log("unexpected offset for", node, originalOffset, event);
+      //   range.selectNodeContents(this.contentRef.current);
+      //   range.collapse(false);
+      // }
+
       let editLength = event.data ? event.data.length : 0;
-      let charsToOffset = givenOffset - editLength;
-      let tokensToOffset = givenOffset - charsToOffset;
+      let finalOffset = originalOffset - editLength;
+      let tokensToOffset = originalOffset - finalOffset;
       let restoreTo = node;
-      // console.log("edit length", editLength, "chars to offset", charsToOffset, "tokens to offset", tokensToOffset);
       for (let i = 0; i < tokensToOffset; i++) {
-        restoreTo = restoreTo.nextSibling;
-        // for some reason when this gives an error, it actually breaks and allows it to work okay?
+        if (restoreTo.nextSibling !== null) {
+          restoreTo = restoreTo.nextSibling;
+        } else {
+          // this is a hacky solution and I don't understand exactly why it is needed at the moment
+          // console.error("no next sibling for", restoreTo, {editLength, event, tokensToOffset, originalOffset})
+          finalOffset += 1;
+          break;
+        }
       }
-      range.setStart(restoreTo, charsToOffset);
-      range.setEnd(restoreTo, charsToOffset);
+      // range.setStart(restoreTo, charsToOffset);
+      // range.setEnd(restoreTo, charsToOffset);
+
+      // let restoreTo = node;
+      // let finalOffset = 1;
+      // let charsToOffset = editLength + 1 - originalOffset;
+      // for (let i = 0; i < charsToOffset; i++) {
+      //   if (restoreTo.nextSibling !== null) {
+      //     restoreTo = restoreTo.nextSibling;
+      //   } else {
+      //     console.error("no next sibling for", restoreTo, {editLength, event, tokensToOffset: charsToOffset, charsToOffset, originalOffset})
+      //   }
+      // }
+
+      console.log("restore to", restoreTo, finalOffset, editLength)
+      range.setStart(restoreTo, finalOffset);
+      range.setEnd(restoreTo, finalOffset);
     }
 
     // for debugging
     // let restoring = {
     //   text: node ? node.textContent : null,
-    //   nextText: restoreTo ? restoreTo.textContent : null,
+    //   // nextText: restoreTo ? restoreTo.textContent : null,
     //   givenOffset: givenOffset,
     //   eventDataLength: editLength,
     //   tokensToOffset: tokensToOffset,
     //   charsToOffset: charsToOffset,
     //   charId: charId,
     //   node: node,
-    //   restoreTo: restoreTo,
+    //   // restoreTo: restoreTo,
     // };
     // console.log('restoring', restoring);
 
@@ -183,6 +227,7 @@ export class PrismEditor extends Component {
   * @returns {number} the new character index
   */
   splitSpan(originalSpan, c) {
+    console.log("splitspan", originalSpan, c)
     // don't delete any spans, just add new ones and remove characters from the old span
     let text = originalSpan.textContent.replace(/\uFEFF/g, ''); // Remove BOM
     let newSpans = [];
@@ -222,6 +267,7 @@ export class PrismEditor extends Component {
     let span = document.createElement('span');
     span.textContent = text;
     this.styleCharacter(span, c);
+    console.log("creating span", span, c, text)
     return span;
   }
 
@@ -235,6 +281,8 @@ export class PrismEditor extends Component {
   * Also, set a unique character ID if it doesn't already exist for the span.
   */
   styleCharacter(child, c) {
+    console.log("styling", child, c, child.textContent)
+
     if (typeof c !== 'number') {
       console.error('styleChild called with', typeof c);
     } 
@@ -253,13 +301,13 @@ export class PrismEditor extends Component {
     let spans = document.querySelectorAll('span[c]');
     for (let i = 0; i < spans.length; i++) {
       let span = spans[i];
-      let c = charIndex(span);
+      let c = getCharIndex(span);
       
       this.colorCharacterByProb(span, c);
     }
   }
 
-  colorTokenByProb(token) {
+  colorCharSpanByToken(token) {
     let start = token.start;
     let end = token.end;
     let color = getColor(this.props.lenseToHighlight, token);
@@ -267,9 +315,14 @@ export class PrismEditor extends Component {
       let span = document.querySelector(`span[c='${i}']`);
       if (span) {
         span.style.backgroundColor = color;
-      } else {
-        console.error('no span for', token)
+        continue;
+      } 
+      let div = document.querySelector(`div[c='${i}']`); // TODO
+      if (div) {
+        // nothing needs to be done to color a new line character
+        continue
       }
+      console.error("coloring-> no span for", token)
     }
   }
 
@@ -317,7 +370,7 @@ export class PrismEditor extends Component {
 
     let i = 0;
     let c = 0;
-    let child = children[i];
+    let child = children[0];
 
     if (!child) {
       let text = content.textContent;
@@ -462,7 +515,6 @@ export class PrismEditor extends Component {
    * Handles keydown events to save the selection before the input event is processed and the text changed.
   */
   onKeyDown(event) {
-    console.log("calling this.onKeyDown")
     this.selectionBeforeInput = this.currentSelection();
   }
 
