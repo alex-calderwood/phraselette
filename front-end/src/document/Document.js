@@ -38,4 +38,8 @@ export class Document {
     _bounce() {
         return !this.selection;
     }
+
+    static fromSelection(selection) {
+        return new Document
+    }
 }

@@ -1,6 +1,6 @@
 import "./App.css";
 import React, { Component } from "react";
-import { ActivePrismIndicator } from "./components/ActivePrismIndicator";
+import { Document } from "./document/Document"
 import { TokenManager } from "./document/TokenManager";
 import { Prism, LLMProbabilityPrism, DictionaryPrism } from "./document/Prism";
 import { WordView } from "./components/WordView";
@@ -8,8 +8,8 @@ import { PrismEditor } from "./components/PrismEditor";
 import { PrismView } from "./components/PrismView";
 import { SearchResults } from "./components/SearchResults";
 import { resolveConstraints } from "./scripts/resolution";
-import { assignSocket, sendMessage } from "./scripts/socket";
-
+import { assignSocket } from "./scripts/socket";
+ 
 const initialPrism = 'words';
 const debugMode = false;
 
@@ -68,8 +68,13 @@ class App extends Component {
     const loc = window.location;
     const socketProtocol = {"http:": "ws", "https:": "wss"}[loc.protocol];
 
+    function handleDictResponse(msg) {
+      let doc = this._currentDocument();
+      return prisms.dictionary.onSearchResults(msg, doc);
+    }
+
     let handlers = {
-      "dictionaryResponse": (msg) => {prisms.dictionary.onSearchResults(msg)}
+      "dictionaryResponse": handleDictResponse.bind(this),
     }
     assignSocket(socketProtocol, loc.host+'/'+loc.hash.replace('#', '?'), handlers)
   }
@@ -87,6 +92,10 @@ class App extends Component {
 
   setText(text) {
     this.text = text;
+  }
+
+  _currentDocument() {
+    return new Document(this.text, this.state.selection, this.tokenManager);
   }
 
   attemptInitialTokenization() {
@@ -157,7 +166,7 @@ class App extends Component {
    * Saearch for alternate words using each prism.
    * Aggregate them and display them.
   */
-  async doSearch(document) {
+  async doSearch(doc) {
     this.setSearchingState(true); // UI update
 
     // try {
@@ -165,7 +174,7 @@ class App extends Component {
     let prisms = Prism.getActive(this.state.prisms);
 
     for (let prism of prisms) {
-      prism.search(document, constraints)
+      prism.search(doc, constraints)
     }
 
     // const searches = prisms.map((prism) => { return prism.search(document, constraints) });
@@ -264,7 +273,7 @@ class App extends Component {
               </select>
               {/* button that sets the selected lense to active */}
               <button className="selectButoon" onClick={this.handleAddPrism.bind(this)}>add</button>
-              <span id="selected" className="info">
+              {/* <span id="selected" className="info">
                 <span id="active" >active: </span>
                 {activePrisms.map((prism) => {
                   let shouldHighlight = prism.shouldHighlight;
@@ -275,7 +284,7 @@ class App extends Component {
                             shouldHighlight={shouldHighlight}
                             onHighlightChange={onHighlightChange}>{prism.name}</ActivePrismIndicator>
                 })}
-              </span>
+              </span> */}
             </div>
 
             <div className={`inspector`}>

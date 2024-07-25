@@ -90,6 +90,7 @@ export async function spacyTokenize(text, data = {}) {
       'end':   rawToken.end,       // inclusive from server
       "text":  rawToken.text,
       "pos":   rawToken.tag,       // Todo looks like there is also a '.pos' need to see if there is a difference
+      "isSpace": rawToken.is_space,
       "type":  "words",
       "isWord": true,
     }
@@ -301,10 +302,9 @@ async function* callPhones(text) {
  * but for now let's just retokenize
  * 
 */
-export async function miscTokensToWordTokens(tokenSpan, document, maxWords) {
-  if (tokenSpan.length === 0 || maxWords === 0) {
-    return [];
-  }
+export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null) {
+  console.log("miscTokensToWordTokens", tokenSpan, document, maxWords)
+  if (tokenSpan.length === 0 || maxWords === 0) { return []; }
 
   // compute the text that results from adding the span we are evaluating to the rest of the prefix
   let newText = document.prefixText + tokenSpan.reduce(
@@ -313,40 +313,37 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords) {
     },
     ''
   );
+  console.log("newText", newText)
 
-  // Let spacy figure out where the words are in the text that results from adding
-  // the span we are evaluating to the existing text
-  let documentWordTokens = await spacyTokenize(newText, { onToken: (token) => { }, requests: document.activeLenses });
+  let resultantWordTokens = await spacyTokenize(newText, { onToken: (token) => { }, requests: document.activeLenses });
 
   // now we need to split it back into the tokens that were in after the given text
   let splitIndex = tokenSpan[0].start;
-  let newWordTokens = documentWordTokens.filter((token) => {
+  if (splitIndex === undefined) { splitIndex = document.prefixText.length; }
+  let convertedTokens = resultantWordTokens.filter((token) => {
     return token.end >= splitIndex;
   });
+  
+  if(maxWords !== null) {
+    let wordCount = 0;
+    convertedTokens = convertedTokens.filter((token) => {
+      wordCount++; 
+      return wordCount <= maxWords;
+    });
+  }
 
-  // only take the first maxWords words, not counting spaces // TODO
-  // let wordCount = 0;
-  // newWordTokens = newWordTokens.filter((token) => {
-  //   if (token.text.match(/\s+/g)) { wordCount++; }
-  //   return wordCount <= maxWords;
-  // });
-
-  // temp
-  let wordCount = 0;
-  newWordTokens = newWordTokens.filter((token) => {
-    wordCount++; 
-    return wordCount <= maxWords;
-  });
-
-  let firstWord = newWordTokens[0]; // it is possible for this to be undefined if the tokenSpan was just empty space (' ') token(s)
-  if (firstWord && firstWord.start < splitIndex) { // TODO this needs to be tested
+  let firstWord = convertedTokens[0]; // it is possible for this to be undefined if the tokenSpan was just empty space (' ') token(s)
+  if (firstWord && firstWord.start < splitIndex) {
     let diff = splitIndex - firstWord.start;
     firstWord.text = firstWord.text.slice(diff);
     firstWord.start = splitIndex;
     firstWord.incomplete = true;
   }
 
-  return newWordTokens;
+  console.log("newWordTokens", convertedTokens)
+
+
+  return convertedTokens;
 }
 
 // export async function dictionary(word, description) {

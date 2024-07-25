@@ -87,6 +87,7 @@ export class TokenRange extends Component {
 
   renderToken(tokenType, token) {
     let color = tokenType ? getColor(tokenType, token) : 'white';
+    let space = token?.isSpace === true ? 'space' : '';
 
     let fields = fieldsToShow(tokenType);
 
@@ -108,7 +109,7 @@ export class TokenRange extends Component {
     let onClick = this.props.onTokenClick ? this.props.onTokenClick : () => { };
     let showCharRange = this.props.debugMode && token.start !== undefined && token.end !== undefined;
 
-    return <div key={token.id} className="token" onClick={() => { onClick(token); } }>
+    return <div key={token.id} className={`token ${space}`} onClick={() => { onClick(token); } }>
       <div className="item heading">{token.text}</div>
       {showCharRange  && <div className="item range">[{token.start}-{token.end}]</div>}
       {pos !== null   && <div className="item" style={{ backgroundColor: color }}>{pos}</div>}

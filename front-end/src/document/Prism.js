@@ -46,7 +46,7 @@ export class Prism {
     this.isSearching = true;
   }
 
-  onSearchResults(predictions) {
+  onSearchResults(predictions, document) {
     this.results = predictions.sort((a, b) => {
       return a.scores['total'] - b.scores['total'];
     });
@@ -110,14 +110,19 @@ export class DictionaryPrism extends Prism {
       word: document.selectionText,
       description: description,
     });
-  
   }
 
-  async onSearchResults(message) {
-    console.log("message in dict", message)
+  async onSearchResults(message, document) {
+    console.log("message in dict", message, document)
     let definitions = message.definitions;
     let predictions = definitions.map((def) => {return new Sequence([new Token({text: def})])})
-    super.onSearchResults(predictions);
+    
+    for (let prediction of predictions) {
+      let words = await miscTokensToWordTokens(prediction.span, document);
+      prediction.span = words;
+    }
+    
+    super.onSearchResults(predictions, document);
   }
 }
 
@@ -158,7 +163,7 @@ export class LLMProbabilityPrism extends Prism {
       // average score (to account for different span lengths)
       prediction.scores.likelihood = prediction.span.reduce((acc, token) => { return acc + token.prob; } , 0) / prediction.span.length;
     }
-  ``
+    
     for (let prediction of predictions) {
       let words = await miscTokensToWordTokens(prediction.span, document, numWords);
       prediction.span = words;
@@ -167,6 +172,6 @@ export class LLMProbabilityPrism extends Prism {
     // remove NaN
     predictions = predictions.filter((prediction) => { return !isNaN(prediction.scores.likelihood); });
 
-    super.onSearchResults(predictions);
+    super.onSearchResults(predictions, document);
   }
 }
