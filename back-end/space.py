@@ -2,6 +2,9 @@ import spacy, json
 from words import get_additional_word_data
 from network import BREAK_TOKEN
 
+# Todo do 
+# spacy.require_gpu(1) # https://spacy.io/api/top-level#spacy.require_gpu
+
 nlp = spacy.load("en_core_web_sm")
 
 # something unlikely to be seen, must match the client (in smarts.js)
