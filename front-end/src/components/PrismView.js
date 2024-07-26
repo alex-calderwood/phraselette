@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { TokenRange } from "./TokenRange";
 import { TokenAlternates } from "./Alternates";
-import { CategoricalConstraintView } from "./ConstraintView";
+import { ConstraintRender } from "./ConstraintView";
 import { ConstraintCreator } from "./ConstraintCreator";
 import { SearchResults } from "./SearchResults";
 import { TokenManager } from "../document/TokenManager";
@@ -75,13 +75,14 @@ export class PrismView extends Component {
           debugMode={this.props.debugMode} /> 
               
         {this.props.constraints.map((constraint) => {
-          return <CategoricalConstraintView key={constraint.id} constraint={constraint} />
+          return <ConstraintRender key={constraint.id} constraint={constraint} />
         })}
           
         <ConstraintCreator 
-          tokens={tokens} 
-          prism={prism} 
-          onAdd={this.props.addConstraint} 
+          tokens={tokens}
+          startIndex={start} endIndex={end}
+          prism={prism}
+          onAdd={this.props.addConstraint}
           onRemove={this.removeConstraint.bind(this)}/>
 
         {tokens.map((token) => {

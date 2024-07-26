@@ -1,6 +1,9 @@
 import React, { Component } from "react";
+// import { Constraint, CategoricalConstraint, POSConstraint, 
+//   RhymeConstraint, AlliterationConstraint} from "../document/Constraint";
 
-export class CategoricalConstraintView extends Component {
+
+class ConstraintView extends Component {
   constructor(props) {
     super(props);
     let constraint = this.props.constraint;
@@ -8,6 +11,16 @@ export class CategoricalConstraintView extends Component {
       target: constraint.targetSequence,
     }
   }
+}
+
+
+class NumericalConstraintView extends ConstraintView {
+  render() {
+    return <div></div>
+  }
+}
+
+class CategoricalConstraintView extends ConstraintView {
 
   addTarget = () => {
     let newTarget = this.props.constraint.addTarget();
@@ -43,7 +56,6 @@ export class CategoricalConstraintView extends Component {
 
     let possibleConstraintValues = constraint.range;
     let target = this.state.target;
-
     let id = `${constraint.id}-constraint`
 
     return  <div id={constraint.id} className="constraint">
@@ -59,5 +71,22 @@ export class CategoricalConstraintView extends Component {
       <button onClick={this.addTarget}>+</button>
       <button onClick={this.deleteTarget}>-</button>
     </div>;
+  }
+}
+
+const constraintViews = {
+  CategoricalConstraint: CategoricalConstraintView,
+  POSConstraint: CategoricalConstraintView,
+  SoundConstraint: CategoricalConstraintView,
+  RhymeConsntraint: CategoricalConstraintView,
+  NumericalConstraint: NumericalConstraintView,
+  AlliterationConstraint: null,
+};
+
+export class ConstraintRender extends React.Component {
+  render() {
+    const { constraint, ...otherProps } = this.props;
+    const ConstraintView = constraintViews[constraint.constructor.name];
+    return ConstraintView ? <ConstraintView constraint={constraint} {...otherProps} /> : null;
   }
 }

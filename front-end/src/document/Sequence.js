@@ -6,4 +6,8 @@ export class Sequence {
         this.scores = scores;
         this.id = getUniqueUUID();
     }
+
+    get text() {
+        return this.span.map(token => token.text);
+    }
 }

@@ -1,26 +1,40 @@
 import React, { Component } from "react";
 import { makeConstraint } from "../document/Constraint";
+import { ConstraintRender } from "./ConstraintView";
 
 export class ConstraintCreator extends Component {
   constructor(props) {
     super(props);
+    this.state = {tempConstraints : []}
   }
 
-  addConstraint = () => {
-    let type = this.props.prism.features[0];
+  makeTempConstraint = (feature) => {
     let target = this.props.tokens;
-    console.log('cc type', type, target)
-    let constraint = makeConstraint(type, target=target) 
+    let constraint = makeConstraint(feature, target=target);
+    this.setState({tempConstraints: [...this.state.tempConstraints, constraint]});
+  }
+
+  actuallyAdd (constraint) {
     this.props.onAdd(constraint);
   }
 
   render() {
     return <div className="constraint-creator">
-      {/* <div className="title">add constraint</div> */}
-      <div> 
-        <button onClick={this.addConstraint.bind(this)}>+</button>
-        <button onClick={this.props.onRemove}>-</button>
-      </div>
-    </div>;
+      {this.state.tempConstraints.map((constraint) => {
+
+        return <div className="temp-constraint-container" key={constraint.id}> 
+          <ConstraintRender key={constraint.id} constraint={constraint} />
+          <button onClick={() => this.actuallyAdd(constraint)}> bind </button>
+        </div>
+      })}
+
+      {this.props.prism.features.map((feature) => {
+        return <div>
+          <button onClick={() => this.makeTempConstraint(feature)}> add {feature} constraint </button>
+          {/* <button onClick={() => this.addConstraint(feature)}>+</button>
+          <button onClick={this.props.onRemove}>-</button> */}
+        </div> 
+      })}
+    </div>
   }
 }

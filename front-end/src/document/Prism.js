@@ -1,10 +1,9 @@
-import {searchForward, miscTokensToWordTokens} from '../scripts/smarts.js';
+import { searchForward, miscTokensToWordTokens } from '../scripts/smarts.js';
 import { Sequence } from './Sequence.js';
 import { Token } from './Token.js'
 import { sendMessage } from "../scripts/socket";
 
 export class Prism {
-
   /**
    * Create a Prism.
    * @param {string} name - The name of the Prism.

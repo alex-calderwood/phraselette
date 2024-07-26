@@ -10,7 +10,7 @@ export function makeConstraint(feature, target, dataType) {
       target = target.map(token => token?.sound?.rhyme || RhymeConstraint.defaultTarget);
       return new RhymeConstraint(target);
     default:
-      return new Constraint(feature, dataType);
+      return new Constraint(features, dataType);
   }
 }
 
@@ -20,9 +20,9 @@ export class Constraint {
     this.dataType = dataType;
     this.id = getUniqueUUID();
     this.span = null;
-    this.isPre = false;     // can the constraint be computed quickly?
+    this.isPre = false;         // can the constraint be computed quickly?
     this.targetSequence = null; // what is the goal of the constraint 
-    this.range = null;      // what are the possible values of the constraint
+    this.range = null;          // what are the possible values of the constraint
   }
 
   /* 
@@ -132,7 +132,7 @@ export class CategoricalConstraint extends Constraint {
   addTarget(newTarget=null) {
     if (this.defaultTarget === null) {
       console.error('no default target for constraint', this);
-      return;
+      return this.targetSequence;
     }
 
     if (this.targetSequence == null) {
@@ -150,10 +150,11 @@ export class CategoricalConstraint extends Constraint {
   }
 
   deleteTarget() {
-    if (this.targetSequence == null || this.targetSequence.length === 0) {
-      return;
+    if (this.targetSequence === null || this.targetSequence.length === 0) {
+      // nothing
+    } else {
+      this.targetSequence.pop();
     }
-    this.targetSequence.pop();
     return this.targetSequence;
   }
 }
@@ -218,9 +219,9 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
 }
 
 /* 
- * Should this be responsible for both meter and rhyme?  
+ * Should this be responsible for both meter and rhyme?
 */
-class RhymeConstraint extends CategoricalConstraint {
+export class RhymeConstraint extends CategoricalConstraint {
   defaultTarget = 'AA'; // TODO
 
   constructor(targetPhones) {
@@ -229,5 +230,50 @@ class RhymeConstraint extends CategoricalConstraint {
     this.defaultTarget = RhymeConstraint.defaultTarget;
     this.targetSequence = targetPhones.map((rhyme, i) => { return { rhyme: rhyme, index: i }; });
     this.range = ["AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY", "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY", "UH", "UW", "UX", "B", "CH", "D", "DH", "DX", "EL", "EM", "EN", "F", "G", "HH", "JH", "K", "L", "M", "N", "NX", "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V", "W", "WH", "Y", "Z", "ZH"];
+  }
+}
+
+class SoundConstraint extends CategoricalConstraint { // untested
+  defaultTarget = 'AA'; // TODO
+  constructor(targetPhones) {
+    super('sound', 'category');
+    this.targetFeature = 'sound';
+    this.defaultTarget = SoundConstraint.defaultTarget;
+    this.targetSequence = targetPhones.map((sound, i) => { return { sound: sound, index: i }; });
+    this.range = ["AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY", "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY", "UH", "UW", "UX", "B", "CH", "D", "DH", "DX", "EL", "EM", "EN", "F", "G", "HH", "JH", "K", "L", "M", "N", "NX", "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V", "W", "WH", "Y", "Z", "ZH"];
+  }
+}
+
+export class NumericalConstraint extends Constraint {
+  comparators = ['==', '!=', '>', '<', '>=', '<='];
+
+  constructor(name, comparator) {
+    super(name, "number");
+    this.range = [-Infinity, Infinity];
+    this.targetValue = null;
+    this.comparator = comparator;
+  }
+
+  async evaluate(sequence, document) {
+    if (this.targetValue === null) {
+      console.error('Must specify a target value for:', this);
+      return 0;
+    }
+
+    if (sequence.length === 0) { return 0; }
+
+    let sum = 0;
+    for (let i = 0; i < sequence.length; i++) {
+      let token = sequence[i];
+      let value = token[this.targetFeature];
+      sum += value;
+    }
+    let avg = sum / sequence.length;
+    return avg;
+  }
+
+  updateTarget(newValue) {
+    this.targetValue = newValue;
+    return this.targetValue;
   }
 }
