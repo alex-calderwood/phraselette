@@ -69,7 +69,7 @@
   margin: 10px;
   padding: 30px;
   
-  z-index: 1;
+  /* z-index: 1; */
   flex: 1; /* Take up all the space */
 
   overflow-x: hidden;
@@ -81,9 +81,9 @@
 
 /* make the z index of the text on the editor slightly higher so we can put something in between, so
 we will need to select the text children of the editor */
-.editor > * {
+/* .editor > * {
   z-index: 3;
-}
+} */
 
 .lense-bar {
   z-index: 2;
