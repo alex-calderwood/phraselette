@@ -33,6 +33,7 @@ export class PrismEditor extends Component {
     this.editorNode.addEventListener('input', this.onInput);
     this.editorNode.addEventListener('click', this.onClick);
     this.editorNode.addEventListener('keydown', this.onKeyDown.bind(this));
+    this.editorNode.addEventListener('keyup', this.onKeyUp.bind(this));
     // this.editorNode.addEventListener('focus', this.handleFocus);
 
     let initializationText = "a";
@@ -60,6 +61,7 @@ export class PrismEditor extends Component {
   
       setTimeout(() => this.moveSelectionToEndOfEditor(), 0);
     });
+
   }
 
   startObserver() {
@@ -76,6 +78,7 @@ export class PrismEditor extends Component {
     this.editorNode.removeEventListener('input', this.onInput);
     this.editorNode.removeEventListener('click', this.onClick);
     this.editorNode.removeEventListener('keydown', this.onKeyDown);
+    this.editorNode.removeEventListener('keyup', this.onKeyUp);
     // this.editorNode.removeEventListener('focus', this.handleFocus);
   }
 
@@ -95,25 +98,25 @@ export class PrismEditor extends Component {
     // this.selection = this.currentSelection();
 
     // turn the text into styled character spans: <span>a</span><span>b</span>
-    this.splitIntoCharactersAndStyle(this.contentRef.current);
+    // this.splitIntoCharactersAndStyle(this.contentRef.current);
 
     // update the state text
-    let newText = this.getTextWithWhitespace(this.contentRef.current);
+    let newText = getTextWithWhitespace(this.contentRef.current);
 
     // update each modified token (currently broken)
-    this.tokenManager.synchronizeTokens(this.selectionBeforeInput, this.selectionBeforeInput, event);
+    // this.tokenManager.synchronizeTokens(this.keyDownSelection, this.keyDownSelection, event);
 
     // pass the new text into the tokenizer to update its token list and associated character indices
-    this.tokenizeOnTextUpdate(newText, this.props.lenseToHighlight);
+    // this.tokenizeOnTextUpdate(newText, this.props.lenseToHighlight);
 
     // give the new text to the parent component
     if (this.props.setText) { this.props.setText(newText); }
 
     // Use a timeout to delay execution of restoring the selection
     // This ensures that the DOM updates have completed before the selection is restored
-    setTimeout(() => {
-      this.restoreSelection(event);
-    }, 0);
+    // setTimeout(() => {
+    //   this.restoreSelection(event);
+    // }, 0);
   };
 
   /* 
@@ -121,8 +124,10 @@ export class PrismEditor extends Component {
   * other calculations, such as determining which tokens the user is editing and to construct prompts
   * for the various tokenizations / LLM interactions.
   */
-  currentSelection = () => {
+  currentSelection() {
+    
     let windowSelection = rangy.getSelection();
+    
     if (windowSelection.rangeCount > 0) {
       
       let anchorSpan = windowSelection.anchorNode.parentNode;
@@ -143,6 +148,9 @@ export class PrismEditor extends Component {
 
       let startIndex = getCharIndex(anchorSpan) + windowSelection.anchorOffset;
       let endIndex = getCharIndex(focusSpan) + windowSelection.focusOffset;
+
+      // super slow but more robust than the other options
+      let offset = getCursorOffsetInDiv(this.editorNode);
 
       // console.log('selection', windowSelection);
       // console.log('anchorparent', anchorSpan, 'anchor', anchor)
@@ -172,13 +180,12 @@ export class PrismEditor extends Component {
         startIndex: startIndex,
         endIndex: endIndex,
 
+        prefixOffset: offset,
+
         // the text that is selected
         text: windowSelection.toString(),
       };
-      console.log('currentSelection', selection)
-      // log a copy of the selection
-      // let copy = JSON.parse(JSON.stringify(selection));
-      // console.log('currentSelection', copy);
+      console.log('currentSelection', selection);
       return selection;
     }
     else {
@@ -187,85 +194,11 @@ export class PrismEditor extends Component {
   };
 
   restoreSelection(event) {
-    if (this.selectionBeforeInput) {
-      console.log('restoring selection', this.selectionBeforeInput);
-      // TODO something about this seems to bug out occasionally (or maybe the place that calls this does?)
-      // For a while I thought it was working when I changed anchorOffset to focusOffset (the wrong one...) but now it is buggy either way
-      this.restoreSelectionFromCharId(this.selectionBeforeInput.charId, this.selectionBeforeInput.anchorOffset, event);
+    if (this.keyDownSelection) {
+      console.log('restoring selection', this.keyDownSelection);
+      setCursorAtOffset(this.editorNode, this.keyDownSelection.prefixOffset);
     }
-  };
-
-  // cursed
-  restoreSelectionFromCharId(charId, originalOffset, event) {
-
-    function getTextLength(node) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        // Node is a text node
-        return node.textContent.length;
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        // Node is an element
-        return node.innerText.length;
-      } else {
-        // Unsupported node type
-        return 0;
-      }
-    }
-
-    try {
-      let node = document.getElementById(charId);
-      if (node === null) {
-        console.error('restore->No node found with id', charId);
-        this.moveSelectionToEndOfEditor();
-      }
-
-      let range = rangy.createRange();
-      let editLength = getEditLength(event);
-
-      // editLength = finalOffset + remainingOffset - originalOffset
-
-      // let remainingOffset = editLength;
-      let remainingOffset = editLength + originalOffset;
-      // let finalOffset = 0;
-      // let restoreTo = node;
-      // for (let i = 0; i < remainingOffset; i++) {
-      //   let nextChar = getNextChar(restoreTo);
-      //   if (nextChar !== null) {
-      //     restoreTo = nextChar; // assumes each sibling has a 1 width...
-      //   } else {
-      //     finalOffset += 1;
-      //     break;
-      //   }
-      // }
-
-      let restoreTo = node;
-      while(true) {
-        // let textLength = getTextLength(restoreTo);
-        let textLength = 1;
-        if (remainingOffset <= textLength) {
-          break;
-        }
-        remainingOffset -= textLength;
-        let next = getNextChar(restoreTo);
-        if (next === null) {
-          break;
-        }
-        restoreTo = next;
-      }
-
-      let finalOffset = remainingOffset;
-
-      console.log("restore to", restoreTo, "finalOffset", finalOffset, "editLength", editLength, "initialOffset", originalOffset, "event", event);
-      range.setStart(restoreTo, finalOffset);
-      range.setEnd(restoreTo, finalOffset);
-
-      let selection = rangy.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
-    catch (e) {
-      console.error('restoreSelectionFromCharId', e);
-    }
-  };
+  }
 
   /*
    * Color all the characters between token.start and token.end based on token.prob
@@ -471,20 +404,6 @@ export class PrismEditor extends Component {
   */
   splitIntoCharactersAndStyle(content) {
 
-    function* traverseDOM(node) {
-      if ((node.tagName === 'DIV' || node.tagName === 'SPAN' || node.tagName === 'BR')
-        // and its not div.editor
-        && node.className !== 'editor'
-        // and it is not a rangy selection marker (id contains the string selectionBoundary)
-        && !node.id.includes('selectionBoundary')) {
-        yield node;
-      }
-
-      for (const child of node.childNodes) {
-        yield* traverseDOM(child);
-      }
-    }
-
     let children = [...traverseDOM(content)];
 
     let i = 0;
@@ -535,33 +454,6 @@ export class PrismEditor extends Component {
     return newSpans;
   }
 
-  /**
-   * Extracts the text content from a contenteditable element, preserving explicit line breaks.
-   *
-   * This function clones the provided element to avoid altering the original content. It then
-   * replaces <br> tags and the beginnings of <div> tags with newline characters to preserve
-   * the visual representation of line breaks. The function does not modify <span> tags, as they
-   * are not typically associated with line breaks. The modified content is then returned as a
-   * single string with preserved line breaks.
-   *
-   * @param {HTMLElement} element - The contenteditable element from which to extract text.
-   * @returns {string} The text content of the element with \n characters in place of <br> and <div> tags.
-  */
-  getTextWithWhitespace(element) {
-    let clone = element.cloneNode(true);
-
-    // Replace <br> tags with \n
-    clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
-
-    // Replace block elements like <div> with \n and maintain their content
-    clone.querySelectorAll('div').forEach(div => {
-      div.replaceWith('\n', ...div.childNodes);
-    });
-
-    // Extract the textContent from the cloned element
-    return clone.textContent;
-  }
-
   /* 
    * Split the text into individual tokens according to the tokenization strategy specified by the current token.
    * After the tokenization is complete, the token manager will call the onFinished function, which typically
@@ -585,7 +477,7 @@ export class PrismEditor extends Component {
       let onFinished = () => {
         // TODO there is a potential problem where the selection has been updated since the last time we saved it
         // This could happen if the user navigates with the arrow keys for instance, so perhpas we want to save the selection during arrows
-        let newText = this.getTextWithWhitespace(this.contentRef.current);
+        let newText = getTextWithWhitespace(this.contentRef.current);
         this.tokenizeOnTextUpdate(newText, lense, callDepth + 1);
       };
 
@@ -602,8 +494,8 @@ export class PrismEditor extends Component {
     if (prisms.length < 1) { return; }
 
     let document = new Document(
-      this.getTextWithWhitespace(this.contentRef.current),
-      this.selectionBeforeInput, // this may be out of date?
+      getTextWithWhitespace(this.contentRef.current),
+      this.keyDownSelection, // this may be out of date?
       this.tokenManager
     );
     
@@ -623,19 +515,22 @@ export class PrismEditor extends Component {
     console.log('manually tokenizing');
     this.forceTokenize();
     this.splitIntoCharactersAndStyle(this.contentRef.current);
+    setTimeout(() => {
+      this.restoreSelection();
+    }, 0);
   }
 
   manualSearchAction() {
     this.onKeyDown();
+    this.manualRetokenizeAction();
 
     let document = new Document(
-      this.getTextWithWhitespace(this.contentRef.current),
-      this.selectionBeforeInput,
+      getTextWithWhitespace(this.contentRef.current),
+      this.keyDownSelection,
       this.tokenManager
     );
 
     console.log('manually searching', document.selectionText);
-
     this.props.doSearch(document);
   }
 
@@ -643,15 +538,21 @@ export class PrismEditor extends Component {
    * Handles keydown events to save the selection before the input event is processed and the text changed.
   */
   onKeyDown(event) {
-    this.selectionBeforeInput = this.currentSelection();
+    this.keyDownSelection = this.currentSelection();
   }
 
+  /*
+   * Handles keydown events to save the selection before the input event is processed and the text changed.
+  */
+  onKeyUp(event) {
+    this.keyUpSelection = this.currentSelection();
+  }
 
   onClick = (event) => {
-    this.selectionBeforeInput = this.currentSelection();
-
-    // // show the token-range if there is a selection of non-zero length
-    this.props.setSelection(this.selectionBeforeInput);
+    let selection = this.currentSelection();
+    this.keyDownSelection = selection;
+    this.keyUpSelection   = selection;
+    this.props.setSelection(selection); // give the new selection to the parent
   };
 
   /* 
@@ -662,37 +563,30 @@ export class PrismEditor extends Component {
   * @param {string} newText - the new text to display
   */ 
   swapText = (start, end, newText) => {
-    // let startSpan = document.querySelector(`span[c='${start}']`);
-    // let endSpan = document.querySelector(`span[c='${end}']`);
+    let startSpan = document.querySelector(`span[c='${start}']`);
+    let endSpan = document.querySelector(`span[c='${end}']`);
 
-    // // select the text to replace
-    // let range = rangy.createRange();
-    // range.setStart(startSpan, 0);
-    // range.setEnd(endSpan, 1);
+    // select the text to replace
+    let range = rangy.createRange();
+    range.setStart(startSpan, 0);
+    range.setEnd(endSpan, 1);
 
-    // // create a span for the new text
-    // let newSpan = document.createElement('span');
-    // newSpan.textContent = newText;
+    // create a span for the new text
+    let newSpan = document.createElement('span');
+    newSpan.textContent = newText;
 
-    // let oldText = range.toString();
+    let oldText = range.toString();
 
-    // console.log('start span', startSpan, 'end span', endSpan)
-    // console.log('swap text', start, end, 'for', newText, 'from', oldText);
+    console.log('start span', startSpan, 'end span', endSpan)
+    console.log('swap text', start, end, 'for', newText, 'from', oldText);
 
-    // // replace the text
-    // range.deleteContents();
-    // range.insertNode(newSpan);
+    // replace the text
+    range.deleteContents();
+    range.insertNode(newSpan);
 
-    // // style the new text
-    // this.splitIntoCharactersAndStyle(this.contentRef.current);
+    // style the new text
+    this.splitIntoCharactersAndStyle(this.contentRef.current);
   }
-
-  // handleFocus = (event) => {
-  //   console.log('focus', event);
-  //   // this.moveSelectionToEndOfEditor();
-  //   setTimeout(() => this.moveSelectionToEndOfEditor(), 0);
-  // };
-
 
   render() {
     // this.colorAllCharactersByProb(); // TODO this shouldn't called here
@@ -707,38 +601,140 @@ export class PrismEditor extends Component {
     );
   }
 }
-function getEditLength(event) {
-  if (event.inputType === 'insertText') {
-    return event.data ? event.data.length : 0;
-  } else if (event.inputType === 'deleteContentBackward') {
-    return -1;
-  } else if (event.inputType === 'deleteContentForward') {
-    return -1;
-  } else if (event.inputType === 'deleteContent') {
-    return -1;
-  } else if (event.inputType === 'insertParagraph') {
-    return 1; // currently a bug where we add two characters on paragraph
-  } else if (event.inputType === 'insertLineBreak') {
-    return 1;
-  } else if (event.inputType === 'insertFromPaste') {
-    return event.data ? event.data.length : 0;
+
+// function getEditLength(event) {
+//   if (event.inputType === 'insertText') {
+//     return event.data ? event.data.length : 0;
+//   } else if (event.inputType === 'deleteContentBackward') {
+//     return -1;
+//   } else if (event.inputType === 'deleteContentForward') {
+//     return -1;
+//   } else if (event.inputType === 'deleteContent') {
+//     return -1;
+//   } else if (event.inputType === 'insertParagraph') {
+//     return 1; // currently a bug where we add two characters on paragraph
+//   } else if (event.inputType === 'insertLineBreak') {
+//     return 1;
+//   } else if (event.inputType === 'insertFromPaste') {
+//     return event.data ? event.data.length : 0;
+//   }
+//   console.error('unexpected event', event.inputType, event);
+// }
+
+// function getNextChar(node) {
+//   if (node.tagName === 'DIV') {
+//     if (node.firstChild !== null) {
+//       return node.firstChild;
+//     }
+//   }
+
+//   if (node.nextSibling !== null) {
+//     return node.nextSibling;
+//   }
+//   if (node.parentNode.nextSibling !== null) {
+//     return node.parentNode.nextSibling.firstChild; // we will want to do this if we get rid of the extra spans
+//     // return node.parentNode.nextSibling;
+//   }
+//   return null;
+// }
+
+function* traverseDOM(node) {
+  if ((node.tagName === 'DIV' || node.tagName === 'SPAN' || node.tagName === 'BR')
+    // and its not div.editor
+    && node.className !== 'editor'
+    // and it is not a rangy selection marker (id contains the string selectionBoundary)
+    && !node.id.includes('selectionBoundary')) {
+    yield node;
   }
-  console.error('unexpected event', event.inputType, event);
+
+  for (const child of node.childNodes) {
+    yield* traverseDOM(child);
+  }
 }
 
-function getNextChar(node) {
-  if (node.tagName === 'DIV') {
-    if (node.firstChild !== null) {
-      return node.firstChild;
+function getCursorOffsetInDiv(editor) {
+  var sel = rangy.getSelection();
+  if (sel.rangeCount > 0) {
+    var range = sel.getRangeAt(0);
+    var preCaretRange = range.cloneRange(); // Clone the range
+    preCaretRange.selectNodeContents(editor); // Select all contents within the div
+    preCaretRange.setEnd(range.endContainer, range.endOffset); // Set the end of the range to the cursor position
+
+    // Extract the container of the range as a fragment
+    var container = document.createElement("div");
+    container.appendChild(preCaretRange.cloneContents());
+
+    // Use the provided getTextWithWhitespace function to include divs and brs correctly
+    var textContent = getTextWithWhitespace(container);
+
+    return textContent.length; // Return the corrected length of the string in the range
+  }
+
+  return 0; // No range found, or no selection
+}
+
+function setCursorAtOffset(editor, offset) {
+  var currentOffset = 0;
+  var found = false;
+
+  // Helper function to traverse the nodes
+  function traverseNodes(node) {
+    if (node.nodeType === 3) { // Text node
+      var nextOffset = currentOffset + node.length;
+      if (offset <= nextOffset) {
+        rangy.getSelection().collapse(node, offset - currentOffset);
+        found = true;
+        return; // Found the position, exit the traversal
+      }
+      currentOffset = nextOffset;
+    } else if (node.nodeType === 1) { // Element node (e.g., <div>, <br>, etc.)
+      // Count a newline if it's a block element or a break
+      if (node.tagName === 'BR' || window.getComputedStyle(node).display === 'block') {
+        currentOffset++;
+        if (offset === currentOffset) {
+          rangy.getSelection().collapse(node, 0);
+          found = true;
+          return; // Found the position, exit the traversal
+        }
+      }
+      // Recurse through child nodes
+      Array.from(node.childNodes).forEach(traverseNodes);
+      if (found) return;
     }
   }
 
-  if (node.nextSibling !== null) {
-    return node.nextSibling;
+  // Start traversal from the editor's child nodes
+  Array.from(editor.childNodes).forEach(traverseNodes);
+
+  // If the specified offset is beyond the last character, collapse at the end
+  if (!found) {
+    rangy.getSelection().collapse(editor, editor.childNodes.length);
   }
-  if (node.parentNode.nextSibling !== null) {
-    return node.parentNode.nextSibling.firstChild; // we will want to do this if we get rid of the extra spans
-    // return node.parentNode.nextSibling;
-  }
-  return null;
+}
+
+/**
+ * Extracts the text content from a contenteditable element, preserving explicit line breaks.
+ *
+ * This function clones the provided element to avoid altering the original content. It then
+ * replaces <br> tags and the beginnings of <div> tags with newline characters to preserve
+ * the visual representation of line breaks. The function does not modify <span> tags, as they
+ * are not typically associated with line breaks. The modified content is then returned as a
+ * single string with preserved line breaks.
+ *
+ * @param {HTMLElement} element - The contenteditable element from which to extract text.
+ * @returns {string} The text content of the element with \n characters in place of <br> and <div> tags.
+*/
+function getTextWithWhitespace(element) {
+  let clone = element.cloneNode(true);
+
+  // Replace <br> tags with \n
+  clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+
+  // Replace block elements like <div> with \n and maintain their content
+  clone.querySelectorAll('div').forEach(div => {
+    div.replaceWith('\n', ...div.childNodes);
+  });
+
+  // Extract the textContent from the cloned element
+  return clone.textContent;
 }
