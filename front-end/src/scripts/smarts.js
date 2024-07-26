@@ -303,7 +303,6 @@ async function* callPhones(text) {
  * 
 */
 export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null) {
-  console.log("miscTokensToWordTokens", tokenSpan, document, maxWords)
   if (tokenSpan.length === 0 || maxWords === 0) { return []; }
 
   // compute the text that results from adding the span we are evaluating to the rest of the prefix
@@ -313,7 +312,6 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
     },
     ''
   );
-  console.log("newText", newText)
 
   let resultantWordTokens = await spacyTokenize(newText, { onToken: (token) => { }, requests: document.activeLenses });
 
@@ -339,9 +337,6 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
     firstWord.start = splitIndex;
     firstWord.incomplete = true;
   }
-
-  console.log("newWordTokens", convertedTokens)
-
 
   return convertedTokens;
 }

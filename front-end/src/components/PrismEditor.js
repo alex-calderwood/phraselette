@@ -94,19 +94,16 @@ export class PrismEditor extends Component {
    *        - spaces aren't being saved correctly on firefox (works on Chrome)
   */
   onInput = (event) => {
-    // Save the current selection to restore later after processing input
-    // this.selection = this.currentSelection();
-
     // turn the text into styled character spans: <span>a</span><span>b</span>
     // this.splitIntoCharactersAndStyle(this.contentRef.current);
 
     // update the state text
     let newText = getTextWithWhitespace(this.contentRef.current);
 
-    // update each modified token (currently broken)
+    // // update each modified token (currently broken)
     // this.tokenManager.synchronizeTokens(this.keyDownSelection, this.keyDownSelection, event);
 
-    // pass the new text into the tokenizer to update its token list and associated character indices
+    // // pass the new text into the tokenizer to update its token list and associated character indices
     // this.tokenizeOnTextUpdate(newText, this.props.lenseToHighlight);
 
     // give the new text to the parent component
@@ -125,11 +122,9 @@ export class PrismEditor extends Component {
   * for the various tokenizations / LLM interactions.
   */
   currentSelection() {
-    
     let windowSelection = rangy.getSelection();
     
     if (windowSelection.rangeCount > 0) {
-      
       let anchorSpan = windowSelection.anchorNode.parentNode;
       let focusSpan  = windowSelection.focusNode.parentNode;
 
@@ -150,16 +145,15 @@ export class PrismEditor extends Component {
       let endIndex = getCharIndex(focusSpan) + windowSelection.focusOffset;
 
       // super slow but more robust than the other options
-      let offset = getCursorOffsetInDiv(this.editorNode);
-
-      // console.log('selection', windowSelection);
-      // console.log('anchorparent', anchorSpan, 'anchor', anchor)
-      let charId = anchorSpan.id;
-      console.log('charId', charId, anchorSpan)
+      let offset = null;
+      try {
+        offset = getCursorOffsetInDiv(this.editorNode);
+      } catch (e) {
+        console.error('Error getting cursor offset', e);
+      }
 
       let selection = {
-        // charId: rangySelection.anchorNode.id,
-        charId: charId,
+        charId: anchorSpan.id,
         rangy: windowSelection,
 
         // these can be used for computing span calculations
@@ -185,7 +179,6 @@ export class PrismEditor extends Component {
         // the text that is selected
         text: windowSelection.toString(),
       };
-      console.log('currentSelection', selection);
       return selection;
     }
     else {
@@ -194,9 +187,9 @@ export class PrismEditor extends Component {
   };
 
   restoreSelection(event) {
-    if (this.keyDownSelection) {
-      console.log('restoring selection', this.keyDownSelection);
-      setCursorAtOffset(this.editorNode, this.keyDownSelection.prefixOffset);
+    // TODO this should use the event data again
+    if (this.keyUpSelection) {
+      setCursorAtOffset(this.editorNode, this.keyUpSelection.prefixOffset);
     }
   }
 
@@ -260,8 +253,6 @@ export class PrismEditor extends Component {
     selection.removeAllRanges();
     selection.addRange(range);
 
-    console.log("selection moved to to end of editor", lastSpan, textNode, offset, selection);
-
     // const testChar = document.createTextNode('|');
     // range.insertNode(testChar);
   }
@@ -276,7 +267,6 @@ export class PrismEditor extends Component {
   * @returns {number} the new character index
   */
   splitSpan(originalSpan, c) {
-    console.log("splitspan", originalSpan, c)
     // don't delete any spans, just add new ones and remove characters from the old span
     let text = originalSpan.textContent.replace(/\uFEFF/g, ''); // Remove BOM
     let newSpans = [];
@@ -318,7 +308,6 @@ export class PrismEditor extends Component {
     let span = document.createElement('span');
     span.textContent = text;
     let newID = this.styleCharacter(span, c);
-    console.log("creating span", span, c, text)
     return [span, newID];
   }
 
@@ -332,8 +321,6 @@ export class PrismEditor extends Component {
   * Also, set a unique character ID if it doesn't already exist for the span.
   */
   styleCharacter(element, c) {
-    // console.log("styling", child, c, child.textContent)
-
     if (typeof c !== 'number') {
       console.error('styleChild called with', typeof c);
     } 
@@ -444,7 +431,6 @@ export class PrismEditor extends Component {
           newSpans.push(...brandNewSpans);
         }
       } else if (child.tagName === 'DIV') {
-        // console.log('DIV splitting', child);
       }
 
       i++;
@@ -575,10 +561,9 @@ export class PrismEditor extends Component {
     let newSpan = document.createElement('span');
     newSpan.textContent = newText;
 
-    let oldText = range.toString();
-
-    console.log('start span', startSpan, 'end span', endSpan)
-    console.log('swap text', start, end, 'for', newText, 'from', oldText);
+    // let oldText = range.toString();
+    // console.log('start span', startSpan, 'end span', endSpan)
+    // console.log('swap text', start, end, 'for', newText, 'from', oldText);
 
     // replace the text
     range.deleteContents();
@@ -674,41 +659,45 @@ function getCursorOffsetInDiv(editor) {
 }
 
 function setCursorAtOffset(editor, offset) {
-  var currentOffset = 0;
-  var found = false;
+  try {
+    var currentOffset = 0;
+    var found = false;
 
-  // Helper function to traverse the nodes
-  function traverseNodes(node) {
-    if (node.nodeType === 3) { // Text node
-      var nextOffset = currentOffset + node.length;
-      if (offset <= nextOffset) {
-        rangy.getSelection().collapse(node, offset - currentOffset);
-        found = true;
-        return; // Found the position, exit the traversal
-      }
-      currentOffset = nextOffset;
-    } else if (node.nodeType === 1) { // Element node (e.g., <div>, <br>, etc.)
-      // Count a newline if it's a block element or a break
-      if (node.tagName === 'BR' || window.getComputedStyle(node).display === 'block') {
-        currentOffset++;
-        if (offset === currentOffset) {
-          rangy.getSelection().collapse(node, 0);
+    // Helper function to traverse the nodes
+    function traverseNodes(node) {
+      if (node.nodeType === 3) { // Text node
+        var nextOffset = currentOffset + node.length;
+        if (offset <= nextOffset) {
+          rangy.getSelection().collapse(node, offset - currentOffset);
           found = true;
           return; // Found the position, exit the traversal
         }
+        currentOffset = nextOffset;
+      } else if (node.nodeType === 1) { // Element node (e.g., <div>, <br>, etc.)
+        // Count a newline if it's a block element or a break
+        if (node.tagName === 'BR' || window.getComputedStyle(node).display === 'block') {
+          currentOffset++;
+          if (offset === currentOffset) {
+            rangy.getSelection().collapse(node, 0);
+            found = true;
+            return; // Found the position, exit the traversal
+          }
+        }
+        // Recurse through child nodes
+        Array.from(node.childNodes).forEach(traverseNodes);
+        if (found) return;
       }
-      // Recurse through child nodes
-      Array.from(node.childNodes).forEach(traverseNodes);
-      if (found) return;
     }
-  }
 
-  // Start traversal from the editor's child nodes
-  Array.from(editor.childNodes).forEach(traverseNodes);
+    // Start traversal from the editor's child nodes
+    Array.from(editor.childNodes).forEach(traverseNodes);
 
-  // If the specified offset is beyond the last character, collapse at the end
-  if (!found) {
-    rangy.getSelection().collapse(editor, editor.childNodes.length);
+    // If the specified offset is beyond the last character, collapse at the end
+    if (!found) {
+      rangy.getSelection().collapse(editor, editor.childNodes.length);
+    }
+  } catch (e) {
+    console.error('Error setting cursor position:', e);
   }
 }
 

@@ -198,14 +198,12 @@ class App extends Component {
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
     let predictions = prisms.map(p => p.results).filter(r => r && r.length > 0).flat()
-    console.log("predictions", predictions)
     let filteredPredictions = await resolveConstraints(predictions, constraints);
     this.setState({ searchResults: filteredPredictions});
     this.setSearchingState(false);  // UI update
   }
 
   addConstraint(constraint) {
-    console.log('adding constraint', constraint);
     this.setState({
       constraints: this.state.constraints.concat([constraint])
     });
