@@ -1,12 +1,7 @@
 import React, { Component, createRef } from "react";
 import { getColor, zeroToOneColor } from "../color";
-import { getUniqueUUID } from "../scripts/utils";
+import { getUniqueUUID, scientific} from "../scripts/utils";
 
-function scientific(num) {
-  if (num !== 0 && (num < 1e-3 || num >= 1e+7)) return num.toExponential(3);
-  if (num?.toPrecision) return num.toPrecision(3);
-  return num;
-}
 
 function fieldsToShow(tokenType) {
   let show = {
@@ -62,7 +57,7 @@ export class TokenRange extends Component {
     let wrap = this.props.wrap ? ' wrap' : ' nowrap';
     let scoreLookup = tokenType === 'search' ? 'total' : tokenType;
 
-    console.log('TokenRange', tokenType, tokens);
+    // console.log('TokenRange', tokenType, tokens);
     return (
       <div className={"token-range-parent " + overflowing}>
           <div id={'tokenbar-' + tokenType} className={`token-range` + wrap}>

@@ -2,20 +2,19 @@ import { searchForward, miscTokensToWordTokens } from '../scripts/smarts.js';
 import { Sequence } from './Sequence.js';
 import { Token } from './Token.js'
 import { sendMessage } from "../scripts/socket";
+import { Feature } from './Feature.js';
 
 export class Prism {
   /**
    * Create a Prism.
    * @param {string} name - The name of the Prism.
-   * @param {string} dataType - Not currently used.
    * @param {Array} [features=[]] - An array of features that become available to view or constrain.
    * @param {Object|null} [parentToken=null] - The name of the token that this Prism uses as its tokenization (in TokenManager).
    *                                           Defaults to {name}.
    */
-  constructor(name, dataType, features=[], parentToken=null) {
+  constructor(name, features=[], parentToken=null) {
     this.name = name;     // eventually this should be type
     this.subTitle = name; // eventually this should be name
-    this.dataType = dataType;
     this.active = false;
     this.shouldHighlight = false;
 
@@ -88,7 +87,7 @@ export class Prism {
 
 export class DictionaryPrism extends Prism {
   constructor(description) {
-    super('dictionary', 'string');
+    super('dictionary');
     this.textFeatures = {
       'description': {text: description, name: 'description'}
     }
@@ -127,7 +126,7 @@ export class DictionaryPrism extends Prism {
 
 export class LLMProbabilityPrism extends Prism {
   constructor() {
-    super('likelihood', 'number');
+    super('likelihood', [Feature.Prob]);
 
     // search settings
     this.minTokens = 1;
@@ -139,8 +138,7 @@ export class LLMProbabilityPrism extends Prism {
   */
   async search(document, constraints) {
     this.onSearch();
-    
-    let numWords = Math.max(...constraints.map((constraint) => { return constraint.targetSequence.length; }));
+    let numWords = Math.max(...constraints.map((constraint) => { return constraint?.targetSequence?.length || 0; }));
     numWords = Math.max(numWords, 1);
 
     let numTokens = numWords;

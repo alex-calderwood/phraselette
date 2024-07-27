@@ -58,9 +58,7 @@ const probColor = (token) => {
 
 export function lengthNormedLogProbToColor(token) {
   let prob = Math.log10(token.prob + 1e-12); // avoid log(0)
-  let normalized = (prob + 6) / 6; // normalize to [0, 1] TODO don't understand this
-
-
+  let normalized = (prob + 6) / 6; // normalize to [0, 1] weird
   // normalized /= token.text.length || 1; // normalize by length
   let alpha = 0.5;
   let hex = colorScale(normalized).alpha(alpha).css();

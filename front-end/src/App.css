@@ -152,6 +152,11 @@ we will need to select the text children of the editor */
   padding-right: 2px;
 }
 
+.text {
+  color:rgb(172, 172, 172);
+  font-size: 10px;
+}
+
 .token-range {
   position: relative;
   z-index: 2;

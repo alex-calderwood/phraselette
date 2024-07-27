@@ -17,3 +17,10 @@ export function overlaps(span1, span2) {
   || (span1.end >= span2.start && span1.end <= span2.end)
   || (span1.start <= span2.start && span1.end >= span2.end);
 }
+
+export function scientific(num) {
+  if (num !== 0 && (num < 1e-3 || num >= 1e+7)) return num.toExponential(3);
+  if (num?.toPrecision) return num.toPrecision(3);
+  return num;
+}
+

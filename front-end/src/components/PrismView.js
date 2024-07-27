@@ -78,7 +78,7 @@ export class PrismView extends Component {
           return <ConstraintRender key={constraint.id} constraint={constraint} />
         })}
           
-        <ConstraintCreator 
+        <ConstraintCreator
           tokens={tokens}
           startIndex={start} endIndex={end}
           prism={prism}

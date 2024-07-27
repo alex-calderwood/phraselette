@@ -1,9 +1,60 @@
 import React, { Component } from "react";
 // import { Constraint, CategoricalConstraint, POSConstraint, 
 //   RhymeConstraint, AlliterationConstraint} from "../document/Constraint";
+import { scientific } from "../scripts/utils";
 
+class BasicNumericalConstraintView extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      targetMin: this.props.constraint.targetMin,
+      targetMax: this.props.constraint.targetMax,
+    };
+  }
 
-class ConstraintView extends Component {
+  changeMin = (event) => {
+    const newValue = parseFloat(event.target.value);
+    this.setState({ targetMin: newValue });
+    this.props.constraint.updateTargetMin(newValue);
+  };
+
+  changeMax = (event) => {
+    const newValue = parseFloat(event.target.value);
+    this.setState({ targetMax: newValue });
+    this.props.constraint.updateTargetMax(newValue);
+  };
+
+  render() {
+    const { constraint } = this.props;
+    const { targetMin, targetMax } = this.state;
+
+    return (
+      <ConstraintWrapper constraint={constraint}>
+        <div className="text"> 
+          Min: {scientific(constraint.targetMin)} Max: {scientific(constraint.targetMax)}
+        </div>
+        <input
+            type="range"
+            min={constraint.range[0]}
+            max={constraint.range[1]}
+            step="any"
+            value={targetMin}
+            onChange={this.changeMin}
+          />
+        <input
+            type="range"
+            min={constraint.range[0]}
+            max={constraint.range[1]}
+            step="any"
+            value={targetMax}
+            onChange={this.changeMax}
+          />
+      </ConstraintWrapper>
+    );
+  }
+}
+
+class CategoricalConstraintView extends Component {
   constructor(props) {
     super(props);
     let constraint = this.props.constraint;
@@ -11,17 +62,7 @@ class ConstraintView extends Component {
       target: constraint.targetSequence,
     }
   }
-}
-
-
-class NumericalConstraintView extends ConstraintView {
-  render() {
-    return <div></div>
-  }
-}
-
-class CategoricalConstraintView extends ConstraintView {
-
+  
   addTarget = () => {
     let newTarget = this.props.constraint.addTarget();
     this.setState({ target: newTarget });
@@ -41,36 +82,34 @@ class CategoricalConstraintView extends ConstraintView {
 
   render() {
     let constraint = this.props.constraint;
-    let feature = constraint.targetFeature;
-    let type;
-    switch (constraint.dataType) {
-      case 'string':
-        type = 'text';
-        break;
-      case 'number':
-        type = 'number';
-        break;
-      default:
-        type = 'text';
-    }
+    let featureName = constraint.feature.name;
 
     let possibleConstraintValues = constraint.range;
     let target = this.state.target;
-    let id = `${constraint.id}-constraint`
 
-    return  <div id={constraint.id} className="constraint">
+    return  <ConstraintWrapper constraint={constraint}>
       {target.map(tokenTarget => {
-        return <select className="constraint-select" id={`constraint-select-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[feature]} onChange={this.handleChange}>
+        return <select className="constraint-select" id={`constraint-select-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[featureName]} onChange={this.handleChange}>
           {possibleConstraintValues.map(value => {
             return <option key={value} value={value}>{value}</option>
           })}
         </select>
       })}
-      {/* <label for={id}>comparator</label> */}
-      {/* <input id={id} className="info-item" value={"=="}></input> */}
       <button onClick={this.addTarget}>+</button>
       <button onClick={this.deleteTarget}>-</button>
-    </div>;
+    </ConstraintWrapper>;
+  }
+}
+
+class ConstraintWrapper extends Component {
+  render() {
+    const { constraint, children } = this.props;
+    const id = `${constraint.id}-constraint`;
+    return (
+      <div id={id} className="constraint">
+        {children}
+      </div>
+    );
   }
 }
 
@@ -79,7 +118,7 @@ const constraintViews = {
   POSConstraint: CategoricalConstraintView,
   SoundConstraint: CategoricalConstraintView,
   RhymeConsntraint: CategoricalConstraintView,
-  NumericalConstraint: NumericalConstraintView,
+  NumericalConstraint: BasicNumericalConstraintView,
   AlliterationConstraint: null,
 };
 
@@ -87,6 +126,6 @@ export class ConstraintRender extends React.Component {
   render() {
     const { constraint, ...otherProps } = this.props;
     const ConstraintView = constraintViews[constraint.constructor.name];
-    return ConstraintView ? <ConstraintView constraint={constraint} {...otherProps} /> : null;
+    return ConstraintView ? <ConstraintView key={constraint.id} constraint={constraint} {...otherProps} /> : null;
   }
 }

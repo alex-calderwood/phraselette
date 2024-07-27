@@ -1,31 +1,45 @@
-import { overlaps, getUniqueUUID } from '../scripts/utils.js';
+import { getUniqueUUID } from '../scripts/utils.js';
+import { Feature } from './Feature.js';
 
-export function makeConstraint(feature, target, dataType) {
-  feature = feature.toLowerCase();
-  switch (feature) {
+export function makeConstraint(feature, target) {
+  let name = feature.name;
+  let dataType = feature.dataType;
+  console.log('making constraint', name, dataType, feature, target);
+  switch (name) {
     case 'pos':
       target = target.map(token => token?.pos);
       return new POSConstraint(target);
-    case 'sound':
+    case 'rhyme':
       target = target.map(token => token?.sound?.rhyme || RhymeConstraint.defaultTarget);
       return new RhymeConstraint(target);
-    default:
-      return new Constraint(features, dataType);
+    case 'sound':
+      target = target.map(token => token?.sound?.sound || SoundConstraint.defaultTarget);
+      return new SoundConstraint(target);
   }
+  
+  switch(dataType) {
+    case 'number':
+      return new NumericalConstraint(name, feature); // name, feature, targetMin=null, targetMax=null
+    case 'category':
+      return new CategoricalConstraint(name, feature);
+  }
+
+  console.error('Could not make constraint for feature:', feature);
+  return null;
 }
 
 export class Constraint {
-  constructor(name, dataType) {
+  constructor(name, feature) {
     this.name = name;
-    this.dataType = dataType;
+    this.feature = feature;
+    this.dataType = feature.dataType; // depracate this
     this.id = getUniqueUUID();
     this.span = null;
     this.isPre = false;         // can the constraint be computed quickly?
-    this.targetSequence = null; // what is the goal of the constraint 
     this.range = null;          // what are the possible values of the constraint
   }
 
-  /* 
+  /*
   * Return a [0-1] score indicating how much the token sequence coheres to the constraint target. 
   * 0 means the span does not match the constraint
   * 1 means the span perfectly coheres to the constraint
@@ -81,19 +95,14 @@ export class AlliterationConstraint extends Constraint {
  * such as part of speech or rhyme scheme
 */
 export class CategoricalConstraint extends Constraint {
-  constructor(name, dataType, defaultTarget=null) {
-    super(name, dataType);
+  constructor(name, feature, defaultTarget=null) {
+    super(name, feature);
     this.defaultTarget = defaultTarget;
-    this.targetFeature = null;
+    this.targetSequence = null; // what is the goal of the constraint 
     this.range = null;
   }
 
   async evaluate(sequence, document) {
-    if (this.targetFeature === null) {
-      console.error('Must specify a feature constrain for:', this);
-      return 0;
-    }
-
     if (sequence.length === 0) {
       return 0;
     }
@@ -110,8 +119,8 @@ export class CategoricalConstraint extends Constraint {
         console.error('target token is undefined mismatch in token lengths?', i, this.targetSequence, this.newSpan);
         continue;
       }
-      let baselineTag = targetToken[this.targetFeature];
-      let newTokenTag = newToken[this.targetFeature];
+      let baselineTag = targetToken[this.feature.name];
+      let newTokenTag = newToken[this.feature.name];
       if (newTokenTag === baselineTag) {
         matches += 1;
       }
@@ -125,7 +134,7 @@ export class CategoricalConstraint extends Constraint {
       console.log('no target span to update for constraint', this);
       return;
     }
-    this.targetSequence[index][this.targetFeature] = newValue;
+    this.targetSequence[index][this.feature.name] = newValue;
     return this.targetSequence;
   }
 
@@ -144,7 +153,7 @@ export class CategoricalConstraint extends Constraint {
     }
 
     let newIndex = this.targetSequence.length;
-    this.targetSequence.push({ [this.targetFeature]: newTarget, index: newIndex });
+    this.targetSequence.push({ [this.feature.name]: newTarget, index: newIndex });
 
     return this.targetSequence;
   }
@@ -163,10 +172,8 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
   defaultTarget = 'NN';
   
   constructor(targetPOSPhrase) {
-    super('POS', 'category');
+    super('pos', Feature.POS, POSConstraint.defaultTarget);
     this.targetSequence = targetPOSPhrase.map((pos, i) => { return { pos: pos, index: i }; });
-    this.targetFeature = 'pos';
-    this.defaultTarget = POSConstraint.defaultTarget;
     this.range = Object.keys({// https://github.com/explosion/spaCy/blob/master/spacy/glossary.py
       "AFX": "affix",
       "CC": "conjunction, coordinating",
@@ -225,9 +232,7 @@ export class RhymeConstraint extends CategoricalConstraint {
   defaultTarget = 'AA'; // TODO
 
   constructor(targetPhones) {
-    super('rhyme', 'category');
-    this.targetFeature = 'rhyme';
-    this.defaultTarget = RhymeConstraint.defaultTarget;
+    super('rhyme', 'category', 'rhyme', RhymeConstraint.defaultTarget);
     this.targetSequence = targetPhones.map((rhyme, i) => { return { rhyme: rhyme, index: i }; });
     this.range = ["AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY", "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY", "UH", "UW", "UX", "B", "CH", "D", "DH", "DX", "EL", "EM", "EN", "F", "G", "HH", "JH", "K", "L", "M", "N", "NX", "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V", "W", "WH", "Y", "Z", "ZH"];
   }
@@ -236,44 +241,48 @@ export class RhymeConstraint extends CategoricalConstraint {
 class SoundConstraint extends CategoricalConstraint { // untested
   defaultTarget = 'AA'; // TODO
   constructor(targetPhones) {
-    super('sound', 'category');
-    this.targetFeature = 'sound';
-    this.defaultTarget = SoundConstraint.defaultTarget;
+    super('sound', 'category', 'sound', SoundConstraint.defaultTarget);
     this.targetSequence = targetPhones.map((sound, i) => { return { sound: sound, index: i }; });
     this.range = ["AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY", "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY", "UH", "UW", "UX", "B", "CH", "D", "DH", "DX", "EL", "EM", "EN", "F", "G", "HH", "JH", "K", "L", "M", "N", "NX", "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V", "W", "WH", "Y", "Z", "ZH"];
   }
 }
 
 export class NumericalConstraint extends Constraint {
-  comparators = ['==', '!=', '>', '<', '>=', '<='];
+  defaultRange = [0, 1];
 
-  constructor(name, comparator) {
+  constructor(name, feature, targetMin=0, targetMax=1) {
     super(name, "number");
-    this.range = [-Infinity, Infinity];
-    this.targetValue = null;
-    this.comparator = comparator;
+    this.feature = feature
+    this.range = this.defaultRange;
+    this.targetMin = targetMin;
+    this.targetMax = targetMax;
   }
 
   async evaluate(sequence, document) {
-    if (this.targetValue === null) {
-      console.error('Must specify a target value for:', this);
+    if (this.targetMin === null && this.targetMax === null) {
+      console.error('Must specify a target for constraint:', this);
       return 0;
     }
-
-    if (sequence.length === 0) { return 0; }
-
-    let sum = 0;
-    for (let i = 0; i < sequence.length; i++) {
-      let token = sequence[i];
-      let value = token[this.targetFeature];
-      sum += value;
+    for (let token of sequence) {
+      let value = this.getValue(token);
+      if (value < this.targetMin || value > this.targetMax) {
+        return 0;
+      }
     }
-    let avg = sum / sequence.length;
-    return avg;
+    return 
   }
 
-  updateTarget(newValue) {
-    this.targetValue = newValue;
-    return this.targetValue;
+  getValue(token) {
+    return token[this.feature] || 0;
+  }
+
+  updateTargetMin(newValue) {
+    this.targetMin = newValue;
+    return this.targetMin;
+  }
+
+  updateTargetMax(newValue) {
+    this.targetMax = newValue;
+    return this.targetMax;
   }
 }

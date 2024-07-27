@@ -9,6 +9,7 @@ import { PrismView } from "./components/PrismView";
 import { SearchResults } from "./components/SearchResults";
 import { resolveConstraints } from "./scripts/resolution";
 import { assignSocket } from "./scripts/socket";
+import { Feature } from "./document/Feature";
  
 const initialPrism = 'words';
 const debugMode = false;
@@ -31,10 +32,10 @@ class App extends Component {
     super(props);
     let prisms = {
       'likelihood':   new LLMProbabilityPrism().setActive(true),
-      'words':        new Prism('words',       'string', ['pos']).setActive(true).setDoHighlight(true),                                                                 
-      'sound':        new Prism('sound',       'list',   ['sound', 'rhyme'], 'words'),
-      'basic':        new Prism('basic',       'string'),                                              
-      'probability':  new Prism('probability', 'number'),
+      'words':        new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true),                                                                 
+      'sound':        new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words'),
+      'basic':        new Prism('basic'),                                              
+      'probability':  new Prism('probability', [Feature.Prob]),
       'dictionary':   new DictionaryPrism("the Spacefarer's Almanac").setActive(true),
       // 'critic':       new Prism('critic',      'string'),
     }
@@ -248,6 +249,7 @@ class App extends Component {
     
     let wordsPrism = this.state.prisms[this.tokenManager.wordsLense]; // which prism represents word breaks
     let searchResults = this.state.searchResults ? this.state.searchResults : [];
+    
 
     return (
       <div className="context-container" ref={this.containerRef}>
@@ -301,6 +303,8 @@ class App extends Component {
 
               {/* Display the active prisms */}
               {activePrisms.map((prism) => {
+                console.log("debug render", prism.name, prism.features, this.state.constraints.map((c) => c.feature))
+
                 return (
                   <PrismView
                     key={prism.name}
@@ -310,7 +314,8 @@ class App extends Component {
                     startIndex={startIndex} endIndex={endIndex} 
                     onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
                     debugMode={debugMode}
-                    constraints={this.state.constraints.filter((constraint) => prism.features.includes(constraint.targetFeature))}
+                    // TODO fix this
+                    constraints={this.state.constraints.filter((constraint) => prism.features.includes(constraint.feature))}
                     addConstraint={this.addConstraint.bind(this)}
                     removeConstraint={this.removeConstraint.bind(this)}
                   />
