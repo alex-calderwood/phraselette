@@ -1,42 +1,48 @@
 import "./App.css";
 import React, { Component } from "react";
-import { Document } from "./document/Document"
-import { TokenManager } from "./document/TokenManager";
+
 import { Prism, LLMProbabilityPrism, DictionaryPrism } from "./document/Prism";
+import { TokenManager } from "./document/TokenManager";
+import { Document } from "./document/Document"
+import { Constraint } from "./document/Constraint";
+import { Feature } from "./document/Feature";
+
 import { WordView } from "./components/WordView";
 import { PrismEditor } from "./components/PrismEditor";
 import { PrismView } from "./components/PrismView";
 import { SearchResults } from "./components/SearchResults";
+
 import { resolveConstraints } from "./scripts/resolution";
 import { assignSocket } from "./scripts/socket";
-import { Feature } from "./document/Feature";
+import { ConstraintRender } from "./components/ConstraintView";
  
-const initialPrism = 'words';
-const debugMode = false;
-
 //         *-*.                                 //        /    /    /
 //      _-',^. `-_.                         //        /   /  /
 //  ._-' ,'   `.   `-_                  //       /  /  /
 // !`-_._________`-':::             //     /  / /
 // !   /\ PRISM  /\::::         //    ///
 // ;  /  \EDITOR/..\:::     //    //
-// ! /    \    /....\::  //   //
+// ! /    \    /....\::  //  / //
 // !/      \  /......\:// /
 // ;--.___. \/_.__.--;/
 //  '-_    `:!;;;;;;;'   \
 //     `-_, :!;;;''             \
 //         `-!'                       \\
 
+const initialPrism = 'words';
+const debugMode = false;
+
 class App extends Component {
   constructor(props) {
     super(props);
     let prisms = {
-      'likelihood':   new LLMProbabilityPrism().setActive(true),
-      'words':        new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true),                                                                 
-      'sound':        new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words'),
-      'basic':        new Prism('basic'),                                              
-      'probability':  new Prism('probability', [Feature.Prob]),
-      'dictionary':   new DictionaryPrism("the Spacefarer's Almanac").setActive(true),
+      'likelihood': new LLMProbabilityPrism().setActive(true),
+      'words':      new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true),                                                                 
+      'sound':      new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words'),
+      'basic':      new Prism('basic'),                                              
+      'probability-base':  
+                    new Prism('probability-base'),
+      'dictionary': new DictionaryPrism("the Spacefarer's Almanac").setActive(true),
       // 'critic':       new Prism('critic',      'string'),
     }
     // bind a UI state callback to the prisms
@@ -71,7 +77,8 @@ class App extends Component {
 
     function handleDictResponse(msg) {
       let doc = this._currentDocument();
-      return prisms.dictionary.onSearchResults(msg, doc);
+      let constraints = Constraint.subsetByFeatures(this.state.constraints, this.state.prisms.dictionary.features);
+      prisms.dictionary.onSearchResults(msg, doc, constraints);
     }
 
     let handlers = {
@@ -165,36 +172,21 @@ class App extends Component {
   }
   /* 
    * Saearch for alternate words using each prism.
-   * Aggregate them and display them.
   */
   async doSearch(doc) {
     this.setSearchingState(true); // UI update
 
-    // try {
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
 
     for (let prism of prisms) {
       prism.search(doc, constraints)
     }
-
-    // const searches = prisms.map((prism) => { return prism.search(document, constraints) });
-      // we should only send out the searches here
-      
-      // we need to also register prism.onSearchResult() which will set the result of the search. this will create a message that we should be listening for elsewhere
-      
-    //   // const results = await Promise.all(searches);
-    //   let predictions = results.flat();
-    //   let filteredPredictions = await resolveConstraints(predictions, constraints);
-      
-    //   this.setState({ searchResults: filteredPredictions});
-    // } catch (error) {
-    //   console.error(error);
-    // } finally {
-    //   this.setSearchingState(false);  // UI update
-    // }
   }
   
+  /* 
+  * A callback that is triggered when a prism finishes its .search() operation
+  */
   async onSearchComplete() {
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
@@ -250,7 +242,6 @@ class App extends Component {
     let wordsPrism = this.state.prisms[this.tokenManager.wordsLense]; // which prism represents word breaks
     let searchResults = this.state.searchResults ? this.state.searchResults : [];
     
-
     return (
       <div className="context-container" ref={this.containerRef}>
         <div className="editor-container">
@@ -265,6 +256,43 @@ class App extends Component {
           </div>
           
           <div className="right"> { /* Everything on the right hand side of the screen */}
+            <div className={`inspector`}>
+              {selectionText && selectionText.length > 0 ? <div className="selection-display">"{selectionText}"</div> : ""}
+              {showSelection ? <div className="selection-info">{startIndex} - {endIndex}</div> : ""}
+              
+              {/* Display the selected span and some info about it */}
+              <WordView
+                key={"wordslense"}
+                tokenManager={this.tokenManager} 
+                wordsPrism={wordsPrism}
+                startIndex={startIndex} endIndex={endIndex} 
+                onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
+                debugMode={debugMode}
+              />
+
+              {/* Display the active prisms */}
+              {activePrisms.map((prism) => {
+                return (
+                  <PrismView
+                    key={prism.name}
+                    tokenManager={this.tokenManager} 
+                    prism={prism}
+                    isSearching={prism.isSearching} 
+                    startIndex={startIndex} endIndex={endIndex} 
+                    onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
+                    debugMode={debugMode}
+                    constraints={Constraint.subsetByFeatures(this.state.constraints, prism.features)}
+                    addConstraint={this.addConstraint.bind(this)}
+                    getDocument={() => { return this._currentDocument(); }} // TODO I don't like that onConstraintUpdate needs this, will prob be slow
+                    removeConstraint={this.removeConstraint.bind(this)}
+                  />
+                );
+              })}
+
+              {/* Constrained search results */}
+              <SearchResults results={searchResults} isSearching={this.state.isSearching} wrap={false}/>   {/* onTokenClick={this.onTokenClick.bind(this)} /> */}
+            </div>
+
             <div className="lenses"> { /* A list of each active lense and a checkbox to activate/deactivate them */}
               <select title="add a lense" id="add-lense">
                 {Object.entries(this.state.prisms).map(([name, lense]) => {
@@ -285,45 +313,6 @@ class App extends Component {
                             onHighlightChange={onHighlightChange}>{prism.name}</ActivePrismIndicator>
                 })}
               </span> */}
-            </div>
-
-            <div className={`inspector`}>
-              {selectionText && selectionText.length > 0 ? <div className="selection-display">"{selectionText}"</div> : ""}
-              {showSelection ? <div className="selection-info">{startIndex} - {endIndex}</div> : ""}
-              
-              {/* Display the selected span and some info about it */}
-              <WordView
-                key={"wordslense"}
-                tokenManager={this.tokenManager} 
-                wordsPrism={wordsPrism}
-                startIndex={startIndex} endIndex={endIndex} 
-                onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
-                debugMode={debugMode}
-              />
-
-              {/* Display the active prisms */}
-              {activePrisms.map((prism) => {
-                console.log("debug render", prism.name, prism.features, this.state.constraints.map((c) => c.feature))
-
-                return (
-                  <PrismView
-                    key={prism.name}
-                    tokenManager={this.tokenManager} 
-                    prism={prism}
-                    isSearching={prism.isSearching} 
-                    startIndex={startIndex} endIndex={endIndex} 
-                    onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
-                    debugMode={debugMode}
-                    // TODO fix this
-                    constraints={this.state.constraints.filter((constraint) => prism.features.includes(constraint.feature))}
-                    addConstraint={this.addConstraint.bind(this)}
-                    removeConstraint={this.removeConstraint.bind(this)}
-                  />
-                );
-              })}
-
-              {/* Constrained search results */}
-              <SearchResults results={searchResults} isSearching={this.state.isSearching} wrap={false}/>   {/* onTokenClick={this.onTokenClick.bind(this)} /> */}
             </div>
           </div>
         </div>

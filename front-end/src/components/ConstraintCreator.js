@@ -24,17 +24,17 @@ export class ConstraintCreator extends Component {
   }
 
   render() {
-    console.log("creator for prism", this.props.prism);
+    let prism = this.props.prism;
+
     return <div className="constraint-creator">
       {this.state.tempConstraints.map((constraint) => {
         return <div className="temp-constraint-container" key={constraint.id}> 
-          <ConstraintRender key={constraint.id} constraint={constraint} />
+          <ConstraintRender key={constraint.id} constraint={constraint} onConstraintUpdate={this.props.onConstraintUpdate} />
           <button onClick={() => this.addConstraintToApp(constraint)}> bind </button>
         </div>
       })}
 
-      {this.props.prism.features.map((feature) => {
-        console.log("feature", feature, "for prism", this.props.prism);
+      {prism.features.map((feature) => {
         return <div key={feature.name}>
           <button key={feature.name} onClick={() => this.makeTempConstraint(feature)}> add {feature.name} constraint </button>
           {/* <button onClick={() => this.addConstraint(feature)}>+</button>

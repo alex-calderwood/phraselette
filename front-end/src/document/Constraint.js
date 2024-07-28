@@ -1,10 +1,10 @@
 import { getUniqueUUID } from '../scripts/utils.js';
 import { Feature } from './Feature.js';
 
+// feature -> constraint mapping
 export function makeConstraint(feature, target) {
   let name = feature.name;
   let dataType = feature.dataType;
-  console.log('making constraint', name, dataType, feature, target);
   switch (name) {
     case 'pos':
       target = target.map(token => token?.pos);
@@ -19,7 +19,7 @@ export function makeConstraint(feature, target) {
   
   switch(dataType) {
     case 'number':
-      return new NumericalConstraint(name, feature); // name, feature, targetMin=null, targetMax=null
+      return new NumericalRangeConstraint(name, feature); // name, feature, targetMin=null, targetMax=null
     case 'category':
       return new CategoricalConstraint(name, feature);
   }
@@ -37,6 +37,7 @@ export class Constraint {
     this.span = null;
     this.isPre = false;         // can the constraint be computed quickly?
     this.range = null;          // what are the possible values of the constraint
+    this.filterThreshold = 0;  // what is the minimum score to consider the constraint satisfied
   }
 
   /*
@@ -44,23 +45,30 @@ export class Constraint {
   * 0 means the span does not match the constraint
   * 1 means the span perfectly coheres to the constraint
   */
-  async evaluate(sequence, document) {
+  async getScore(sequence, document) {
     return 0;
+  }
+
+  evaluate(score, sequence, document) {
+    return score > this.filterThreshold;
   }
 
   /*
   * Does the constraint apply to the given span?
-  * TODO perhaps we want to also pass in a token here... since Span character ids might
-  * change as the text edits... need to think through this
   */
   applies(span) {
     return true;
     // TODO implement this kind of logic...
-    // if (this.span === null) {
-    //   return false;
-    // }
+      if (this.span === null) {
+        return false;
+      }
 
-    // return overlaps(this.span, span);
+      return overlaps(this.span, span);
+  }
+
+  static subsetByFeatures(constraints, features) { 
+    // could also hard code the mapping for a speedup
+    return constraints.filter((constraint) => { return features.includes(constraint.feature); });
   }
 }
 
@@ -75,7 +83,7 @@ export class AlliterationConstraint extends Constraint {
     return letter;
   }
 
-  async evaluate(sequence, document) {
+  async getScore(sequence, document) {
     // this is a placeholder
     let token = sequence.span[0];
     let letter = this.firstLetterInToken(token);
@@ -83,10 +91,6 @@ export class AlliterationConstraint extends Constraint {
       return 1;
     }
     return 0;
-  }
-
-  applies(span) {
-    return true;
   }
 }
 
@@ -102,18 +106,21 @@ export class CategoricalConstraint extends Constraint {
     this.range = null;
   }
 
-  async evaluate(sequence, document) {
-    if (sequence.length === 0) {
+  async getScore(sequence, document) {
+    if (sequence === null || sequence.span.length === 0) {
       return 0;
     }
+
     if (this.targetSequence === null || this.targetSequence.length === 0) {
       return 0;
     }
 
+    let tokens = sequence.span;
+
     // zip through the span tokens and the tokens to evaluate
     let matches = 0;
-    for (let i = 0; i < sequence.length; i++) {
-      let newToken = sequence[i];
+    for (let i = 0; i < tokens.length; i++) {
+      let newToken = tokens[i];
       let targetToken = this.targetSequence[i];
       if (targetToken === undefined) {
         console.error('target token is undefined mismatch in token lengths?', i, this.targetSequence, this.newSpan);
@@ -125,7 +132,7 @@ export class CategoricalConstraint extends Constraint {
         matches += 1;
       }
     }
-    let avg = matches / sequence.length;
+    let avg = matches / tokens.length;
     return avg;
   }
 
@@ -247,7 +254,7 @@ class SoundConstraint extends CategoricalConstraint { // untested
   }
 }
 
-export class NumericalConstraint extends Constraint {
+export class NumericalRangeConstraint extends Constraint {
   defaultRange = [0, 1];
 
   constructor(name, feature, targetMin=0, targetMax=1) {
@@ -258,18 +265,17 @@ export class NumericalConstraint extends Constraint {
     this.targetMax = targetMax;
   }
 
-  async evaluate(sequence, document) {
-    if (this.targetMin === null && this.targetMax === null) {
+  async getScore(sequence, document) {
+    if (this.targetMin === null || this.targetMax === null) {
       console.error('Must specify a target for constraint:', this);
       return 0;
     }
-    for (let token of sequence) {
-      let value = this.getValue(token);
-      if (value < this.targetMin || value > this.targetMax) {
-        return 0;
-      }
+
+    let value = sequence.getAttribute(this.feature.name) || 0;
+    if (value < this.targetMin || value > this.targetMax) {
+      return 0;
     }
-    return 
+    return 1;
   }
 
   getValue(token) {

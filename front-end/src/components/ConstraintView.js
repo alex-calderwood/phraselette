@@ -3,7 +3,7 @@ import React, { Component } from "react";
 //   RhymeConstraint, AlliterationConstraint} from "../document/Constraint";
 import { scientific } from "../scripts/utils";
 
-class BasicNumericalConstraintView extends Component {
+class NumericalRangeConstraint extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -118,7 +118,7 @@ const constraintViews = {
   POSConstraint: CategoricalConstraintView,
   SoundConstraint: CategoricalConstraintView,
   RhymeConsntraint: CategoricalConstraintView,
-  NumericalConstraint: BasicNumericalConstraintView,
+  NumericalRangeConstraint: NumericalRangeConstraint,
   AlliterationConstraint: null,
 };
 

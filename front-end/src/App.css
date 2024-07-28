@@ -273,6 +273,7 @@ select {
 button {
   font-size: 14px;
   background-color: var(--accent-color);
+  color: var(--darker-text-color);
   border: none;
   outline: none;
 }

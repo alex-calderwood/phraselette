@@ -84,7 +84,7 @@ export class PrismEditor extends Component {
 
   componentDidUpdate(prevProps, prevState) {
     if (this.state.content !== prevState.content) {
-      console.log('content updated', this.state.content);
+      // console.log('content updated', this.state.content);
     }
   }
 

@@ -21,7 +21,6 @@ class PrismEditableTextFeature extends Component {
     this.setState({ text: value });
     let featureName = this.props.feature.name;
     this.props.prism.updateTextFeature(featureName, value);
-    console.log('value', this.props.prism)
   }
 
   render() {
@@ -61,6 +60,11 @@ export class PrismView extends Component {
     this.forceUpdate();
   }
 
+  onConstraintUpdate() {
+    let document = this.props.getDocument(); // TOOD is this going to be out of date?
+    this.prism.onSearchResults(this.prism.results, document, this.state.constraints);
+  }
+
   removeConstraint() {
     let constraint = this.props.constraints.pop();
     this.props.removeConstraint(constraint);
@@ -73,20 +77,9 @@ export class PrismView extends Component {
           tokenType={prism.name}
           startIndex={start} endIndex={end}
           debugMode={this.props.debugMode} /> 
-              
-        {this.props.constraints.map((constraint) => {
-          return <ConstraintRender key={constraint.id} constraint={constraint} />
-        })}
-          
-        <ConstraintCreator
-          tokens={tokens}
-          startIndex={start} endIndex={end}
-          prism={prism}
-          onAdd={this.props.addConstraint}
-          onRemove={this.removeConstraint.bind(this)}/>
 
         {tokens.map((token) => {
-          return <TokenAlternates 
+          return <TokenAlternates
             token={token}
             key={token.id}
             alternates={token.alternates}
@@ -131,6 +124,19 @@ export class PrismView extends Component {
             tokenType={prism.name} results={results} /> : ""}
 
           {collapsed ? this.additionalContent(prism, start, end, tokens) : ""}
+
+          {activeNotHidden ? this.props.constraints.map((constraint) => {
+            return <ConstraintRender key={constraint.id} constraint={constraint} onConstraintUpdate={this.onConstraintUpdate.bind(this)}/>}) : ""
+          }
+
+          {activeNotHidden ? <ConstraintCreator
+            tokens={tokens}
+            startIndex={start} endIndex={end}
+            prism={prism}
+            onAdd={this.props.addConstraint}
+            onRemove={this.removeConstraint.bind(this)}
+            onConstraintUpdate={this.onConstraintUpdate.bind(this)} /> : "" }
+        
       </div>
     </div>;
   }

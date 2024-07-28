@@ -17,7 +17,7 @@ function assignSocket(socketProtocol, host, extraHandlers){
   });
   socket.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
-    console.log("ws:got", msg);
+    // console.log("ws:got", msg);
     const handlers = {
       "test": msg => console.log("test", msg),
       ...extraHandlers

@@ -7,7 +7,7 @@ export function getColor(type, token) {
   switch (type) {
     case 'basic':
       return categoryToColor(token.text);
-    case 'likelihood': case 'probability': case 'alternate':
+    case 'likelihood': case 'probability-base': case 'alternate':
       return probColor(token);
     case 'words': case 'POS':
       return categoryToColor(token.pos);

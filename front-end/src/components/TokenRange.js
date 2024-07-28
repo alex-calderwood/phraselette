@@ -2,11 +2,10 @@ import React, { Component, createRef } from "react";
 import { getColor, zeroToOneColor } from "../color";
 import { getUniqueUUID, scientific} from "../scripts/utils";
 
-
-function fieldsToShow(tokenType) {
+function tokenItemsToShow(tokenType) {
   let show = {
     'likelihood': [],
-    'probability': ['prob'],
+    'probability-base': ['prob'],
     'alternate': ['prob'],
     'sound': ['sound'],
     'words': ['pos'],
@@ -61,18 +60,25 @@ export class TokenRange extends Component {
     return (
       <div className={"token-range-parent " + overflowing}>
           <div id={'tokenbar-' + tokenType} className={`token-range` + wrap}>
-              {tokens && tokens.map((tokenGroup) => {
-                if (tokenGroup.scores) {
-                  let score = tokenGroup.scores[scoreLookup];
+              {tokens && tokens.map((tokenOrSeq) => {
+                if (tokenOrSeq.span) { // tokenGroup is a sequence
+                  let sequence = tokenOrSeq;
+                  let prob = sequence?.getAttribute('prob');
+                  let probColor = zeroToOneColor(prob);
+                  let score = sequence?.scores[scoreLookup]?.value;
                   let color = zeroToOneColor(score);
                   return <div key={getUniqueUUID()} className="token-span"> 
-                     { tokenGroup.span.map((token) => { return this.renderToken(tokenType, token); }) }
+                     { sequence.span.map((token) => { return this.renderToken(tokenType, token); }) }
                     <div className="item" style={{ backgroundColor: color }}>
                       {scientific(score)}
                     </div>
+                    {prob ? <div className="item" style={{ backgroundColor: probColor }}>
+                      {scientific(prob)}
+                    </div> : ""}
                   </div>
                 } else {
-                  return this.renderToken(tokenType, tokenGroup);
+                  let token = tokenOrSeq;
+                  return this.renderToken(tokenType, token);
                 }
               })}
         </div>
@@ -84,7 +90,7 @@ export class TokenRange extends Component {
     let color = tokenType ? getColor(tokenType, token) : 'white';
     let space = token?.isSpace === true ? 'space' : '';
 
-    let fields = fieldsToShow(tokenType);
+    let fields = tokenItemsToShow(tokenType);
 
     let prob = null;
     if (fields.includes('prob') && token.prob !== undefined) {
