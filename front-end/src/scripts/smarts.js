@@ -221,7 +221,7 @@ async function* callSpacy(context, tokenizeRange, additionalRequests) {
 
   returns: [Token] - a list of tokens spans that satisfy the constraints (each token span is a list of tokens)
 */
-export async function searchForward(document, constraints, depth) {
+export async function searchForward(document, constraints, depth, top_k=50) {
   if (document.prefixText.length === 0) {
     return [];
   }
@@ -230,9 +230,7 @@ export async function searchForward(document, constraints, depth) {
     console.error("searchForward called with invalid depth", depth);
     return [];
   }
-
-  let alternates = 200;
-  let tokenGenerator = callSearch(document.prefixText, alternates, depth);
+  let tokenGenerator = callSearch(document.prefixText, top_k, depth);
 
   let promise = await tokenGenerator.next();
   let predictedSequence = [];
@@ -254,10 +252,10 @@ export async function searchForward(document, constraints, depth) {
   return predictedSequence;
 }
 
-async function* callSearch(prefix, alternates, depth) {
+async function* callSearch(prefix, top_k, depth) {
   const data = {
     text: prefix,
-    top_k: alternates,
+    top_k: top_k,
     depth: depth,
   };
 
@@ -325,7 +323,8 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
   if(maxWords !== null) {
     let wordCount = 0;
     convertedTokens = convertedTokens.filter((token) => {
-      wordCount++; 
+      if (token.isSpace || token.pos == "_SP") { return true; }
+      wordCount++;
       return wordCount <= maxWords;
     });
   }

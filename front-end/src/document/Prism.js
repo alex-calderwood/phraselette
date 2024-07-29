@@ -133,24 +133,27 @@ export class LLMProbabilityPrism extends Prism {
 
     // search settings
     this.minTokens = 1;
-    this.maxTokens = 15;
+    this.maxTokens = 25;
   }
 
   /*
    * Given a document and a list of constraints, return a list of sequences that maximally satisfy the constraints.
   */
   async search(document, constraints) {
-    this.onSearch();
-    let numWords = Math.max(...constraints.map((constraint) => { return constraint?.targetSequence?.length || 0; }));
+    this.onSearch(); // UI
+    let targetSequenceWords = Math.max(...constraints.map((constraint) => { return constraint?.targetSequence?.length || 0; }));
+    let selectionWords = document.selectionText.split(' ').length; // TODO I suppose we should have the tokenized words to calculate this...
+    let numWords = targetSequenceWords > 0 ? targetSequenceWords : selectionWords;
     numWords = Math.max(numWords, 1);
 
     let numTokens = numWords;
-    if (numWords > 1) {
-      let numTokens = Math.floor(numWords * 4/3 + 4);                            // enough tokens to approximate the correct word count
-      numTokens = Math.max(this.minTokens, Math.min(this.maxTokens, numTokens)); // clamp it
-    }
+    let longestExpeectedWordInTokens = 1;
+    numTokens = Math.floor(numWords * 4/3 + longestExpeectedWordInTokens);                            // enough tokens to approximate the correct word count
+    numTokens = Math.max(this.minTokens, Math.min(this.maxTokens, numTokens)); // clamp it
 
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
+
+    console.log('search', {numWords, numTokens, selectionWords, targetSequenceWords})
     await searchForward(document, preConstraints, numTokens).then(
       (predictions) => {
         // TODO document, constraints might have been altererd in the meantime

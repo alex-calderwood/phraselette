@@ -12,10 +12,6 @@ tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
 model = TFGPT2LMHeadModel.from_pretrained("gpt2", pad_token_id=tokenizer.eos_token_id)
 
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import tensorflow as tf
-
 # A function that generates the probabilities of each token in the phrase
 # it also tokenizes strings using the GPT-2 tokenizer
 # So "this is a sentence -> ["this", "is", "a", "sent", "ence"] and their probabilities
@@ -108,76 +104,15 @@ def calculate_offset(offset, extra_context, start_token_offset):
     offset[1] = len(extra_context) + offset[1] - start_token_offset
     return offset
 
+def forward_search(text, top_k=1, depth=1, num_beam_groups=3, eos=tokenizer.eos_token):
+    num_beams = top_k
+    # num_beams = min(top_k, 50)
+    # Ensure num_beams is divisible by num_beam_groups
+    num_beams = (num_beams // num_beam_groups) * num_beam_groups
+    num_beam_groups = min(num_beam_groups, num_beams)
 
-# # Really boring-basic greedy forward search with multiple tokens
-# def forward_search(text, top_k=1, depth=1, eos=tokenizer.eos_token):
-#     # s`pace_token = 1849
-    
-#     encoding = tokenizer.encode_plus(
-#         text,
-#         return_offsets_mapping=True,  # This will return the token offsets
-#         return_tensors='tf'
-#     )
+    print('forward', text, 'k', top_k, 'depth', depth,'beams', num_beams, 'beam groups', num_beam_groups)
 
-#     input_ids = encoding['input_ids'] # Extract input_ids and offsets
-#     offsets   = encoding['offset_mapping']
-#     max_length = len(input_ids[0]) + depth
-
-#     greedy_output_dict = model.generate( # should be of type GenerateDecoderOnlyOutput but is actually TFGreedySearchDecoderOnlyOutput
-#         input_ids, max_length=max_length, output_scores=True, return_dict_in_generate=True, 
-#         do_sample=False,
-#         # eos_token_id=[space_token],
-#         # num_beams=4,
-#         # do_sample=True,
-#         # num_return_sequences=top_k,
-#     )
-
-#     length = len(greedy_output_dict.scores)
-
-#     # the shape of the dictionary
-#     # print('output', greedy_output_dict.scores, type(greedy_output_dict))
-#     offset = offsets[-1, -1, :].numpy().tolist()
-#     initial_offset = [offset[0], offset[1] - 1] # inclusive
-
-#     offset = initial_offset
-#     # print("text", text, 'char', text[offset[1]])
-#     # print("initial offset", offset)
-#     spans = []
-#     for i in range(length - 1):
-#         softmax = tf.nn.softmax(greedy_output_dict.scores[i])[0]
-#         top_k_values, top_k_indices = tf.math.top_k(softmax, k=1)
-
-#         for index, prob in zip(top_k_indices, top_k_values):
-#             text = tokenizer.decode(index)
-#             offset = [offset[1] + 1, offset[1] + len(text)] # inclusive
-#             token = {
-#                 'token': text,
-#                 'prob': float(prob),
-#                 'span': offset,
-#             }
-#             spans.append(token)
-
-#     i = length - 1
-#     softmax = tf.nn.softmax(greedy_output_dict.scores[i])[0]
-#     top_k_values, top_k_indices = tf.math.top_k(softmax, k=top_k)
-
-#     final_offset = [offset[0], offset[1]]
-
-#     # print("final offst", final_offset)
-
-#     for index, prob in zip(top_k_indices, top_k_values):
-#         text = tokenizer.decode(index)
-#         offset = [final_offset[1] + 1, final_offset[1] + len(text)]
-#         token = {
-#             'token': text,
-#             'prob': float(prob),
-#             'span': offset,
-#         }
-#         up_to = spans + [token]
-#         print("yielding", up_to)
-#         yield up_to
-
-def forward_search(text, top_k=1, depth=1, eos=tokenizer.eos_token):
     encoding = tokenizer.encode_plus(
         text,
         return_offsets_mapping=True,
@@ -191,18 +126,20 @@ def forward_search(text, top_k=1, depth=1, eos=tokenizer.eos_token):
     beam_output = model.generate(
         input_ids,
         max_length=max_length,
-        num_beams=top_k,
-        num_return_sequences=top_k,
+        num_beams=num_beams,
+        num_return_sequences=num_beams,
         output_scores=True,
         return_dict_in_generate=True,
         output_attentions=True,
         output_hidden_states=True,
+        diversity_penalty=0.25,
+        num_beam_groups=num_beam_groups,
     )
 
     initial_offset = offsets[-1, -1, :].numpy().tolist()
     initial_offset = [initial_offset[0], initial_offset[1] - 1]  # inclusive
 
-    for beam_idx in range(top_k):
+    for beam_idx in range(num_beams):
         spans = []
         offset = initial_offset.copy()
         
@@ -225,7 +162,17 @@ def forward_search(text, top_k=1, depth=1, eos=tokenizer.eos_token):
             }
             spans.append(token)
 
+        # print('spans', beam_idx, spans)
         yield spans
+
+
+def print_output(output):
+    for span in output:
+        # pprint(span)
+        print(''.join([s['token'] for s in span]))
+        print('------')
+        # pprint(json.dumps(span))
+
 
 if __name__ == "__main__":
     # Example usage
@@ -233,18 +180,5 @@ if __name__ == "__main__":
     #     print(token)
     #     print(json.dumps(token))
 
-    # input_ids = tokenizer.encode("Hello, world!", return_tensors="tf")
-    # outputs = model(input_ids, output_hidden_states=True)
-
-    # print("Hidden states available:", outputs.hidden_states is not None)
-    # if outputs.hidden_states:
-    #     for i, hidden_state in enumerate(outputs.hidden_states):
-    #         print(f"Layer {i} hidden state shape: {hidden_state.shape}")
-
-
-
-    for span in forward_search("And all is all and each is all, and infinite", top_k=1, depth=3):
-        # pprint(span)
-        print(''.join([s['token'] for s in span]))
-        print('------')
-        # pprint(json.dumps(span))
+    output = forward_search("When I was walking down the street today I was surprised to see ", top_k=40, depth=3)
+    print_output(output)
