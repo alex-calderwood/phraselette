@@ -1,4 +1,4 @@
-import { searchForward, miscTokensToWordTokens } from '../scripts/smarts.js';
+import { searchForward, miscTokensToWordTokens, gpt2Tokenize } from '../scripts/smarts.js';
 import { Sequence } from './Sequence.js';
 import { Token } from './Token.js'
 import { sendMessage } from "../scripts/socket";
@@ -115,9 +115,35 @@ export class DictionaryPrism extends Prism {
   }
 
   async onSearchResults(message, document, constraints) {
-    let definitions = message.definitions;
-    let predictions = definitions.map((def) => {return new Sequence([new Token({text: def})])})
-    
+    let words = message.definitions;
+    console.log('got words', words)
+    // let predictions = definitions.map((def) => {return new Sequence([new Token({text: def})])})
+
+     // TODO abstract this
+     // Get probabilities
+     // not the way to do this, returns promises
+    // let predictions = words.map(async (word) => {
+    //   let text = document.prefixText + word;
+    //   console.log('getting tokens for', text)
+    //   let range = [0, text.length];
+    //   let tokens = await gpt2Tokenize(text, { tokenizeRange: range });
+    //   let sequence = new Sequence(tokens);
+    //   setSequenceProb(sequence);
+    //   return sequence;
+    // });
+
+    let predictions = [];
+    for (let word of words) {
+      let text = document.prefixText + word;
+      console.log('getting tokens for', text)
+      let range = [document.prefixText.length, text.length];           // is this range correct?
+      let tokens = await gpt2Tokenize(text, { tokenizeRange: range }); // TODO debug why these are coming through with 0 prob
+      let sequence = new Sequence(tokens);
+      setSequenceProb(sequence);
+      predictions.push(sequence);
+    }
+
+    // get spacy scores
     for (let prediction of predictions) {
       let words = await miscTokensToWordTokens(prediction.span, document);
       prediction.span = words;
@@ -156,7 +182,7 @@ export class LLMProbabilityPrism extends Prism {
     console.log('search', {numWords, numTokens, selectionWords, targetSequenceWords})
     await searchForward(document, preConstraints, numTokens).then(
       (predictions) => {
-        // TODO document, constraints might have been altererd in the meantime
+        // TODO document that constraints might have been altererd in the meantime
         // should copy them if necessary - at least document?
         this.onSearchResults(predictions, document, constraints, numWords)
       }
@@ -164,11 +190,8 @@ export class LLMProbabilityPrism extends Prism {
   }
 
   async onSearchResults(predictions, document, constraints, numWords) {
-    // TODO put this back somewhere
     for (let prediction of predictions) {
-      // average score (to account for different span lengths)
-      let seqProb = prediction.span.reduce((acc, token) => { return acc + token.prob; } , 0) / prediction.span.length;
-      prediction.setAttribute('prob', seqProb);
+      setSequenceProb(prediction)
     }
 
     for (let prediction of predictions) {
@@ -181,4 +204,15 @@ export class LLMProbabilityPrism extends Prism {
 
     super.onSearchResults(predictions, document, constraints);
   }
+}
+
+// TODO put this somewhere better
+function setSequenceProb(sequence) {
+  // average score (to account for different span lengths)
+  let seqProb = sequence.span.reduce((acc, token) => { return acc + token.prob; } , 0) / sequence.span.length;
+  // TODO we should be doing this on logprobs:
+  // let seqProb = sequence.span.reduce((acc, token) => { return acc * token.prob; } , 0);
+  console.log('seqProb', seqProb)
+  sequence.setAttribute('prob', seqProb);
+  return sequence;
 }

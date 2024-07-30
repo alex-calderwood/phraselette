@@ -27,7 +27,6 @@ export class Sequence {
         return null;
     }
 
-
     get text() {
         return this.span.map(token => token.text);
     }

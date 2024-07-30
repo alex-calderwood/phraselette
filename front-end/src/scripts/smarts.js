@@ -115,6 +115,27 @@ export async function spacyTokenize(text, data = {}) {
   return tokens;
 }
 
+export function makeProbToken(rawToken) {
+  return new Token({
+    // rawToken.span is exclusive, our start and end is inclusive
+    'start': rawToken.span[0],
+    'end': rawToken.span[1] - 1,
+    "text": rawToken.token,
+    "type": 'probability-base',
+    "prob": rawToken.prob,
+    "alternates": rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
+      "start": alt.span[0],
+      "end": alt.span[1],
+      "text": alt.token,
+      "prob": alt.prob,
+      "type": "alternate",
+    }) } ) : [],
+  })
+}
+
+/* 
+ * Return a list of tokens and their probabilities. 
+*/
 export async function gpt2Tokenize(text, data = {}) {
   if (badData(text)) return;
 
@@ -123,31 +144,21 @@ export async function gpt2Tokenize(text, data = {}) {
   let alternates = 15; // The number of alternate tokens to return (the highest probability tokens according to the LM)
   let tokenGenerator = callGPT2(text, tokenizeRange, alternates);
 
+  let tokens = [];
   // don't wait for the generator to finish
   // instead, call onToken for each token
   let rawTokenPromise = await tokenGenerator.next();
   while (!rawTokenPromise.done) {
     let rawToken = rawTokenPromise.value;
-    let token = new Token({
-      'start': rawToken.span[0],
-      // rawToken.span[1] is exclusive, our start and end is inclusive
-      'end': rawToken.span[1] - 1,
-      "text": rawToken.token,
-      "type": 'probability-base',
-      "prob": rawToken.prob,
-      "alternates": rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
-        "start": alt.span[0],
-        "end": alt.span[1],
-        "text": alt.token,
-        "prob": alt.prob,
-        "type": "alternate",
-      }) } ) : [],
-    })
+    let token = makeProbToken(rawToken);
+    tokens.push(token);
     if (onToken) {
       onToken(token);
     }
     rawTokenPromise = await tokenGenerator.next();
   }
+
+  return tokens;
 }
 
 export function splitWordTokenize(text, data = {}) {
