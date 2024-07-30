@@ -1,8 +1,9 @@
 import { Token } from "../document/Token.js";
 import { Sequence } from "../document/Sequence.js";
 
-const PYTHON_SERVER = process.env.PYTHON_SERVER || 'http://localhost:5025';
+const PYTHON_SERVER = 'http://localhost:5025';
 console.log(`Communicating with python server at ${PYTHON_SERVER}`);
+console.warn("WARNING TODO THIS ISN'T USING THE ENV VARIABLE");
 
 // Something unlikely to be seen, must match the tokenization in the backend (server.py)
 const breakToken = "&&VE*A=]";
