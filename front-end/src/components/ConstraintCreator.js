@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { makeConstraint } from "../document/Constraint";
+import { makeConstraint } from "../base/Constraint";
 import { ConstraintRender } from "./ConstraintView";
 
 export class ConstraintCreator extends Component {

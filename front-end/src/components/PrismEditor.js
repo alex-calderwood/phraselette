@@ -1,9 +1,9 @@
 import React, { Component } from "react";
 import rangy from 'rangy';
 import { getUniqueUUID, insertAfter } from "../scripts/utils";
-import { TokenManager } from "../document/TokenManager";
+import { TokenManager } from "../base/TokenManager";
 import { getColor } from "../color";
-import { Document } from "../document/Document";
+import { Document } from "../base/Document";
 
 /* 
 * Given character span <span c="5" id="id14acbb15b7e0e"">f</span>

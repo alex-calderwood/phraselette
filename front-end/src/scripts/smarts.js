@@ -1,5 +1,5 @@
-import { Token } from "../document/Token.js";
-import { Sequence } from "../document/Sequence.js";
+import { Token } from "../base/Token.js";
+import { Sequence } from "../base/Sequence.js";
 
 // Something unlikely to be seen, must match the tokenization in the backend (server.py)
 const breakToken = "&&VE*A=]";

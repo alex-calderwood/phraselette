@@ -1,9 +1,9 @@
-import { searchForward, miscTokensToWordTokens } from '../scripts/smarts.js';
-import { Sequence } from './Sequence.js';
-import { Token } from './Token.js'
-import { sendMessage } from "../scripts/socket";
-import { Feature } from './Feature.js';
-import { resolveConstraints } from '../scripts/resolution.js';
+import { searchForward, miscTokensToWordTokens } from '../../scripts/smarts.js';
+import { Sequence } from '../Sequence.js';
+import { Token } from '../Token.js'
+import { sendMessage } from "../../scripts/socket.js";
+import { Feature } from '../Feature.js';
+import { resolveConstraints } from '../../scripts/resolution.js';
 
 export class Prism {
   /**

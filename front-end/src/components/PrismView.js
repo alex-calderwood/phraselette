@@ -4,8 +4,8 @@ import { TokenAlternates } from "./Alternates";
 import { ConstraintRender } from "./ConstraintView";
 import { ConstraintCreator } from "./ConstraintCreator";
 import { SearchResults } from "./SearchResults";
-import { TokenManager } from "../document/TokenManager";
-import { Prism } from "../document/Prism";
+import { TokenManager } from "../base/TokenManager";
+import { Prism } from "../base/prism/Prism";
 
 class PrismEditableTextFeature extends Component {
   constructor(props) {

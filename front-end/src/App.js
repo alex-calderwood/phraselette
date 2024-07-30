@@ -1,11 +1,11 @@
 import "./App.css";
 import React, { Component } from "react";
 
-import { Prism, LLMProbabilityPrism, DictionaryPrism } from "./document/Prism";
-import { TokenManager } from "./document/TokenManager";
-import { Document } from "./document/Document"
-import { Constraint } from "./document/Constraint";
-import { Feature } from "./document/Feature";
+import { Prism, LLMProbabilityPrism, DictionaryPrism } from "./base/prism/Prism";
+import { TokenManager } from "./base/TokenManager";
+import { Document } from "./base/Document"
+import { Constraint } from "./base/Constraint";
+import { Feature } from "./base/Feature";
 
 import { WordView } from "./components/WordView";
 import { PrismEditor } from "./components/PrismEditor";

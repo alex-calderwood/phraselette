@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 // import { Constraint, CategoricalConstraint, POSConstraint, 
-//   RhymeConstraint, AlliterationConstraint} from "../document/Constraint";
+//   RhymeConstraint, AlliterationConstraint} from "../base/Constraint";
 import { scientific } from "../scripts/utils";
 
 class NumericalRangeConstraint extends Component {
