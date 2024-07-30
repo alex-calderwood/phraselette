@@ -10,6 +10,7 @@ function tokenItemsToShow(tokenType) {
     'sound': ['sound'],
     'words': ['pos'],
     'search': ['pos', 'sound'],
+    'dictionary': ['prob', 'pos', 'sound'],
   };
   return show[tokenType] || [];
 }

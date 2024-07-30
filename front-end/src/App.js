@@ -1,7 +1,9 @@
 import "./App.css";
 import React, { Component } from "react";
 
-import { Prism, LLMProbabilityPrism, DictionaryPrism } from "./base/prism/Prism";
+import { Prism } from "./base/prism/Prism";
+import { LLMProbabilityPrism } from "./base/prism/LLMPrism";
+import { DictionaryPrism } from "./base/prism/DictionaryPrism";
 import { TokenManager } from "./base/TokenManager";
 import { Document } from "./base/Document"
 import { Constraint } from "./base/Constraint";

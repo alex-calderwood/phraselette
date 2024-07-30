@@ -36,7 +36,7 @@ export class PrismEditor extends Component {
     this.editorNode.addEventListener('keyup', this.onKeyUp.bind(this));
     // this.editorNode.addEventListener('focus', this.handleFocus);
 
-    let initializationText = "|";
+    let initializationText = "A";
     let content = [];
     let initialId = getUniqueUUID();
     for (let i = 0; i < initializationText.length; i++) {

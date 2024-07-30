@@ -115,6 +115,27 @@ export async function spacyTokenize(text, data = {}) {
   return tokens;
 }
 
+export function makeProbToken(rawToken) {
+  return new Token({
+    // rawToken.span is exclusive, our start and end is inclusive
+    'start': rawToken.span[0],
+    'end': rawToken.span[1] - 1,
+    "text": rawToken.token,
+    "type": 'probability-base',
+    "prob": rawToken.prob,
+    "alternates": rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
+      "start": alt.span[0],
+      "end": alt.span[1],
+      "text": alt.token,
+      "prob": alt.prob,
+      "type": "alternate",
+    }) } ) : [],
+  })
+}
+
+/* 
+ * Return a list of tokens and their probabilities. 
+*/
 export async function gpt2Tokenize(text, data = {}) {
   if (badData(text)) return;
 
@@ -123,31 +144,21 @@ export async function gpt2Tokenize(text, data = {}) {
   let alternates = 15; // The number of alternate tokens to return (the highest probability tokens according to the LM)
   let tokenGenerator = callGPT2(text, tokenizeRange, alternates);
 
+  let tokens = [];
   // don't wait for the generator to finish
   // instead, call onToken for each token
   let rawTokenPromise = await tokenGenerator.next();
   while (!rawTokenPromise.done) {
     let rawToken = rawTokenPromise.value;
-    let token = new Token({
-      'start': rawToken.span[0],
-      // rawToken.span[1] is exclusive, our start and end is inclusive
-      'end': rawToken.span[1] - 1,
-      "text": rawToken.token,
-      "type": 'probability-base',
-      "prob": rawToken.prob,
-      "alternates": rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
-        "start": alt.span[0],
-        "end": alt.span[1],
-        "text": alt.token,
-        "prob": alt.prob,
-        "type": "alternate",
-      }) } ) : [],
-    })
+    let token = makeProbToken(rawToken);
+    tokens.push(token);
     if (onToken) {
       onToken(token);
     }
     rawTokenPromise = await tokenGenerator.next();
   }
+
+  return tokens;
 }
 
 export function splitWordTokenize(text, data = {}) {
@@ -221,7 +232,7 @@ async function* callSpacy(context, tokenizeRange, additionalRequests) {
 
   returns: [Token] - a list of tokens spans that satisfy the constraints (each token span is a list of tokens)
 */
-export async function searchForward(document, constraints, depth) {
+export async function searchForward(document, constraints, depth, top_k=50) {
   if (document.prefixText.length === 0) {
     return [];
   }
@@ -230,9 +241,7 @@ export async function searchForward(document, constraints, depth) {
     console.error("searchForward called with invalid depth", depth);
     return [];
   }
-
-  let alternates = 200;
-  let tokenGenerator = callSearch(document.prefixText, alternates, depth);
+  let tokenGenerator = callSearch(document.prefixText, top_k, depth);
 
   let promise = await tokenGenerator.next();
   let predictedSequence = [];
@@ -254,10 +263,10 @@ export async function searchForward(document, constraints, depth) {
   return predictedSequence;
 }
 
-async function* callSearch(prefix, alternates, depth) {
+async function* callSearch(prefix, top_k, depth) {
   const data = {
     text: prefix,
-    top_k: alternates,
+    top_k: top_k,
     depth: depth,
   };
 
@@ -325,7 +334,8 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
   if(maxWords !== null) {
     let wordCount = 0;
     convertedTokens = convertedTokens.filter((token) => {
-      wordCount++; 
+      if (token.isSpace || token.pos == "_SP") { return true; }
+      wordCount++;
       return wordCount <= maxWords;
     });
   }

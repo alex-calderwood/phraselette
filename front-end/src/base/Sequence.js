@@ -27,8 +27,12 @@ export class Sequence {
         return null;
     }
 
+    get textContent() {
+        return this.span.map(token => token.text).join('');
+    }
 
-    get text() {
-        return this.span.map(token => token.text);
+    get strippedTextContent() {
+        console.log('span', this.span)
+        return this.span.map(token => token.text).join('').trim();
     }
 }

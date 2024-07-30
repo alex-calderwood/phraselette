@@ -1,0 +1,68 @@
+import { miscTokensToWordTokens, gpt2Tokenize } from '../../scripts/smarts.js';
+import { Sequence } from '../Sequence.js';
+import { sendMessage } from "../../scripts/socket.js";
+import { Prism, setSequenceProb } from './Prism.js';
+
+export class DictionaryPrism extends Prism {
+  constructor(description) {
+    super('dictionary', []);
+    this.textFeatures = {
+      'description': {text: description, name: 'description'}
+    }
+    this.subTitle = description;
+  }
+
+  updateTextFeature(featureName, value) {
+    this.textFeatures[featureName].text = value;
+    this.subTitle = value;
+  }
+
+  async search(document, constraints) {
+    this.onSearch();
+    let description = this.textFeatures.description.text;
+    console.log('searching with description', description)
+    sendMessage({
+      type: "dictionary",
+      word: document.selectionText,
+      description: description,
+    });
+  }
+
+  async onSearchResults(message, document, constraints) {
+    let words = message.definitions;
+    console.log('got words', words)
+    // let predictions = definitions.map((def) => {return new Sequence([new Token({text: def})])})
+
+     // TODO abstract this
+     // Get probabilities
+     // not the way to do this, returns promises
+    // let predictions = words.map(async (word) => {
+    //   let text = document.prefixText + word;
+    //   console.log('getting tokens for', text)
+    //   let range = [0, text.length];
+    //   let tokens = await gpt2Tokenize(text, { tokenizeRange: range });
+    //   let sequence = new Sequence(tokens);
+    //   setSequenceProb(sequence);
+    //   return sequence;
+    // });
+
+    let predictions = [];
+    for (let word of words) {
+      let text = document.prefixText + word;
+      console.log('getting tokens for', text)
+      let range = [document.prefixText.length, text.length];           // is this range correct?
+      let tokens = await gpt2Tokenize(text, { tokenizeRange: range }); // TODO debug why these are coming through with 0 prob
+      let sequence = new Sequence(tokens);
+      setSequenceProb(sequence);
+      predictions.push(sequence);
+    }
+
+    // get spacy scores
+    for (let prediction of predictions) {
+      let words = await miscTokensToWordTokens(prediction.span, document);
+      prediction.span = words;
+    }
+    
+    super.onSearchResults(predictions, document, constraints);
+  }
+}
