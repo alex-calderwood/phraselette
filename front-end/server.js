@@ -62,8 +62,8 @@ app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
 });
 
-server.listen(myPort, () => {
-  console.log(`Server running on port ${myPort}`);
+server.listen(myPort, myHostname, () => {
+  console.log(`Server running on at ${myHostname} on port ${myPort}`);
 });
 
 // WebSocket connection handling
