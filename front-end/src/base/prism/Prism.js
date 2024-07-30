@@ -95,7 +95,6 @@ export function setSequenceProb(sequence) {
   let seqProb = sequence.span.reduce((acc, token) => { return acc + token.prob; } , 0) / sequence.span.length;
   // TODO we should be doing this on logprobs:
   // let seqProb = sequence.span.reduce((acc, token) => { return acc * token.prob; } , 0);
-  console.log('seqProb', seqProb)
   sequence.setAttribute('prob', seqProb);
   return sequence;
 }

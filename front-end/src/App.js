@@ -2,12 +2,10 @@ import "./App.css";
 import React, { Component } from "react";
 
 import { Prism } from "./base/prism/Prism";
-import { LLMProbabilityPrism } from "./base/prism/LLMPrism";
-import { DictionaryPrism } from "./base/prism/DictionaryPrism";
+import { possibilities } from "./base/prism/possibilities";
 import { TokenManager } from "./base/TokenManager";
 import { Document } from "./base/Document"
 import { Constraint } from "./base/Constraint";
-import { Feature } from "./base/Feature";
 
 import { WordView } from "./components/WordView";
 import { PrismEditor } from "./components/PrismEditor";
@@ -16,7 +14,6 @@ import { SearchResults } from "./components/SearchResults";
 
 import { resolveConstraints } from "./scripts/resolution";
 import { assignSocket } from "./scripts/socket";
-import { ConstraintRender } from "./components/ConstraintView";
  
 //         *-*.                                 //        /    /    /
 //      _-',^. `-_.                         //        /   /  /
@@ -37,16 +34,7 @@ const debugMode = false;
 class App extends Component {
   constructor(props) {
     super(props);
-    let prisms = {
-      'likelihood': new LLMProbabilityPrism().setActive(true),
-      'words':      new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true),                                                                 
-      'sound':      new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words'),
-      'basic':      new Prism('basic'),                                              
-      'probability-base':  
-                    new Prism('probability-base'),
-      'dictionary': new DictionaryPrism("the Spacefarer's Almanac").setActive(true),
-      // 'critic':       new Prism('critic',      'string'),
-    }
+    let prisms = possibilities();
     // bind a UI state callback to the prisms
     for(let prism of Object.values(prisms)) {
       prism.onSearchComplete = this.onSearchComplete.bind(this);
@@ -83,8 +71,16 @@ class App extends Component {
       prisms.dictionary.onSearchResults(msg, doc, constraints);
     }
 
+    function handleCriticResponse(msg) {
+      let doc = this._currentDocument();
+      // TOOD rename this function call it doesn't explain what's happening
+      let constraints = Constraint.subsetByFeatures(this.state.constraints, this.state.prisms.critic.features);
+      prisms.critic.onSearchResults(msg, doc, constraints);
+    }
+
     let handlers = {
       "dictionaryResponse": handleDictResponse.bind(this),
+      "criticResponse": handleCriticResponse.bind(this),
     }
     assignSocket(socketProtocol, loc.host+'/'+loc.hash.replace('#', '?'), handlers)
   }

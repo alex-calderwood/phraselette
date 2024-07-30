@@ -30,7 +30,6 @@ export class LLMProbabilityPrism extends Prism {
 
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
 
-    console.log('search', {numWords, numTokens, selectionWords, targetSequenceWords})
     await searchForward(document, preConstraints, numTokens).then(
       (predictions) => {
         // TODO document that constraints might have been altererd in the meantime
@@ -50,7 +49,9 @@ export class LLMProbabilityPrism extends Prism {
       prediction.span = words;
     }
     
-    // remove NaN
+    // deduplicate based on strippedTextContent
+    predictions = this.deduplicate(predictions);
+    // remove bad predicitons
     predictions = predictions.filter((prediction) => { return !this.badPrediction(prediction) });
 
     super.onSearchResults(predictions, document, constraints);
@@ -59,9 +60,21 @@ export class LLMProbabilityPrism extends Prism {
   badPrediction(prediction) {
     if(isNaN(prediction.getAttribute('prob'))) { return true; }
     if(prediction.span.length === 0) { return true; }
-    console.log(this.STOPLIST, prediction.strippedTextContent, this.STOPLIST.has(prediction.strippedTextContent));
     if(this.STOPLIST.has(prediction.strippedTextContent)) { return true; }
 
     return false;
+  }
+
+  deduplicate(predictions) {
+    const seen = new Set();
+    const deduplicated = predictions.filter(prediction => {
+      const content = prediction.strippedTextContent;
+      if (!seen.has(content)) {
+        seen.add(content);
+        return true;
+      }
+      return false;
+    });
+    return deduplicated;
   }
 }
