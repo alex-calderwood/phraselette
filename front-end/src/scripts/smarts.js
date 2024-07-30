@@ -1,6 +1,9 @@
 import { Token } from "../document/Token.js";
 import { Sequence } from "../document/Sequence.js";
 
+const PYTHON_SERVER = process.env.PYTHON_SERVER || 'http://localhost:5025';
+console.log(`Communicating with python server at ${PYTHON_SERVER}`);
+
 // Something unlikely to be seen, must match the tokenization in the backend (server.py)
 const breakToken = "&&VE*A=]";
 
@@ -23,7 +26,7 @@ function makeTokenizationRange(text, data) {
 
 async function* streamFromServer(endpoint, data) {
   try {
-    const response = await fetch(`http://127.0.0.1:5000/${endpoint}`, {
+    const response = await fetch(`${PYTHON_SERVER}/${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

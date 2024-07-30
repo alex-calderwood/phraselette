@@ -4,18 +4,11 @@ A text editor for viewing your text in many different ways...
 
 # Start the Front End
 
-You will need a credential.json (move `credential.json` into `front-end/src`)
-
-    cd front-end/
-    npm start
-
-## Reminder on how to set up node
-
-To use a specific node version
+You will need a credential.json (move `credential.json` into `front-end/`)
 
     nvm use 16
-    npm install yarn
-    yarn add react react-dom
+    cd front-end/
+    PYTHON_SERVER=http://10.128.1.24:5025 npm start
 
 # Start the backend
 
@@ -25,5 +18,4 @@ I recommend you create a new python environment because this uses transformers, 
     pip install -r requirements.txt
     python -m spacy download en_core_web_sm
     export FLASK_APP="server.py"
-    
-    flask run
+    flask run --host 0.0.0.0 --port 5025

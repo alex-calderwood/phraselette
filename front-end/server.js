@@ -12,8 +12,8 @@ const ws = require("ws");
 const {handleDictionary, testClaude} = require('./src/server/dictionary.js');
 
 // config
-const myHostname = "localhost";
-const myPort = 5001;
+const myHostname = "0.0.0.0";
+const myPort = 5026;
 
 const app = express();
 const server = http.createServer(app);
@@ -27,6 +27,10 @@ app.use(webpackDevMiddleware(compiler, {
   publicPath: config.output.publicPath
 }));
 
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
 
 // Enable hot-reloading
 app.use(webpackHotMiddleware(compiler, {
@@ -34,6 +38,10 @@ app.use(webpackHotMiddleware(compiler, {
   path: '/__webpack_hmr',
   heartbeat: 10 * 1000
 }));
+
+app.get('/test', (req, res) => {
+  res.send('Node.js server is working!');
+});
 
 // API routes
 app.get('/api/external', async (req, res) => {
