@@ -28,7 +28,8 @@ export class DictionaryPrism extends Prism {
     });
   }
 
-  async onSearchResults(message, document, constraints) {
+  async onSearchResults(insights, document, constraints) {
+    let message = insights.message;
     let words = message.definitions;
     console.log('got words', words)
     // let predictions = definitions.map((def) => {return new Sequence([new Token({text: def})])})
@@ -63,6 +64,6 @@ export class DictionaryPrism extends Prism {
       prediction.span = words;
     }
     
-    super.onSearchResults(predictions, document, constraints);
+    super.onSearchResults({predictions: predictions}, document, constraints);
   }
 }

@@ -9,8 +9,8 @@ export function possibilities() {
     return {
       'words':      new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true),                                                                 
       'likelihood': new LLMProbabilityPrism().setActive(true),
-    //   'dictionary': new DictionaryPrism("the Spacefarer's Almanac").setActive(true),
-      'critic':     new CriticPrism('a grumpy circus clown').setActive(true),
+      'critic':     new CriticPrism('a grumpy circus clown'),
+      'dictionary': new DictionaryPrism("the Spacefarer's Almanac"),
       'sound':      new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words'),
       'basic':      new Prism('basic'),         
       'probability-base':  

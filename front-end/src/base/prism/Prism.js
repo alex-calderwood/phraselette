@@ -24,7 +24,7 @@ export class Prism {
     
     this.features = features || [];
     this.textFeatures = [];
-    this.results = null;
+    this.insights = null;
 
     // UI Variables
     this.hidden = false;
@@ -45,12 +45,15 @@ export class Prism {
     this.isSearching = true;
   }
 
-  async onSearchResults(predictions, document, constraints) {
-    // TODO resolve the constraints here
-    // only save the ones that pass I think
-    this.results = await resolveConstraints(predictions, constraints);
-
-    console.log('search results', this.name, this.results);
+  /*
+   * Each search should return an insights dictionary. 
+   * Insights might be in the form of token predictions or any other data that can be given to the user to comment on their text. 
+  */
+  async onSearchResults(insights, document, constraints) {
+    let predictions = insights.predictions;
+    let results = await resolveConstraints(predictions, constraints);
+    console.log(`search results for ${this.name}:`, results);
+    this.insights = {results: results, ...insights};
 
     this.isSearching = false;
     this.onSearchComplete(this);

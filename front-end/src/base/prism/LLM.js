@@ -34,12 +34,14 @@ export class LLMProbabilityPrism extends Prism {
       (predictions) => {
         // TODO document that constraints might have been altererd in the meantime
         // should copy them if necessary - at least document?
-        this.onSearchResults(predictions, document, constraints, numWords)
+        this.onSearchResults({predictions: predictions}, document, constraints, numWords)
       }
     )
   }
 
-  async onSearchResults(predictions, document, constraints, numWords) {
+  async onSearchResults(insights, document, constraints, numWords) {
+    let predictions = insights.predictions
+
     for (let prediction of predictions) {
       setSequenceProb(prediction)
     }
@@ -54,7 +56,8 @@ export class LLMProbabilityPrism extends Prism {
     // remove bad predicitons
     predictions = predictions.filter((prediction) => { return !this.badPrediction(prediction) });
 
-    super.onSearchResults(predictions, document, constraints);
+
+    super.onSearchResults({predictions: predictions}, document, constraints);
   }
 
   badPrediction(prediction) {

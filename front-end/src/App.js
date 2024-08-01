@@ -68,14 +68,14 @@ class App extends Component {
     function handleDictResponse(msg) {
       let doc = this._currentDocument();
       let constraints = Constraint.subsetByFeatures(this.state.constraints, this.state.prisms.dictionary.features);
-      prisms.dictionary.onSearchResults(msg, doc, constraints);
+      prisms.dictionary.onSearchResults({message: msg}, doc, constraints);
     }
 
     function handleCriticResponse(msg) {
       let doc = this._currentDocument();
       // TOOD rename this function call it doesn't explain what's happening
       let constraints = Constraint.subsetByFeatures(this.state.constraints, this.state.prisms.critic.features);
-      prisms.critic.onSearchResults(msg, doc, constraints);
+      prisms.critic.onSearchResults({message: msg}, doc, constraints);
     }
 
     let handlers = {

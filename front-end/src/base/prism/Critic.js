@@ -24,31 +24,33 @@ export class CriticPrism extends Prism {
       type: "critic",
       context: document.prefixText,
       selection: document.selectionText,
+
       description: description,
     });
   }
 
-  async onSearchResults(message, document, constraints) {
-    let words = message.definitions;
-    console.log('got words', words)
+  async onSearchResults(insights, document, constraints) {
+    let message = insights.message;
+    // let words = message.definitions;
+    // console.log('got words', words)
 
-    let predictions = [];
-    for (let word of words) {
-      let text = document.prefixText + word;
-      console.log('getting tokens for', text)
-      let range = [document.prefixText.length, text.length];           // is this range correct?
-      let tokens = await gpt2Tokenize(text, { tokenizeRange: range }); // TODO debug why these are coming through with 0 prob
-      let sequence = new Sequence(tokens);
-      setSequenceProb(sequence);
-      predictions.push(sequence);
-    }
+    // let predictions = [];
+    // for (let word of words) {
+    //   let text = document.prefixText + word;
+    //   console.log('getting tokens for', text)
+    //   let range = [document.prefixText.length, text.length];           // is this range correct?
+    //   let tokens = await gpt2Tokenize(text, { tokenizeRange: range }); // TODO debug why these are coming through with 0 prob
+    //   let sequence = new Sequence(tokens);
+    //   setSequenceProb(sequence);
+    //   predictions.push(sequence);
+    // }
 
-    // get spacy scores
-    for (let prediction of predictions) {
-      let words = await miscTokensToWordTokens(prediction.span, document);
-      prediction.span = words;
-    }
+    // // get spacy scores
+    // for (let prediction of predictions) {
+    //   let words = await miscTokensToWordTokens(prediction.span, document);
+    //   prediction.span = words;
+    // }
     
-    super.onSearchResults(predictions, document, constraints);
+    super.onSearchResults( {predictions: [], text: message.response}, document, constraints);
   }
 }

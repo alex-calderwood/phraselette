@@ -61,8 +61,9 @@ export class PrismView extends Component {
   }
 
   onConstraintUpdate() {
-    let document = this.props.getDocument(); // TOOD is this going to be out of date?
-    this.prism.onSearchResults(this.prism.results, document, this.state.constraints);
+    // Doesn't seem to do anything yet
+    let document = this.props.getDocument(); // TODO is this going to be out of date?
+    this.prism.onSearchResults({predictions: this.prism.results}, document, this.state.constraints);
   }
 
   removeConstraint() {
@@ -96,11 +97,14 @@ export class PrismView extends Component {
     let end = this.props.endIndex;
 
     let tokens = start !== null ? this.tokenManager.tokensAt(prism.parentToken, start, end) : [];
-    let results = prism.results || [];
+    let results = prism?.insights?.results || [];
+
+    let text = prism?.insights?.text || null;
 
     let activeNotHidden = prism.active && !prism.hidden;
     let collapsed       = activeNotHidden && tokens.length > 0;
     let showResults     = activeNotHidden && (results.length > 0 || this.props.isSearching)
+    let showtext        = activeNotHidden && text;
     let displayingFull  = collapsed || showResults;
 
     let rotated = activeNotHidden ? "rotated" : "";
@@ -122,6 +126,8 @@ export class PrismView extends Component {
           {showResults ? <SearchResults 
             isSearching={this.props.isSearching} 
             tokenType={prism.name} results={results} /> : ""}
+
+          {showtext ? <div className="text">{text}</div> : ""}
 
           {collapsed ? this.additionalContent(prism, start, end, tokens) : ""}
 

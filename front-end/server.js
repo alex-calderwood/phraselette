@@ -8,7 +8,7 @@ const path = require('path');
 const http = require('http');
 const ws = require("ws");
 
-const {handleDictionary, queryCritic} = require('./src/server/dictionary.js');
+const {handleDictionary, queryCritic} = require('./src/server/queries.js');
 
 // config
 const myHostname = "localhost";
