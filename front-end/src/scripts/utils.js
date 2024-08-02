@@ -1,5 +1,5 @@
 export function getUniqueUUID() {
-  var id = 'id' + Math.random().toString(16).slice(2);
+  var id = 'id-' + Math.random().toString(16).slice(2);
   return id; // TODO small chance of collision, 
 }
 

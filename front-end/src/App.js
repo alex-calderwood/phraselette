@@ -2,7 +2,7 @@ import "./App.css";
 import React, { Component } from "react";
 
 import { Prism } from "./base/prism/Prism";
-import { availablePrismTypes, initialPrisms, getDefaultPrism } from "./base/prism/prismCreator";
+import { initialPrisms, makePrism} from "./base/prism/prismCreator";
 import { TokenManager } from "./base/TokenManager";
 import { Document } from "./base/Document"
 import { Constraint } from "./base/Constraint";
@@ -28,21 +28,22 @@ import { assignSocket } from "./scripts/socket";
 //     `-_, :!;;;''             \
 //         `-!'                       \\
 
-const initialPrism = 'words';
+const initialPrismType = 'words';
 const debugMode = false;
 
 class App extends Component {
   constructor(props) {
     super(props);
-    let prisms = initialPrisms();
-    for(let prism of Object.values(prisms)) { // bind a UI state callback to the prisms
-      prism.onSearchComplete = this.onSearchComplete.bind(this);
+
+    this.prismCallbacks = {
+      onSearchComplete: this.onSearchComplete.bind(this),
     }
+    let prisms = initialPrisms(this.prismCallbacks);
 
     let activePrisms = Prism.getActive(prisms);
     this.tokenManager = new TokenManager(activePrisms);
     window.tokenManager = this.tokenManager; // for debugging
-    let prismToHighlight = getDefaultPrism(initialPrism);
+    let prismToHighlight = Prism.getByType(activePrisms, initialPrismType);
     console.log('initial prism to highlight', prismToHighlight);
 
     this.text = null;
@@ -66,17 +67,17 @@ class App extends Component {
 
     function handleDictResponse(msg) {
       let doc = this._currentDocument();
-      let dictPrism = Prism.getByType(this.state.prisms, 'dictionary')[0]; // TODO msg should have the dict id
+      let dictPrism = Prism.getByID(this.state.prisms, msg.prism);
       let constraints = Constraint.subsetByFeatures(this.state.constraints, dictPrism.features);
       dictPrism.onSearchResults({message: msg}, doc, constraints);
     }
 
     function handleCriticResponse(msg) {
       let doc = this._currentDocument();
-      // TOOD rename this function call it doesn't explain what's happening
-      let criticPrism = Prism.getByType(this.state.prisms, 'critic')[0]; // TODO msg should have the dict id
-      let constraints = Constraint.subsetByFeatures(this.state.constraints, criticPrism.features);
-      criticPrism.onSearchResults({message: msg}, doc, constraints);
+      let critic = Prism.getByID(this.state.prisms, msg.prism);
+      console.log('critic prism', critic, this.state.prisms, msg);
+      let constraints = Constraint.subsetByFeatures(this.state.constraints, critic.features);
+      critic.onSearchResults({message: msg}, doc, constraints);
     }
 
     let handlers = {
@@ -118,7 +119,8 @@ class App extends Component {
   */
   handleAddPrism() {
     const selectedPrismType = document.getElementById('add-lense').value;
-    const prism = getDefaultPrism(selectedPrismType);
+    const prism = makePrism(selectedPrismType, this.prismCallbacks);
+    console.log("making prism", prism);
 
     // tell the editor it is active and should be the current highlighted prism
     prism.setActive(true);
@@ -127,7 +129,10 @@ class App extends Component {
     
     // update the state
     let prisms = this.state.prisms;
-    this.setState({ activePrisms: Prism.getActive(prisms) });
+    this.setState({ 
+      prisms: {...prisms, [prism.id]: prism},
+      activePrisms: Prism.getActive(prisms)
+    });
 
     // update the tokenManager
     this.tokenManager.setActivePrism(prism, true);
@@ -297,7 +302,7 @@ class App extends Component {
 
             <div className="lenses"> { /* A list of each active lense and a checkbox to activate/deactivate them */}
               <select title="add a lense" id="add-lense">
-                {Object.values(availablePrismTypes()).map((prismType) => {
+                {Object.values(Prism.TYPES).map((prismType) => {
                   return <option key={prismType} value={prismType}>{prismType}</option>;
                 })}
               </select>

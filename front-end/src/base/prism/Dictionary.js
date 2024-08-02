@@ -25,6 +25,7 @@ export class DictionaryPrism extends Prism {
       type: "dictionary",
       word: document.selectionText,
       description: description,
+      prism: this.id,
     });
   }
 

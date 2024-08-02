@@ -2,6 +2,7 @@ import { resolveConstraints } from '../../scripts/resolution.js';
 import { getUniqueUUID } from '../../scripts/utils.js';
 
 export class Prism {
+  static TYPES = ['words', 'likelihood', 'critic', 'dictionary', 'sound', 'basic', 'probability-base'];
   /**
    * Create a Prism.
    * @param {string} type - The category of the prism
@@ -94,6 +95,15 @@ export class Prism {
     return Object.values(prisms).filter((prism) => {
       return prism.type === type;
     });
+  }
+
+  static getByID(prisms, id) {
+    for (let key in prisms) {
+      if (prisms[key].id === id) {
+        return prisms[key];
+      }
+    }
+    return null;
   }
 
   /* 

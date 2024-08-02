@@ -12,6 +12,7 @@ async function queryDictionary(message, clientSocket) {
     clientSocket.send(JSON.stringify({
         type: "dictionaryResponse",
         definitions: definitions,
+        prism: message.prism,
     }))
 }
 
@@ -27,6 +28,7 @@ async function queryCritic(message, clientSocket) {
     clientSocket.send(JSON.stringify({
         type: "criticResponse",
         response: response,
+        prism: message.prism,
     }))
 }
 

@@ -25,6 +25,7 @@ export class CriticPrism extends Prism {
       context: document.prefixText,
       selection: document.selectionText,
       description: description,
+      prism: this.id,
     });
   }
 

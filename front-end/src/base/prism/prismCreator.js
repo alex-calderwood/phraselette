@@ -14,47 +14,52 @@ const roles = {
 }
 
 /* randomly select a role from the roles */
-function randomRole(prism) {
-  let role = roles[prism.type];
+function randomRole(type) {
+  let role = roles[type];
   if(role) {
     return role[Math.floor(Math.random() * role.length)];
   }
-  throw new TypeError('Invalid prism or prism name not found in roles');
+  throw new TypeError('Invalid prism or prism name not found in roles', type);
 }
 
-let possibilities = {
-  'words':      new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true),                                                                 
-  'likelihood': new LLMProbabilityPrism().setActive(true),
-  'critic':     new CriticPrism('a grumpy circus clown'),
-  'dictionary': new DictionaryPrism("the Spacefarer's Almanac"),
-  'sound':      new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words'),
-  'basic':      new Prism('basic'),         
-  'probability-base':  
-                new Prism('probability-base'),
-}
-
-function convertToPrismIdKeys(possibilities) {
-  const newDict = {};
-  
-  for (const [key, prism] of Object.entries(possibilities)) {
-    if (prism && typeof prism === 'object') {
-      newDict[prism.id] = prism;
-    } else {
-      console.warn(`Skipping entry '${key}': Not a valid Prism object`);
-    }
+export function makePrism(type, callbacks) {
+  let prism = null;
+  switch(type) {
+    case 'words':
+      prism = new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true);
+      break;
+    case 'likelihood':
+      prism = new LLMProbabilityPrism().setActive(true);
+      break;
+    case 'critic':
+      prism = new CriticPrism(randomRole('critic'));
+      break;
+    case 'dictionary':
+      prism = new DictionaryPrism(randomRole('dictionary'));
+      break;
+    case 'sound':
+      prism = new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words');
+      break;
+    case 'basic':
+      prism = new Prism('basic');
+      break;
+    case 'probability-base':
+      prism = new Prism('probability-base');
+      break;
   }
-  
-  return newDict;
+
+  if (prism === null) {
+    throw new TypeError('Invalid prism type', type);
+  }
+
+  prism.onSearchComplete = callbacks.onSearchComplete;
+  return prism;
 }
 
-export function initialPrisms() {
-  return convertToPrismIdKeys(possibilities);
-}
-
-export function availablePrismTypes() {
-  return Object.keys(possibilities);
-}
-
-export function getDefaultPrism(type) {
-  return possibilities[type];
+export function initialPrisms(callbacks) {
+  return Prism.TYPES.reduce((acc, type) => {
+      let prism = makePrism(type, callbacks);
+      acc[prism.id] = prism
+      return acc;
+  }, {});
 }

@@ -46,7 +46,7 @@ export class ConstraintCreator extends Component {
         onMouseLeave={this.handleMouseLeave}
       >
 
-      {!this.state.showFullCreator && <div className="add-constraint major-text"> Add constraint </div>}
+      {!this.state.showFullCreator && this.props.prism.features.length > 0 && <div className="add-constraint major-text"> Add constraint </div>}
 
       {this.state.showFullCreator && this.state.tempConstraints.map((constraint) => {
         return <div className="temp-constraint-container" key={constraint.id}> 
