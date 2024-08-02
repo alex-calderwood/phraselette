@@ -3,10 +3,10 @@ import { Feature } from '../Feature.js';
 import { Prism, setSequenceProb } from './Prism.js';
 
 export class LLMProbabilityPrism extends Prism {
-  STOPLIST = new Set(["_", "�"]);
+  STOPLIST = new Set(["_", "�", "」"]);
 
   constructor() {
-    super('likelihood', [Feature.Prob]);
+    super('likelihood', [Feature.Prob], 'words');
 
     // search settings
     this.minTokens = 1;

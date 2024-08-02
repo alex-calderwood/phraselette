@@ -2,9 +2,9 @@ import chroma from "chroma-js";
 const colorScale = chroma.scale(['red', 'white', 'green', 'green']).mode('lab');
 const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple', 'cyan', 'coral', 'teal', 'orange', 'skyblue', 'burlywood']).mode('lab');
 
-export function getColor(type, token) {
+export function getColor(tokenType, token) {
   let prob = token.prob || 0;
-  switch (type) {
+  switch (tokenType) {
     case 'basic':
       return categoryToColor(token.text);
     case 'likelihood': case 'probability-base': case 'alternate':

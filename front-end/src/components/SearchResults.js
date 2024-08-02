@@ -24,7 +24,11 @@ export class SearchResults extends Component {
       return <div className='title'>No results</div>
     }
 
+    console.log('SearchResults', results, this.tokenType)
+
+
     return <div className={"search-results"}>
+      {this.props.showLength && <div className="subtitle">{`${results.length} results`}</div>}
       <TokenRange tokenType={this.tokenType} tokens={results} onTokenClick={this.props.onTokenClick} suppressPOS={true} wrap={wrap} />
     </div> 
   }

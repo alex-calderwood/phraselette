@@ -4,6 +4,7 @@
   --accent-color: rgb(229, 229, 229);
   --primary-text-color: rgb(172, 172, 172);
   --darker-text-color: rgb(80, 80, 80);
+  --hover-color: rgb(200, 200, 200);
 }
 
 .App {
@@ -157,6 +158,16 @@ we will need to select the text children of the editor */
   font-size: 10px;
 }
 
+.major-text {
+  color:rgb(172, 172, 172);
+  font-size: 14px;
+}
+
+.token-range-parent {
+  position: relative;
+}
+
+
 .token-range {
   position: relative;
   z-index: 2;
@@ -164,6 +175,10 @@ we will need to select the text children of the editor */
   height: 100%;
   min-height: 3ch;
   margin-bottom: 4px;
+  /* display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  justify-content: center; This will center the content only when it doesn't overflow */
 }
 
 .wrap {
@@ -175,28 +190,18 @@ we will need to select the text children of the editor */
   -ms-overflow-style: none;
 }
 
-.token-range-parent {
-  position: relative;
-}
 
-
-
-/* add a gradient to the right of the token range */
-/* not currently used */
-.overflowing::after {
-  z-index: 2;
-  content: "";
-  position: absolute;
-  top: 0px;
-  right: 0px;
-  width: 70px; /* Adjust the width to your preference */
-  height: 100%;
-  background: linear-gradient(to left, rgba(209, 209, 209, 0.7), rgba(255, 255, 255, 0));
-  pointer-events: none; /* Allow interactions with underlying content */
-}
-
-.card { /* anything that needs to go side to side */
+.token-span {
   display: inline-block;
+  /* padding: 4px; */
+  margin-left: 2px;
+  /* margin-right: 2px; */
+  background-color: #f1f1f1;
+  min-height: 100%;
+  height: 100%;
+  text-wrap: wrap;
+  /* make the cursor a pointer */
+  cursor: pointer;
 }
 
 .token { /* specific formatting for a token object */ 
@@ -208,13 +213,20 @@ we will need to select the text children of the editor */
   cursor: pointer;
 }
 
+/* 1ch is supposed to be equal to the approximate width of one character but it seems large*/
 .token.space {
-  width: 0.4ch;  /* 1ch is supposed to be equal to the approximate width of one character but it seems large*/
+  width: 0.4ch;  
 }
 
 .item {
   color: #777777;
-  font-size: 10px;
+  font-size: 8px;
+  text-align: center;
+  /* allow to get cut off rather than resize */
+  white-space: nowrap;
+  overflow: hidden;
+  min-height: none;
+  text-overflow: ellipsis;
 }
 
 /* on hover make the token a bit darker */
@@ -223,22 +235,9 @@ we will need to select the text children of the editor */
 }
 
 .token .heading {
-  font-size: 14px;
+  font-size: 12px;
   min-height: 100%;
   text-align: center;
-}
-
-.token-span {
-  display: inline-block;
-  /* padding: 4px; */
-  margin-left: 2px;
-  margin-right: 2px;
-  background-color: #f1f1f1;
-  min-height: 100%;
-  height: 100%;
-  text-wrap: wrap;
-  /* make the cursor a pointer */
-  cursor: pointer;
 }
 
 .hidden {
@@ -266,8 +265,6 @@ select {
   background-color: var(--accent-color);
   border: none;
   outline: none;
-  margin-left: 3px;
-  margin-right: 3px;
 }
 
 button {
@@ -279,7 +276,9 @@ button {
 }
 
 button:hover {
-  background-color: rgb(100, 100, 100);
+  /* background-color: rgb(100, 100, 100); */
+  background-color: var(--hover-color);
+  color: #282c34; /* Dark color for text */
 }
 
 .selectButoon {
@@ -293,10 +292,26 @@ button:hover {
 
 .constraint-creator {
   display: inline-block;
+  width: 100%;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.constraint-buttons {
+  /* make the buttons appear next to each other and center them */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.3s ease;
+
+  button {
+    margin-right: 4px;   
+  }
 }
 
 .temp-constraint-container {
   display: flex;
+  animation: fadeIn 0.3s ease;
 }
 
 .constraint {
@@ -379,4 +394,9 @@ div.searching {
 /*** For Webkit ***/
 ::-webkit-selection {
   background-color:  var(--selection-color);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

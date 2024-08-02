@@ -7,24 +7,24 @@ export class TokenManager {
       'words': [],
       'basic': [],
     };
-    this.activePrismNames = activePrisms; // which lenses are currently active
+    this.activePrisms = activePrisms;     // list
     this.externalOnToken = (token) => {}; // a callback to call when a token is created
-    this.wordsLense = 'words';
+    this.wordsPrism = 'words';
   }
 
-  activeTokenizations() { // should this be efficient?
-    return this.activePrismNames.filter(prism => this.tokens.hasOwnProperty(prism)) // set intersection
+  activeTokenizations() { // should this be made efficient?
+    return this.activePrisms.filter(prism => this.tokens.hasOwnProperty(prism.type)) // set intersection
   }
 
   /*
    * Toggle TokenManager's understanding of which lenses should be actively tokenized.
   */
-  setActiveLense(lense, active=true) {
-    if (active && !this.activePrismNames.includes(lense) ) {
-      this.activePrismNames.push(lense);
+  setActivePrism(prism, active=true) {
+    if (active && !this.activePrisms.includes(prism) ) {
+      this.activePrisms.push(prism)
     }
-    if (!active && this.activePrismNames.includes(lense)) {
-      this.activePrismNames = this.activePrismNames.filter(l => l !== lense);
+    if (!active && this.activePrisms.includes(prism)) {
+      this.activePrisms = this.activePrisms.filter(l => l !== prism);
     }
   }
 
@@ -49,6 +49,8 @@ export class TokenManager {
   /* 
   * Logic to handle input events: synchornize the text in the tokenManager's various lenses
   * with the edits that were made by {event} to the text in the contenteditable div (which is already updated);
+  * 
+  * TODO This is largely in need of work. 
   */
   synchronizeTokens(selection, beforeEventSelection, event) {
     let tokensToSync = this.activeTokenizations();
@@ -178,11 +180,11 @@ export class TokenManager {
 
   /* 
   * Swap the token with the given id with the given token.
+  * TODO only works on the token.type tokenization, should be on all of them
   */
   swapToken(token, newToken) {
     console.log("Swapping token", token, "with", newToken)
 
-    // for (let lense of this.activePrismNames) {
     let lense = token.type;
     let index = this.tokens[lense].findIndex(t => t.id === token.id);
     if (index === -1) {
@@ -192,7 +194,6 @@ export class TokenManager {
 
     this.tokens[lense][index] = newToken;
     this.refreshCharIndices(lense);
-    // }
   }
 
   /* 
@@ -210,15 +211,15 @@ export class TokenManager {
   /* 
   * TODO document
   */
-  pushUpdateToken(lenseType, token) {
-    // make a copy of the current lense
-    let newLense = this.tokens[lenseType].slice();
+  pushUpdateToken(tokenType, token) {
+    // make a copy of the current tokens
+    let newTokens = this.tokens[tokenType].slice();
 
     // find all tokens that overlap at all
     let overlappingTokens = [];
     let overlapIndex = -1;
-    for (let i = 0; i < newLense.length; i++) {
-      let curToken = newLense[i];
+    for (let i = 0; i < newTokens.length; i++) {
+      let curToken = newTokens[i];
       if (curToken.start <= token.end && curToken.end >= token.start) { // TODO is this missing cases? could call utils.overlaps
         overlappingTokens.push(i);
         // use the first one as the index to replace
@@ -231,42 +232,41 @@ export class TokenManager {
     if (overlappingTokens.length > 0) {
       // Splice from the end to the start to maintain correct indices
       for (let i = overlappingTokens.length - 1; i >= 0; i--) {
-        newLense.splice(overlappingTokens[i], 1);
+        newTokens.splice(overlappingTokens[i], 1);
       }
       // Reinsert the new token at the position of the first overlapping token
-      newLense.splice(overlapIndex, 0, token);
+      newTokens.splice(overlapIndex, 0, token);
     } else {
-      newLense.push(token);
+      newTokens.push(token);
     }
     
-    this.tokens[lenseType] = newLense;
+    this.tokens[tokenType] = newTokens;
   }
 
   /**
    * Provide all tokens betweens the 'start' and 'end' range (inclusive) in the given lense.
    * In the future I may want to create a helper that is able to return multiple lense types. 
    * 
-   * @param {string} lense - which lense to look for
-   * @param {int} start - the first location to look for tokens (inclusive)
-   * @param {int} end -  the final location to look for tokens (inclusive)
+   * @param {string} tokenType - which tokenization to use
+   * @param {int}    start - the first location to look for tokens (inclusive)
+   * @param {int}    end -  the final location to look for tokens (inclusive)
    * @returns {list} - the spanned token objects
   */
-  tokensAt(lense, start, end = start) {
+  tokensAt(tokenType, start, end = start) {
     if (typeof start !== 'number' || typeof end !== 'number' ) {
       console.error('tokensAt called with', typeof start, typeof end);
     } 
 
-    let tokens = this.tokens[lense] || [];
+    let tokens = this.tokens[tokenType] || [];
+    if (!tokens) {
+      console.error("No token of type", tokenType);
+      return;
+    }
 
     if (start > end) {
       let temp = start;
       start = end;
       end = temp;
-    }
-
-    if (!tokens) {
-      console.error("No label of lense type", lense);
-      return;
     }
 
     let tokensSpanned = [];
@@ -276,6 +276,7 @@ export class TokenManager {
         tokensSpanned.push(token);
       }
     }
+    console.log('tokensAt', tokenType, 'result', tokensSpanned);
     return tokensSpanned;
   }
 
@@ -294,28 +295,33 @@ export class TokenManager {
     *                        the text that should be processed
     *                        data.tokenizeRange is a [int, int] representing where to tokenize
     *                        data.document is the full document
-    * @param {object} prisms - the list of prisms that should be tokenized
+    * @param {object} prismsToTokenize - the list of prisms that should be tokenized
   */
-  tokenize(text, data = {}, prisms=this.activePrismNames) {
-    let tokens = [];
+  tokenize(text, data = {}, prismsToTokenize=this.activePrisms) {
+    data = {  
+      ...data, 
+      onToken: this.internalOnToken.bind(this), 
+      requests: this.activePrisms.map(p => p.type),
+    };
 
-    data = {  ...data, onToken: this.internalOnToken.bind(this), requests: this.activePrismNames};
-    
-    for (let prism of prisms) {
-      switch (prism) {
+
+    for (let prism of Object.values(prismsToTokenize)) {
+      let type = prism.type;
+      let tokens = null;
+    console.log('.tokenizing', type, 'requests', data.requests, 'data', data, prismsToTokenize);
+      switch (type) {
         case 'basic':
-          // TODO this is not currently using onToken
+          // TODO this is not currently using onToken but also we don't really use basic anymore
           tokens = splitWordTokenize(text, data);
           this.tokens.words = tokens; 
           break;
         case 'probability-base':
-          gpt2Tokenize(text, data);
+          tokens = gpt2Tokenize(text, data);
           break;
         case 'words':
-          spacyTokenize(text, data);
+          tokens = spacyTokenize(text, data);
           break;
         default:
-          // console.log('ignoring', lense);
           break;
       }
     }

@@ -104,7 +104,7 @@ export class PrismEditor extends Component {
     // this.tokenManager.synchronizeTokens(this.keyDownSelection, this.keyDownSelection, event);
 
     // // pass the new text into the tokenizer to update its token list and associated character indices
-    // this.tokenizeOnTextUpdate(newText, this.props.lenseToHighlight);
+    // this.tokenizeOnTextUpdate(newText, this.props.lenseToHighlight); // TODO this will be prismToHighlight when we bring it back
 
     // give the new text to the parent component
     if (this.props.setText) { this.props.setText(newText); }
@@ -186,8 +186,7 @@ export class PrismEditor extends Component {
     }
   };
 
-  restoreSelection(event) {
-    // TODO this should use the event data again
+  restoreSelection(event) { // TODO this should use the event data again
     if (this.keyUpSelection) {
       setCursorAtOffset(this.editorNode, this.keyUpSelection.prefixOffset);
     }
@@ -198,7 +197,7 @@ export class PrismEditor extends Component {
    * Force the component to update.
   */
   updateUITokens(token) {
-    if (this.props.lenseToHighlight === token.type) {
+    if (this.props.prismToHighlight.tokenType === token.type) {
       this.colorCharSpanByToken(token);
       this.forceUpdate(); // trigger a rerender of the editor
     }
@@ -307,7 +306,7 @@ export class PrismEditor extends Component {
   createCharacterSpan(text, c) {
     let span = document.createElement('span');
     span.textContent = text;
-    let newID = this.styleCharacter(span, c);
+    let newID = this.setSpanAttributes(span, c);
     return [span, newID];
   }
 
@@ -320,7 +319,7 @@ export class PrismEditor extends Component {
   * 
   * Also, set a unique character ID if it doesn't already exist for the span.
   */
-  styleCharacter(element, c) {
+  setSpanAttributes(element, c) {
     if (typeof c !== 'number') {
       console.error('styleChild called with', typeof c);
     } 
@@ -328,7 +327,7 @@ export class PrismEditor extends Component {
     element.setAttribute('c', c);
     let createdID = this.setIdIfNotPresent(element);
     if (element.tagName === 'SPAN') {
-      if (this.props.lenseToHighlight === 'basic') { // TODO make basicTokenize use onToken callback so that we don't have to do this
+      if (this.props.prismToHighlight.tokenType === 'basic') { // TODO make basicTokenize use onToken callback so that we don't have to do this
         this.colorCharacterByProb(element, c);
       }
     }
@@ -349,7 +348,7 @@ export class PrismEditor extends Component {
   colorCharSpanByToken(token) {
     let start = token.start;
     let end = token.end;
-    let color = getColor(this.props.lenseToHighlight, token);
+    let color = getColor(this.props.prismToHighlight.tokenType, token);
     for (let i = start; i <= end; i++) { // [start, end] inclusive
       let span = document.querySelector(`span[c='${i}']`);
       if (span) {
@@ -370,15 +369,17 @@ export class PrismEditor extends Component {
       console.error('colorCharacterByProb called with', typeof c);
     }
 
+    let tokenType = this.props.prismToHighlight.tokenType;
     if (this.tokenManager) {
-      let tokensAt = this.tokenManager.tokensAt(this.props.lenseToHighlight, c);
+      let tokensAt = this.tokenManager.tokensAt(tokenType, c);
       let color;
       if (tokensAt && tokensAt.length > 0) {
         let token = tokensAt[0];
-        color = getColor(this.props.lenseToHighlight, token);
+        color = getColor(tokenType, token);
       } else {
         color = getColor('basic', {});
       }
+      console.log('coloring', tokenType, 'at', c, color);
       child.style.backgroundColor = color;
 
     } else {
@@ -390,7 +391,6 @@ export class PrismEditor extends Component {
   * Split the content into individual characters and apply the appropriate styles.
   */
   splitIntoCharactersAndStyle(content) {
-
     let children = [...traverseDOM(content)];
 
     let i = 0;
@@ -416,7 +416,7 @@ export class PrismEditor extends Component {
         continue;
       }
 
-      let newID = this.styleCharacter(child, c);
+      let newID = this.setSpanAttributes(child, c);
       if (newID !== null) {
         newSpans.push(child);
       }
@@ -431,6 +431,7 @@ export class PrismEditor extends Component {
           newSpans.push(...brandNewSpans);
         }
       } else if (child.tagName === 'DIV') {
+
       }
 
       i++;
@@ -445,12 +446,16 @@ export class PrismEditor extends Component {
    * After the tokenization is complete, the token manager will call the onFinished function, which typically
    * involves attempting to tokize one more time, as the tokenization may have been incomplete if the user continued to type.
   */
-  tokenizeOnTextUpdate(text, lense, callDepth = 0) {
+  tokenizeOnTextUpdate(text, tokenType, callDepth = 0) {
     if (this.tokenManager) {
-      let curTokens = this.tokenManager.tokens[lense];
+      let curTokens = this.tokenManager.tokens[tokenType];
+      if (!curTokens) {
+        console.error('on text update tokenType not found', tokenType);
+        return;
+      }
 
       let tokenizeRange  = TokenManager.getUntokenizedRange(text, curTokens);
-      let shouldTokenize = TokenManager.shouldTokenize(text, tokenizeRange, lense);
+      let shouldTokenize = TokenManager.shouldTokenize(text, tokenizeRange, tokenType);
 
       // We keep track of the call depth because we want to check to see if there is more tokenization
       // to take care of after the user has finished typing (some requests may have been denied by the server
@@ -464,7 +469,7 @@ export class PrismEditor extends Component {
         // TODO there is a potential problem where the selection has been updated since the last time we saved it
         // This could happen if the user navigates with the arrow keys for instance, so perhpas we want to save the selection during arrows
         let newText = getTextWithWhitespace(this.contentRef.current);
-        this.tokenizeOnTextUpdate(newText, lense, callDepth + 1);
+        this.tokenizeOnTextUpdate(newText, tokenType, callDepth + 1);
       };
 
       let data = {
@@ -476,7 +481,8 @@ export class PrismEditor extends Component {
     }
   }
 
-  forceTokenize(prisms=this.tokenManager.activePrismNames) {
+  forceTokenize(prisms=this.tokenManager.activePrisms) {
+    console.log("force tokenizing prisms", prisms)
     if (prisms.length < 1) { return; }
 
     let document = new Document(
@@ -486,15 +492,15 @@ export class PrismEditor extends Component {
     );
     
     let data = { tokenizeRange: document.range, document: document }; // old versions of tokenizers still use tokenizeRange, should be depracated
-    let lense = prisms[0];
-    let remainingLenses = prisms.slice(1);
+    let curPrism = prisms[0];
+    let remaining = prisms.slice(1);
 
-    if (remainingLenses && remainingLenses.length > 0) {
-      let onFinished = () => { this.forceTokenize(remainingLenses); };
+    if (remaining && remaining.length > 0) {
+      let onFinished = () => { this.forceTokenize(remaining); };
       data['onFinished']= onFinished.bind(this);
     }
 
-    this.tokenManager.tokenize(document.text, data, prisms=[lense]);
+    this.tokenManager.tokenize(document.text, data, prisms=[curPrism]);
   }
 
   manualRetokenizeAction() {

@@ -1,32 +1,29 @@
-import { searchForward, miscTokensToWordTokens, gpt2Tokenize } from '../../scripts/smarts.js';
-import { Sequence } from '../Sequence.js';
-import { Token } from '../Token.js'
-import { sendMessage } from "../../scripts/socket.js";
-import { Feature } from '../Feature.js';
 import { resolveConstraints } from '../../scripts/resolution.js';
+import { getUniqueUUID } from '../../scripts/utils.js';
 
 export class Prism {
   /**
    * Create a Prism.
-   * @param {string} name - The name of the Prism.
-   * @param {Array} [features=[]] - An array of features that become available to view or constrain.
-   * @param {Object|null} [parentToken=null] - The name of the token that this Prism uses as its tokenization (in TokenManager).
+   * @param {string} type - The category of the prism
+   * @param {Array} [features=[]] - An array of features that this prism makes available to view or constrain. See Feature.js
+   * @param {Object|null} [tokenType=null] - The name of the token that this Prism uses as its tokenization (in TokenManager).
    *                                           Defaults to {name}.
    */
-  constructor(name, features=[], parentToken=null) {
-    this.name = name;     // eventually this should be type
-    this.subTitle = name; // eventually this should be name
+  constructor(type, features=[], tokenType=null) {
+    this.id = `${type}-${getUniqueUUID()}`;
+    this.type = type;
+    this.title = type;
     this.active = false;
-    this.shouldHighlight = false;
 
     // which tokens to look up in the tokenManager
-    this.parentToken = parentToken ? parentToken : this.name;  
+    this.tokenType = tokenType ? tokenType : this.type;  
     
     this.features = features || [];
     this.textFeatures = [];
     this.insights = null;
 
     // UI Variables
+    this.shouldHighlight = false; // is this prism responsible for coloring the text editor spans
     this.hidden = false;
     this.isSearching = false;
     this.onSearchComplete = () => {};
@@ -41,18 +38,26 @@ export class Prism {
     return this;
   }
 
+  // Triggered at the beginning of a search
   onSearch() {
     this.isSearching = true;
   }
 
-  /*
-   * Each search should return an insights dictionary. 
-   * Insights might be in the form of token predictions or any other data that can be given to the user to comment on their text. 
+  /**
+   * Triggered when the search has concluded.
+   * 
+   * Insights might be in the form of token predictions or any other data that can be given to the user to comment 
+   * on their text. 
+   * @param {object} insights - The things that the prism has learned about the text.
+   *                            Each search should return an insights dictionary. 
+   *                            Will contain a 'predictions' key when it is making alternate word predictions.
+   * @param {Document} document - the working document in the editor. Should be taken with a small grain of salt as I haven't tested that it is up to date.
+   * @param {Constraint[]} constraints - the constraints applicable to the current prism
   */
   async onSearchResults(insights, document, constraints) {
     let predictions = insights.predictions;
     let results = await resolveConstraints(predictions, constraints);
-    console.log(`search results for ${this.name}:`, results);
+    console.log(`search results for ${this.type}:`, results);
     this.insights = {results: results, ...insights};
 
     this.isSearching = false;
@@ -67,9 +72,10 @@ export class Prism {
     return this;
   }
 
-  async search(document, constraints) {
-    return [];
-  }
+  // Search logic to be overriden
+  async search(document, constraints) {  return []; }
+
+  // Static methods
 
   /* 
   * Helper to filter the active prisms from a list of prisms.
@@ -80,14 +86,24 @@ export class Prism {
     });
   }
 
+  static firstByType(prisms, type) {
+    return this.getByType(prisms, type)[0];
+  }
+
+  static getByType(prisms, type) {
+    return Object.values(prisms).filter((prism) => {
+      return prism.type === type;
+    });
+  }
+
   /* 
   * Helper to deactivate all prisms passed in.
   */
   static unhighlightAll(prisms) {
     // for now, we only allow one highlighted lense, so we need to uncheck all the other ones
-    let activeLenses = Prism.getActive(prisms);
-    for (let lense of activeLenses) {
-      prisms[lense].setDoHighlight(false);  
+    let activePrisms = Prism.getActive(prisms);
+    for (let prism of activePrisms) {
+      prism.setDoHighlight(false);  
     }
   }
 }

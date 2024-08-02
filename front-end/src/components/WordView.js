@@ -19,7 +19,7 @@ export class WordView extends Component {
 
     this.tokens = [];
     if (start !== null) {
-      this.tokens = this.tokenManager.tokensAt(wordsPrism.parentToken, start, end);
+      this.tokens = this.tokenManager.tokensAt(wordsPrism.tokenType, start, end);
     }
 
     let hidden = this.tokens.length == 0;
@@ -31,7 +31,7 @@ export class WordView extends Component {
     return <div className="word-view">
       <TokenRange tokens={this.tokens}
         tokenManager={this.tokenManager}
-        tokenType={wordsPrism.name}
+        tokenType={wordsPrism.type}
         startIndex={start} endIndex={end}
         filterSpaces={false}
         debugMode={this.props.debugMode} />

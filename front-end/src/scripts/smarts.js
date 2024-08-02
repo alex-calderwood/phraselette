@@ -322,7 +322,10 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
     ''
   );
 
-  let resultantWordTokens = await spacyTokenize(newText, { onToken: (token) => { }, requests: document.activeLenses });
+  let resultantWordTokens = await spacyTokenize(newText, { 
+    onToken: (token) => { }, 
+    requests: document.tokenManager.activePrisms.map((prism) => prism.type) 
+  });
 
   // now we need to split it back into the tokens that were in after the given text
   let splitIndex = tokenSpan[0].start;
@@ -350,16 +353,3 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
 
   return convertedTokens;
 }
-
-// export async function dictionary(word, description) {
-//   sendMessage({
-//     type: "dictionary",
-//     word: word,
-//     description: description,
-//   });
-
-//   return [
-//     new Sequence([new Token({text: 'follower'})]),
-//     new Sequence([new Token({text: 'given'})]),
-//   ];
-// }

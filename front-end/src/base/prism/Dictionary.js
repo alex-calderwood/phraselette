@@ -9,12 +9,12 @@ export class DictionaryPrism extends Prism {
     this.textFeatures = {
       'description': {text: description, name: 'description'}
     }
-    this.subTitle = description;
+    this.title = description;
   }
 
   updateTextFeature(featureName, value) {
     this.textFeatures[featureName].text = value;
-    this.subTitle = value;
+    this.title = value;
   }
 
   async search(document, constraints) {

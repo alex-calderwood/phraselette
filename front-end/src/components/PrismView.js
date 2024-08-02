@@ -72,10 +72,11 @@ export class PrismView extends Component {
   }
 
   additionalContent(prism, start, end, tokens) {
+    console.log("rendering additional content", prism, tokens);
     return <div className="additional-content">
         <TokenRange 
           tokens={tokens}
-          tokenType={prism.name}
+          tokenType={prism.type}
           startIndex={start} endIndex={end}
           debugMode={this.props.debugMode} /> 
 
@@ -96,7 +97,7 @@ export class PrismView extends Component {
     let start = this.props.startIndex;
     let end = this.props.endIndex;
 
-    let tokens = start !== null ? this.tokenManager.tokensAt(prism.parentToken, start, end) : [];
+    let tokens = start !== null ? this.tokenManager.tokensAt(prism.tokenType, start, end) : [];
     let results = prism?.insights?.results || [];
 
     let text = prism?.insights?.text || null;
@@ -110,22 +111,18 @@ export class PrismView extends Component {
     let rotated = activeNotHidden ? "rotated" : "";
     let border  = activeNotHidden ? "border"  : "";
 
-    let subtitle = prism.subTitle != prism.name && !activeNotHidden ? 
-      <span className="subtitle"> ({prism.subTitle})</span> : ""
+    let title = prism.title != prism.type && !activeNotHidden ? 
+      <span className="subtitle"> ({prism.title})</span> : ""
 
     return <div className={`prism`}>
         <div className={`title ${rotated}`} onClick={this.toggleHidden.bind(this)}>
-          {prism.name} {subtitle}
+          {prism.type} {title}
         </div>
 
         <div className={`prism-content ${border}`}>
           {activeNotHidden ? Object.values(prism.textFeatures).map((feature) => {
             return <PrismEditableTextFeature key={feature.text} feature={feature} prism={prism} />
           }) : ""}
-
-          {showResults ? <SearchResults 
-            isSearching={this.props.isSearching} 
-            tokenType={prism.name} results={results} /> : ""}
 
           {showtext ? <div className="text">{text}</div> : ""}
 
@@ -142,6 +139,10 @@ export class PrismView extends Component {
             onAdd={this.props.addConstraint}
             onRemove={this.removeConstraint.bind(this)}
             onConstraintUpdate={this.onConstraintUpdate.bind(this)} /> : "" }
+          
+          {showResults ? <SearchResults 
+                      isSearching={this.props.isSearching} 
+                      tokenType={prism.type} results={results} /> : ""}
         
       </div>
     </div>;
