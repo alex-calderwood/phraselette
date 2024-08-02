@@ -29,7 +29,7 @@ class NumericalRangeConstraint extends Component {
     const { targetMin, targetMax } = this.state;
 
     return (
-      <ConstraintWrapper constraint={constraint}>
+      <ConstraintWrapper {...this.props} >
         <div className="text"> 
           Min: {scientific(constraint.targetMin)} Max: {scientific(constraint.targetMax)}
         </div>
@@ -83,18 +83,19 @@ class CategoricalConstraintView extends Component {
   render() {
     let constraint = this.props.constraint;
     let featureName = constraint.feature.name;
-
     let possibleConstraintValues = constraint.range;
     let target = this.state.target;
 
-    return  <ConstraintWrapper constraint={constraint}>
-      {target.map(tokenTarget => {
-        return <select className="constraint-select" id={`constraint-select-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[featureName]} onChange={this.handleChange}>
-          {possibleConstraintValues.map(value => {
-            return <option key={value} value={value}>{value}</option>
-          })}
-        </select>
-      })}
+    return  <ConstraintWrapper {...this.props} >
+      <div className="constraint-target">
+        {target.map(tokenTarget => {
+          return <select className="constraint-select" id={`constraint-select-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[featureName]} onChange={this.handleChange}>
+            {possibleConstraintValues.map(value => {
+              return <option key={value} value={value}>{value}</option>
+            })}
+          </select>
+        })}
+      </div>
       <button onClick={this.addTarget}>+</button>
       <button onClick={this.deleteTarget}>-</button>
     </ConstraintWrapper>;
@@ -102,12 +103,19 @@ class CategoricalConstraintView extends Component {
 }
 
 class ConstraintWrapper extends Component {
+  
+  onDelete() {
+    this.props.onDelete(this.props.constraint);
+    this.props.onConstraintUpdate();
+  }
+
   render() {
     const { constraint, children } = this.props;
     const id = `${constraint.id}-constraint`;
     return (
       <div id={id} className="constraint">
         {children}
+        {!this.props.isTemp && <button onClick={() => this.onDelete()}>X</button>}
       </div>
     );
   }

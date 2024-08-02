@@ -276,7 +276,6 @@ export class TokenManager {
         tokensSpanned.push(token);
       }
     }
-    console.log('tokensAt', tokenType, 'result', tokensSpanned);
     return tokensSpanned;
   }
 

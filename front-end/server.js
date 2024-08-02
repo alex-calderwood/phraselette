@@ -8,7 +8,7 @@ const path = require('path');
 const http = require('http');
 const ws = require("ws");
 
-const {handleDictionary, queryCritic} = require('./src/server/queries.js');
+const {handleThesaurus, queryCritic} = require('./src/server/queries.js');
 
 // config
 const myHostname = "localhost";
@@ -66,7 +66,7 @@ wss.on('connection', (clientSocket, req) => {
       const message = JSON.parse(data.toString());
       console.log("msg", message);
       const handlers = {
-        dictionary: (message) => handleDictionary(message, clientSocket),
+        thesaurus: (message) => handleThesaurus(message, clientSocket),
         critic: (message) => queryCritic(message, clientSocket),
       };
       const handler = handlers[message.type];

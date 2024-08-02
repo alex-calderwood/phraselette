@@ -1,11 +1,11 @@
 import { Prism } from './Prism';
 import { LLMProbabilityPrism } from './LLM';
-import { DictionaryPrism } from './Dictionary';
+import { ThesaurusPrism } from './Thesaurus';
 import { CriticPrism } from './Critic';
 import { Feature } from '../Feature';
 
 const roles = {
-  'dictionary': [
+  'thesaurus': [
     "the Spacefarer's Almanac",
   ],
   'critic': [
@@ -28,14 +28,14 @@ export function makePrism(type, callbacks) {
     case 'words':
       prism = new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true);
       break;
-    case 'likelihood':
+    case 'context':
       prism = new LLMProbabilityPrism().setActive(true);
       break;
     case 'critic':
       prism = new CriticPrism(randomRole('critic'));
       break;
-    case 'dictionary':
-      prism = new DictionaryPrism(randomRole('dictionary'));
+    case 'thesaurus':
+      prism = new ThesaurusPrism(randomRole('thesaurus'));
       break;
     case 'sound':
       prism = new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words');

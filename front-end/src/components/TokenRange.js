@@ -4,12 +4,12 @@ import { getUniqueUUID, scientific} from "../scripts/utils";
 
 function tokenItemsToShow(tokenType) {
   let show = {
-    'likelihood': ['prob'],
+    'context': ['prob'],
     'probability-base': ['prob'],
     'alternate': ['prob'],
     'sound': ['sound'],
     'words': ['pos'],
-    'dictionary': ['pos', 'sound'],
+    'thesaurus': ['pos', 'sound'],
     'search': ['pos', 'sound'],
   };
   return show[tokenType] || [];

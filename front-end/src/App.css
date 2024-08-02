@@ -5,6 +5,7 @@
   --primary-text-color: rgb(172, 172, 172);
   --darker-text-color: rgb(80, 80, 80);
   --hover-color: rgb(200, 200, 200);
+  --button-height: 1.5em;
 }
 
 .App {
@@ -261,18 +262,40 @@ label {
 }
 
 select {
-  font-size: 14px;
+  font-size: 12px;
   background-color: var(--accent-color);
   border: none;
   outline: none;
+  margin-left: 0px;
+  margin-right: 0px;
+  
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 0px 0px 0px 0px;
+  text-align: center;
+  min-height: var(--button-height);
+}
+
+select:hover {
+  background-color: var(--hover-color);
+}
+
+select option:checked {
+  background-color: var(--hover-color);
+}
+
+select::-ms-expand {
+  display: none;
 }
 
 button {
-  font-size: 14px;
+  font-size: 12px;
   background-color: var(--accent-color);
   color: var(--darker-text-color);
   border: none;
   outline: none;
+  height: var(--button-height);
 }
 
 button:hover {
@@ -288,7 +311,35 @@ button:hover {
 
 .constraint-container {
   font-size: 12px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
+
+.temp-constraint-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  /* height: var(--button-height); */
+  animation: fadeIn 0.3s ease;
+}
+
+.constraint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  /* margin-bottom: 8px; */
+
+  input {
+    background-color: #f1f1f1;
+    border: none;
+    outline: none;
+  }
+}
+
 
 .constraint-creator {
   display: inline-block;
@@ -310,19 +361,10 @@ button:hover {
   }
 }
 
-.temp-constraint-container {
+.constraint-target {
   display: flex;
-  animation: fadeIn 0.3s ease;
-}
-
-.constraint {
-  /* background-color: #f1f1f1; */
-
-  input {
-    background-color: #f1f1f1;
-    border: none;
-    outline: none;
-  }
+  align-items: center;
+  margin-right: 2px;
 }
 
 textarea {
@@ -343,20 +385,13 @@ textarea {
 /*** Works on common browsers ***/
 ::selection {
   background-color:  var(--selection-color);
-  /* add a border */
-
   color: rgb(0, 60, 200); /* Change to your preferred text color */
-  /* text-shadow:
-    -1px -1px 0 #282c34,
-      1px -1px 0 #282c34,
-    -1px  1px 0 #000,
-      1px  1px 0 #000; Add a text shadow */
 }
 
 /* make the brackground gradient bounce left and right */
 /* Specific styles for the div when the searching class is added */
 div.searching {
-  background: linear-gradient(to right, #ffffff 0%, #b3b3b3 100%);
+  background: linear-gradient(to right, #ffffff 0%, #dfdfdf 100%);
   background-size: 200% 100%;
   animation: slide 2s linear infinite;
   width: 100%;

@@ -2,7 +2,7 @@ import { resolveConstraints } from '../../scripts/resolution.js';
 import { getUniqueUUID } from '../../scripts/utils.js';
 
 export class Prism {
-  static TYPES = ['words', 'likelihood', 'critic', 'dictionary', 'sound', 'basic', 'probability-base'];
+  static TYPES = ['words', 'context', 'critic', 'thesaurus', 'sound', 'basic', 'probability-base'];
   /**
    * Create a Prism.
    * @param {string} type - The category of the prism
@@ -50,13 +50,13 @@ export class Prism {
    * Insights might be in the form of token predictions or any other data that can be given to the user to comment 
    * on their text. 
    * @param {object} insights - The things that the prism has learned about the text.
-   *                            Each search should return an insights dictionary. 
+   *                            Each search should return an insights thesaurus. 
    *                            Will contain a 'predictions' key when it is making alternate word predictions.
    * @param {Document} document - the working document in the editor. Should be taken with a small grain of salt as I haven't tested that it is up to date.
    * @param {Constraint[]} constraints - the constraints applicable to the current prism
   */
   async onSearchResults(insights, document, constraints) {
-    let predictions = insights.predictions;
+    let predictions = insights?.predictions || [];
     let results = await resolveConstraints(predictions, constraints);
     console.log(`search results for ${this.type}:`, results);
     this.insights = {results: results, ...insights};

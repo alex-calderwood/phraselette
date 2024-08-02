@@ -6,7 +6,7 @@ export class LLMProbabilityPrism extends Prism {
   STOPLIST = new Set(["_", "�", "」"]);
 
   constructor() {
-    super('likelihood', [Feature.Prob], 'words');
+    super('context', [Feature.Prob], 'words');
 
     // search settings
     this.minTokens = 1;

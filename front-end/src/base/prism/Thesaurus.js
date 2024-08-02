@@ -3,9 +3,9 @@ import { Sequence } from '../Sequence.js';
 import { sendMessage } from "../../scripts/socket.js";
 import { Prism, setSequenceProb } from './Prism.js';
 
-export class DictionaryPrism extends Prism {
+export class ThesaurusPrism extends Prism {
   constructor(description) {
-    super('dictionary', []);
+    super('thesaurus', []);
     this.textFeatures = {
       'description': {text: description, name: 'description'}
     }
@@ -22,7 +22,7 @@ export class DictionaryPrism extends Prism {
     let description = this.textFeatures.description.text;
     console.log('searching with description', description)
     sendMessage({
-      type: "dictionary",
+      type: "thesaurus",
       word: document.selectionText,
       description: description,
       prism: this.id,

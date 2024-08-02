@@ -25,7 +25,7 @@ export class ConstraintCreator extends Component {
     this.setState({tempConstraints: [...this.state.tempConstraints, constraint]});
   }
 
-  addConstraintToApp(constraint) {
+  addConstraint(constraint) {
     this.props.onAdd(constraint);
     // remove it from the temp consraints
     let newTempConstraints = this.state.tempConstraints.filter((tempConstraint) => {
@@ -37,9 +37,6 @@ export class ConstraintCreator extends Component {
   render() {
     let prism = this.props.prism;
 
-    if (!this.state.showFullCreator) {
-    }
-
     return <div 
         className="constraint-creator"
         onMouseEnter={this.handleMouseEnter}
@@ -50,8 +47,8 @@ export class ConstraintCreator extends Component {
 
       {this.state.showFullCreator && this.state.tempConstraints.map((constraint) => {
         return <div className="temp-constraint-container" key={constraint.id}> 
-          <ConstraintRender key={constraint.id} constraint={constraint} onConstraintUpdate={this.props.onConstraintUpdate} />
-          <button onClick={() => this.addConstraintToApp(constraint)}> bind </button>
+          <ConstraintRender key={constraint.id} constraint={constraint} onConstraintUpdate={this.props.onConstraintUpdate} isTemp={true}/>
+          <button onClick={() => this.addConstraint(constraint)}> constrain </button>
         </div>
       })}
       

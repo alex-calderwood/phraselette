@@ -81,7 +81,7 @@ class App extends Component {
     }
 
     let handlers = {
-      "dictionaryResponse": handleDictResponse.bind(this),
+      "thesaurusResponse": handleDictResponse.bind(this),
       "criticResponse": handleCriticResponse.bind(this),
     }
     assignSocket(socketProtocol, loc.host+'/'+loc.hash.replace('#', '?'), handlers)
@@ -171,7 +171,7 @@ class App extends Component {
       }
     }
 
-    console.log('on highlight change', prismID, shouldHighlight, prisms, toHighlight);
+    // console.log('on highlight change', prismID, shouldHighlight, prisms, toHighlight);
 
     this.setState({ prismToHighlight: prismID});
   }
@@ -209,6 +209,7 @@ class App extends Component {
   }
 
   removeConstraint(constraint) {
+    console.log('removing constraint', constraint);
     this.setState({
       constraints: this.state.constraints.filter((c) => { return c !== constraint; })
     });

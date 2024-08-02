@@ -62,8 +62,11 @@ export class PrismView extends Component {
 
   onConstraintUpdate() {
     // Doesn't seem to do anything yet
-    let document = this.props.getDocument(); // TODO is this going to be out of date?
-    this.prism.onSearchResults({predictions: this.prism.results}, document, this.state.constraints);
+    let predictions = this.prism?.insights?.results || [];
+    let document = this.props.getDocument();  // TODO is this going to be out of date?
+    let constraints = this.props.constraints; // TODO it's also possible this is out of date
+    console.log("updating constraints", predictions, document, constraints);
+    this.prism.onSearchResults({ predictions: predictions}, document, constraints );
   }
 
   removeConstraint() {
@@ -71,8 +74,7 @@ export class PrismView extends Component {
     this.props.removeConstraint(constraint);
   }
 
-  additionalContent(prism, start, end, tokens) {
-    console.log("rendering additional content", prism, tokens);
+  tokenContent(prism, start, end, tokens) {
     return <div className="additional-content">
         <TokenRange 
           tokens={tokens}
@@ -103,13 +105,14 @@ export class PrismView extends Component {
     let text = prism?.insights?.text || null;
 
     let activeNotHidden = prism.active && !prism.hidden;
-    let collapsed       = activeNotHidden && tokens.length > 0;
+    let showTokenContent       = activeNotHidden && tokens.length > 0;
     let showResults     = activeNotHidden && (results.length > 0 || this.props.isSearching)
     let showtext        = activeNotHidden && text;
-    let displayingFull  = collapsed || showResults;
+    let displayingFull  = showTokenContent || showResults;
 
     let rotated = activeNotHidden ? "rotated" : "";
     let border  = activeNotHidden ? "border"  : "";
+    let searching = this.props.isSearching ? "searching" : "";
 
     let title = prism.title != prism.type && !activeNotHidden ? 
       <span className="subtitle"> ({prism.title})</span> : ""
@@ -119,25 +122,28 @@ export class PrismView extends Component {
           {prism.type} {title}
         </div>
 
-        <div className={`prism-content ${border}`}>
+        <div className={`prism-content ${border} ${searching}`}>
           {activeNotHidden ? Object.values(prism.textFeatures).map((feature) => {
             return <PrismEditableTextFeature key={feature.text} feature={feature} prism={prism} />
           }) : ""}
 
           {showtext ? <div className="text">{text}</div> : ""}
 
-          {collapsed ? this.additionalContent(prism, start, end, tokens) : ""}
+          {showTokenContent ? this.tokenContent(prism, start, end, tokens) : ""}
 
-          {activeNotHidden ? this.props.constraints.map((constraint) => {
-            return <ConstraintRender key={constraint.id} constraint={constraint} onConstraintUpdate={this.onConstraintUpdate.bind(this)}/>}) : ""
+          {showTokenContent ? this.props.constraints.map((constraint) => {
+            return <ConstraintRender 
+              key={constraint.id} 
+              constraint={constraint} 
+              onDelete={this.props.removeConstraint}
+              onConstraintUpdate={this.onConstraintUpdate.bind(this)}/>}) : ""
           }
 
-          {activeNotHidden ? <ConstraintCreator
+          {showTokenContent ? <ConstraintCreator
             tokens={tokens}
             startIndex={start} endIndex={end}
             prism={prism}
             onAdd={this.props.addConstraint}
-            onRemove={this.removeConstraint.bind(this)}
             onConstraintUpdate={this.onConstraintUpdate.bind(this)} /> : "" }
           
           {showResults ? <SearchResults 
