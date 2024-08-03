@@ -2,10 +2,9 @@ const {sendClaudeReq, claudeReplyText} = require("./textgen.js");
 
 async function queryThesaurus(message, clientSocket) {
     const claudeJSON = await sendClaudeReq({
-        prompt: `You are a thesaurus written in the style of ${message.description}. You only provide words that match this theme (${message.description}), and would appear in such a thesaurus. Eacy word should be on its own line, surrounded by HTML-like tags: <entry>{actual word/phrase here}</entry>. Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags. Try to provide between 10 and 30 alternatives.\nProvde synonyms for the following word: ${message.word}`
+        prompt: `You are a thesaurus written in the style of ${message.description}. You only provide words that match this theme (${message.description}), and would appear in such a thesaurus. Eacy word should be on its own line, surrounded by HTML-like tags: <entry>{actual word/phrase here}</entry>. Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags. Try to provide between 10 and 30 alternatives. Match the case of the query.\nProvde synonyms for the following word (query): ${message.word}`
     });
     let response = claudeReplyText(claudeJSON);
-    // regex out the words
     const definitions = response.match(/<entry>(.*?)<\/entry>/g).map((def) => {
         return def.replace(/<entry>|<\/entry>/g, ''); 
     });

@@ -51,7 +51,6 @@ export class ThesaurusPrism extends Prism {
     let predictions = [];
     for (let word of words) {
       let text = document.prefixText + word;
-      console.log('getting tokens for', text)
       let range = [document.prefixText.length, text.length];           // is this range correct?
       let tokens = await gpt2Tokenize(text, { tokenizeRange: range }); // TODO debug why these are coming through with 0 prob
       let sequence = new Sequence(tokens);

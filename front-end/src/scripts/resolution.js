@@ -35,7 +35,7 @@ export async function sortPredictions(scoredPredictions, constraintName) {
     let sortedPredictions = scoredPredictions.sort((a, b) => {
         let aScore = a.scores[constraintName].value;
         let bScore = b.scores[constraintName].value;
-        console.log('sorting', a, b, constraintName, aScore, bScore)
+        // console.log('sorting', a, b, constraintName, aScore, bScore)
         return bScore - aScore;
     });
 

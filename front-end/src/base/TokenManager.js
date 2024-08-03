@@ -307,7 +307,6 @@ export class TokenManager {
     for (let prism of Object.values(prismsToTokenize)) {
       let type = prism.type;
       let tokens = null;
-    console.log('.tokenizing', type, 'requests', data.requests, 'data', data, prismsToTokenize);
       switch (type) {
         case 'basic':
           // TODO this is not currently using onToken but also we don't really use basic anymore

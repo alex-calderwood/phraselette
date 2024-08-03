@@ -3,7 +3,6 @@ const webpack = require('webpack');
 const webpackDevMiddleware = require('webpack-dev-middleware');
 const webpackHotMiddleware = require('webpack-hot-middleware');
 const config = require('./webpack.config.js');
-const axios = require('axios');
 const path = require('path');
 const http = require('http');
 const ws = require("ws");
@@ -87,6 +86,3 @@ wss.on('connection', (clientSocket, req) => {
       console.log('WebSocket connection closed');
     });
   });
-
-
-
