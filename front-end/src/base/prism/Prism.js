@@ -1,4 +1,4 @@
-import { resolveConstraints } from '../../scripts/resolution.js';
+import { resolveConstraints, sortPredictions } from '../../scripts/resolution.js';
 import { getUniqueUUID } from '../../scripts/utils.js';
 
 export class Prism {
@@ -22,6 +22,8 @@ export class Prism {
     this.features = features || [];
     this.textFeatures = [];
     this.insights = null;
+
+    this.sortBy = 'total'; // default sorting // TODO take a look at this
 
     // UI Variables
     this.shouldHighlight = false; // is this prism responsible for coloring the text editor spans
@@ -57,7 +59,10 @@ export class Prism {
   */
   async onSearchResults(insights, document, constraints) {
     let predictions = insights?.predictions || [];
-    let results = await resolveConstraints(predictions, constraints);
+    let results = await resolveConstraints(predictions, constraints, false);
+
+    results = sortPredictions(results, this.sortBy, true);
+
     console.log(`search results for ${this.type}:`, results);
     this.insights = {results: results, ...insights};
 
@@ -121,9 +126,14 @@ export class Prism {
 // TODO put this somewhere better
 export function setSequenceProb(sequence) {
   // average score (to account for different span lengths)
-  let seqProb = sequence.span.reduce((acc, token) => { return acc + token.prob; } , 0) / sequence.span.length;
-  // TODO we should be doing this on logprobs:
-  // let seqProb = sequence.span.reduce((acc, token) => { return acc * token.prob; } , 0);
-  sequence.setAttribute('prob', seqProb);
+  // let seqProb = sequence.span.reduce((acc, token) => { return acc + token.prob; } , 0) / sequence.span.length;
+
+  let logProb = sequence.span.reduce((acc, token) => { return acc + token.logProb; }, 0);
+  let logProbMean = logProb / sequence.span.length;
+  let probGeometricMean = Math.exp(logProbMean);
+
+  sequence.setAttribute('logProb', logProb);
+  sequence.setAttribute('probGeometricMean', probGeometricMean);
+  sequence.setAttribute('prob', probGeometricMean); // used for scoring
   return sequence;
 }

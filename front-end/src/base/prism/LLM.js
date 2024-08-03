@@ -12,6 +12,8 @@ export class ContextPrism extends Prism {
     // search settings
     this.minTokens = 1;
     this.maxTokens = 25;
+
+    this.sortBy = 'probGeometricMean'; // default sorting // TODO take a look at this
   }
 
   /*
@@ -44,19 +46,17 @@ export class ContextPrism extends Prism {
     let predictions = insights.predictions
 
     for (let prediction of predictions) {
-      setSequenceProb(prediction)
       let wordTokens = await miscTokensToWordTokens(prediction.span, document, numWords);
-      console.log('prediction', prediction, 'words', wordTokens)
-      // prediction.span = wordTokens;
+      prediction.span = wordTokens;
+      setSequenceProb(prediction)
     }``
             
-            // // deduplicate based on strippedTextContent
-            // predictions = this.deduplicate(predictions);
-            // // remove bad predicitons
-            // predictions = predictions.filter((prediction) => { return !this.badPrediction(prediction) });
+    // deduplicate based on strippedTextContent
+    predictions = this.deduplicate(predictions);
+    // remove bad predicitons
+    predictions = predictions.filter((prediction) => { return !this.badPrediction(prediction) });
 
-
-            // super.onSearchResults({predictions: predictions}, document, constraints);
+    super.onSearchResults({predictions: predictions}, document, constraints);
   }
 
   badPrediction(prediction) {

@@ -256,15 +256,6 @@ export async function searchForward(document, constraints, depth, top_k=50) {
       token.type = "alternate";
       return token;
     });
-    console.warn("searchForward: sequence", sequence);
-      
-    //   return new Token({
-    //   "text": alt.token,
-    //   "prob": alt.prob,
-    //   "start": alt.span[0],
-    //   "end": alt.span[1],
-    //   "type": "alternate",
-    // }) } );
 
     predictedSequence.push(new Sequence(sequence));
     promise = await tokenGenerator.next();

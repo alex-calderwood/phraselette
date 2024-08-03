@@ -40,7 +40,7 @@ export function makePrism(type, callbacks) {
       prism = new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true);
       break;
     case 'context':
-      prism = new ContextPrism();
+      prism = new ContextPrism().setActive(true);
       break;
     case 'critic':
       prism = new CriticPrism(randomRole('critic'));

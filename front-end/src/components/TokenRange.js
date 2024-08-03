@@ -10,7 +10,7 @@ function tokenItemsToShow(tokenType) {
     'sound': ['sound'],
     'words': ['pos'],
     'thesaurus': ['pos', 'sound'],
-    'search': ['pos', 'sound'],
+    'search': ['pos', 'sound', 'prob'],
   };
   return show[tokenType] || [];
 }
@@ -57,22 +57,21 @@ export class TokenRange extends Component {
     let wrap = this.props.wrap ? ' wrap' : ' nowrap';
     let scoreLookup = tokenType === 'search' ? 'total' : tokenType;
 
-    // console.log('TokenRange', tokenType, tokens);
     return (
       <div className={"token-range-parent " + overflowing}>
           <div id={'tokenbar-' + tokenType} className={`token-range` + wrap}>
               {tokens && tokens.map((tokenOrSeq) => {
                 if (tokenOrSeq.span) { // tokenGroup is a sequence
                   let sequence = tokenOrSeq;
-                  let prob = sequence?.getAttribute('prob');
+                  let prob = sequence.getAttribute('probGeometricMean');
                   let probColor = zeroToOneColor(prob);
-                  let score = sequence?.scores[scoreLookup]?.value;
-                  let color = zeroToOneColor(score);
+                  // let score = sequence?.scores[scoreLookup]?.value;
+                  // let color = zeroToOneColor(score);
                   return <div key={getUniqueUUID()} className="token-span"> 
                      { sequence.span.map((token) => { return this.renderToken(tokenType, token); }) }
-                    <div className="item" style={{ backgroundColor: color }}>
+                    {/* <div className="item" style={{ backgroundColor: color }}>
                       {scientific(score)}
-                    </div>
+                    </div> */}
                     {prob ? <div className="item" style={{ backgroundColor: probColor }}>
                       {scientific(prob)}
                     </div> : ""}
@@ -94,8 +93,8 @@ export class TokenRange extends Component {
     let fields = tokenItemsToShow(tokenType);
 
     let prob = null;
-    if (fields.includes('prob') && token.prob !== undefined) {
-      prob = scientific(token.prob);
+    if (fields.includes('prob') && token.probGeometricMean !== undefined) {
+      prob = scientific(token.probGeometricMean);
     }
 
     let sound = null;
