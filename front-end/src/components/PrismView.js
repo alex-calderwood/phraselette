@@ -10,7 +10,7 @@ import { Prism } from "../base/prism/Prism";
 class PrismEditableTextFeature extends Component {
   constructor(props) {
     super(props)
-    this.id = `text-feature-area-` + this.props.feature.name
+    this.id = `text-feature-${this.props.feature.name}-${this.props.prism.id}`;
     this.state = {
       text: this.props.feature.text,
     };
