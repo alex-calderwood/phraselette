@@ -174,11 +174,12 @@ def forward_search(text, top_k=1, depth=1, num_beam_groups=3, eos=tokenizer.eos_
     for beam_idx in range(num_beams):
         sequence = []
         current_end = offsets[-1, -1, 1].numpy().item() + (1 if ends_with_space else 0)
-        
+    
         beam_tokens = beam_output.sequences[beam_idx, len(input_ids[0]):]
         beam_token_scores = beam_output.scores
         for token_idx, token_id in enumerate(beam_tokens):
-            token_text = tokenizer.decode(token_id, skip_special_tokens=True)
+            # token_text = tokenizer.decode(token_id, skip_special_tokens=True) # eventually it would be nice to use this but we would have to deal with "" tokens
+            token_text = tokenizer.decode(token_id)
 
             # Calculate offset
             token_length = len(token_text)
