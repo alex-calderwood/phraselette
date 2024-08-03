@@ -1,5 +1,5 @@
 import { Prism } from './Prism';
-import { LLMProbabilityPrism } from './LLM';
+import { ContextPrism } from './LLM';
 import { ThesaurusPrism } from './Thesaurus';
 import { CriticPrism } from './Critic';
 import { Feature } from '../Feature';
@@ -7,9 +7,20 @@ import { Feature } from '../Feature';
 const roles = {
   'thesaurus': [
     "the Spacefarer's Almanac",
+    "A Tralfamadorian dictionary",
+    "a precise academic thesaurus",
+    "Emily Dickenson's lexicon",
+    "Jane Austen's word-hoard",
+    "the thesaurus James Joyce used for Ulysses",
+    "an everyday English thesaurus",
+    "Alfred Jarry's inverted dictionary",
   ],
   'critic': [
-    'a circus clown who is too old for this',
+    "a thoughtful kind colleague open to constructively critiquing and red-teaming my ideas",
+    "a stern Ph.D. advisor named Stacy",
+    "Zora Neale Hurston in her role as spirit-guide and text scholar",
+    "Noah Wardrip-Fruin, Michael Mateas, Samantha Gorman, and Allison Parrish, a computational media and digital arts PhD committee",
+    "the Midjourney narrative team, a group of academic-developers who are exports in computational narrative",
   ],
 }
 
@@ -29,7 +40,7 @@ export function makePrism(type, callbacks) {
       prism = new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true);
       break;
     case 'context':
-      prism = new LLMProbabilityPrism().setActive(true);
+      prism = new ContextPrism();
       break;
     case 'critic':
       prism = new CriticPrism(randomRole('critic'));

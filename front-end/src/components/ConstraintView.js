@@ -96,8 +96,8 @@ class CategoricalConstraintView extends Component {
           </select>
         })}
       </div>
-      <button onClick={this.addTarget}>+</button>
-      <button onClick={this.deleteTarget}>-</button>
+      <button onClick={this.addTarget}>＋</button>
+      <button onClick={this.deleteTarget}>−</button>
     </ConstraintWrapper>;
   }
 }
@@ -115,7 +115,7 @@ class ConstraintWrapper extends Component {
     return (
       <div id={id} className="constraint">
         {children}
-        {!this.props.isTemp && <button onClick={() => this.onDelete()}>X</button>}
+        {!this.props.isTemp && <button onClick={() => this.onDelete()}>×</button>}
       </div>
     );
   }

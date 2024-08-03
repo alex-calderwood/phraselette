@@ -89,7 +89,7 @@ export class TokenRange extends Component {
 
   renderToken(tokenType, token) {
     let color = tokenType ? getColor(tokenType, token) : 'white';
-    let space = token?.isSpace === true ? 'space' : '';
+    let space = token?.isSpacySpace === true ? 'space' : '';
 
     let fields = tokenItemsToShow(tokenType);
 

@@ -1,6 +1,6 @@
 
 import tensorflow as tf
-from transformers import TFGPT2LMHeadModel, GPT2TokenizerFast
+from transformers import TFGPT2LMHeadModel, GPT2TokenizerFast, TFLogitsProcessor, TFLogitsProcessorList
 import json
 import traceback
 from tqdm import tqdm
@@ -11,6 +11,23 @@ tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
 # add the EOS token as PAD token to avoid warnings
 model = TFGPT2LMHeadModel.from_pretrained("gpt2", pad_token_id=tokenizer.eos_token_id)
 
+# # Create a mask for tokens that start with a space
+# print('Creating space token mask')
+# space_tokens = [tokenizer.decode([i]).startswith(' ') for i in range(tokenizer.vocab_size)]
+# space_token_mask = tf.constant(space_tokens, dtype=tf.bool)
+# print('num space tokens', tf.reduce_sum(tf.cast(space_token_mask, tf.int32)).numpy())
+
+class SpaceAwareLogitsProcessor(TFLogitsProcessor):
+    def __init__(self, tokenizer, ends_with_space):
+        self.tokenizer = tokenizer
+        self.ends_with_space = ends_with_space
+        self.space_tokens = tf.constant([tokenizer.decode([i]).startswith(' ') for i in range(tokenizer.vocab_size)], dtype=tf.bool)
+    
+    def __call__(self, input_ids, scores, cur_len):
+        if self.ends_with_space and cur_len == 1:  # Only apply to the first token
+            non_space_mask = tf.logical_not(self.space_tokens)
+            scores = tf.where(non_space_mask, tf.float32.min, scores)
+        return scores
 
 # A function that generates the probabilities of each token in the phrase
 # it also tokenizes strings using the GPT-2 tokenizer
@@ -104,14 +121,21 @@ def calculate_offset(offset, extra_context, start_token_offset):
     offset[1] = len(extra_context) + offset[1] - start_token_offset
     return offset
 
+
+
+
 def forward_search(text, top_k=1, depth=1, num_beam_groups=3, eos=tokenizer.eos_token):
+    text = text.replace('\xa0', ' ') # get rid of non-breaking space characters which seem to mess things up
+    ends_with_space = text.endswith(' ')
+    if ends_with_space:
+        text = text[:-1]
+
     num_beams = top_k
-    # num_beams = min(top_k, 50)
     # Ensure num_beams is divisible by num_beam_groups
     num_beams = (num_beams // num_beam_groups) * num_beam_groups
     num_beam_groups = min(num_beam_groups, num_beams)
 
-    print('forward', text, 'k', top_k, 'depth', depth,'beams', num_beams, 'beam groups', num_beam_groups)
+    print(f'forward |{text}|', 'k', top_k, 'depth', depth,'beams', num_beams, 'beam groups', num_beam_groups, 'ends space', ends_with_space)
 
     encoding = tokenizer.encode_plus(
         text,
@@ -119,9 +143,15 @@ def forward_search(text, top_k=1, depth=1, num_beam_groups=3, eos=tokenizer.eos_
         return_tensors='tf'
     )
 
+    print(encoding)
+
     input_ids = encoding['input_ids']
     offsets = encoding['offset_mapping']
     max_length = len(input_ids[0]) + depth
+
+    # Create the LogitsProcessor
+    space_aware_processor = SpaceAwareLogitsProcessor(tokenizer, ends_with_space)
+    logits_processor = TFLogitsProcessorList([space_aware_processor])
 
     beam_output = model.generate(
         input_ids,
@@ -132,38 +162,47 @@ def forward_search(text, top_k=1, depth=1, num_beam_groups=3, eos=tokenizer.eos_
         return_dict_in_generate=True,
         output_attentions=True,
         output_hidden_states=True,
-        diversity_penalty=0.25,
+        diversity_penalty=0.4,
         num_beam_groups=num_beam_groups,
+        no_repeat_ngram_size=2,
+        logits_processor=logits_processor
     )
 
-    initial_offset = offsets[-1, -1, :].numpy().tolist()
-    initial_offset = [initial_offset[0], initial_offset[1] - 1]  # inclusive
+    # Add these lines to check the overall shape of beam_token_scores
+    print("Shape of beam_token_scores:", [s.shape for s in beam_output.scores])
 
     for beam_idx in range(num_beams):
-        spans = []
-        offset = initial_offset.copy()
+        sequence = []
+        current_end = offsets[-1, -1, 1].numpy().item() + (1 if ends_with_space else 0)
         
         beam_tokens = beam_output.sequences[beam_idx, len(input_ids[0]):]
         beam_token_scores = beam_output.scores
-
         for token_idx, token_id in enumerate(beam_tokens):
-            text = tokenizer.decode(token_id)
-            offset = [offset[1] + 1, offset[1] + len(text)]  # inclusive
+            token_text = tokenizer.decode(token_id, skip_special_tokens=True)
+
+            # Calculate offset
+            token_length = len(token_text)
+            offset_end = current_end + token_length - 1
+            
+            offset = [current_end, offset_end]
+            current_end = offset_end + 1
 
             # Calculate token probability
             token_logits = beam_token_scores[token_idx][beam_idx]
             token_probs = tf.nn.softmax(token_logits)
             token_prob = float(token_probs[token_id])
+            log_prob = float(token_logits[token_id])
 
             token = {
-                'token': text,
+                'token': token_text,
                 'prob': token_prob,
+                'log_prob': log_prob,
                 'span': offset,
             }
-            spans.append(token)
+            sequence.append(token)
 
-        # print('spans', beam_idx, spans)
-        yield spans
+        print('---span', sequence)
+        yield sequence
 
 
 def print_output(output):

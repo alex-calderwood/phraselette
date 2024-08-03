@@ -79,20 +79,18 @@ export async function spacyTokenize(text, data = {}) {
   let tokenGenerator = callSpacy(text, tokenizeRange, requests);
 
   let tokens = [];
-
-  // don't wait for the generator to finish
-  // instead, call onToken for each token
+  
   let rawTokenPromise = await tokenGenerator.next();
   while (!rawTokenPromise.done) {
     let rawToken = rawTokenPromise.value;
     let tokenData = {
-      'start': rawToken.start,     // inclusive
-      'end':   rawToken.end,       // inclusive from server
-      "text":  rawToken.text,
-      "pos":   rawToken.tag,       // Todo looks like there is also a '.pos' need to see if there is a difference
-      "isSpace": rawToken.is_space,
-      "type":  "words",
-      "isWord": true,
+      'start':        rawToken.start,     // inclusive
+      'end':          rawToken.end,       // inclusive
+      "text":         rawToken.text,
+      "pos":          rawToken.tag,
+      "isSpacySpace": rawToken.is_space,
+      "type":         "words",
+      "isWord":       true,
     }
     if (rawToken.extra && typeof rawToken.extra === 'object') {
       for (let key in rawToken.extra) {
@@ -106,6 +104,9 @@ export async function spacyTokenize(text, data = {}) {
     
     let token = new Token(tokenData);
     tokens.push(token);
+
+    // don't wait for the generator to finish
+    // instead, call onToken for each token
     if (onToken) {
       onToken(token);
     }
@@ -115,19 +116,21 @@ export async function spacyTokenize(text, data = {}) {
   return tokens;
 }
 
-export function makeProbToken(rawToken) {
+export function makeProbToken(rawToken, rawIsInclusive=false) {
   return new Token({
-    // rawToken.span is exclusive, our start and end is inclusive
+    // rawToken.span may be exclusive, our start and end is inclusive
     'start': rawToken.span[0],
-    'end': rawToken.span[1] - 1,
+    'end': rawToken.span[1] - (rawIsInclusive ? 0 : 1),
     "text": rawToken.token,
     "type": 'probability-base',
     "prob": rawToken.prob,
+    "logProb": rawToken.log_prob,
     "alternates": rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
       "start": alt.span[0],
       "end": alt.span[1],
       "text": alt.token,
       "prob": alt.prob,
+      "logProb": rawToken.log_prob,
       "type": "alternate",
     }) } ) : [],
   })
@@ -248,13 +251,20 @@ export async function searchForward(document, constraints, depth, top_k=50) {
   while (!promise.done) {
     let rawSequence = promise.value;
 
-    let sequence = rawSequence.map((alt) => { return new Token({
-      "text": alt.token,
-      "prob": alt.prob,
-      "start": alt.span[0],
-      "end": alt.span[1],
-      "type": "alternate",
-    }) } );
+    let sequence = rawSequence.map((alt) => { 
+      let token = makeProbToken(alt, true); 
+      token.type = "alternate";
+      return token;
+    });
+    console.warn("searchForward: sequence", sequence);
+      
+    //   return new Token({
+    //   "text": alt.token,
+    //   "prob": alt.prob,
+    //   "start": alt.span[0],
+    //   "end": alt.span[1],
+    //   "type": "alternate",
+    // }) } );
 
     predictedSequence.push(new Sequence(sequence));
     promise = await tokenGenerator.next();
@@ -337,18 +347,78 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
   if(maxWords !== null) {
     let wordCount = 0;
     convertedTokens = convertedTokens.filter((token) => {
-      if (token.isSpace || token.pos == "_SP") { return true; }
+      if (token.isSpacySpace || token.pos == "_SP") { return true; }
       wordCount++;
       return wordCount <= maxWords;
     });
   }
 
-  let firstWord = convertedTokens[0]; // it is possible for this to be undefined if the tokenSpan was just empty space (' ') token(s)
-  if (firstWord && firstWord.start < splitIndex) {
-    let diff = splitIndex - firstWord.start;
-    firstWord.text = firstWord.text.slice(diff);
-    firstWord.start = splitIndex;
-    firstWord.incomplete = true;
+  // // set the correct text, start on the first returned word
+  // // TODO shouldn't this be lastWord?
+  // let firstWord = convertedTokens[0]; // it is possible for this to be undefined if the tokenSpan was just empty space (' ') token(s)
+  // if (firstWord && firstWord.start < splitIndex) {
+
+  //   let diff = splitIndex - firstWord.start;
+  //   firstWord.text = firstWord.text.slice(diff);
+  //   firstWord.start = splitIndex;
+  //   firstWord.incomplete = true;
+  // }
+
+  // grab any information from the original token and assign it to the word token
+  let originalTokenIndex = 0;
+  for (let i = 0; i < convertedTokens.length; i++) {
+    let wordToken = convertedTokens[i];
+    wordToken.originalTokens = []; // Array to store all overlapping original tokens
+    wordToken.partialLogProbs = []; // Array to store partial log probs for tokens that partially overlap
+    
+    while (originalTokenIndex < tokenSpan.length) {
+      let originalToken = tokenSpan[originalTokenIndex];
+      
+      // Check for any kind of overlap
+      if (originalToken.start <= wordToken.end && originalToken.end >= wordToken.start) {
+        // Calculate the overlap
+        let overlapStart = Math.max(originalToken.start, wordToken.start);
+        let overlapEnd = Math.min(originalToken.end, wordToken.end);
+        let overlapLength = overlapEnd - overlapStart + 1;
+        let originalTokenLength = originalToken.end - originalToken.start + 1;
+        
+        // Calculate the fraction of the original token that overlaps with this word token
+        let overlapFraction = overlapLength / originalTokenLength;
+        
+        // Store the original token and its partial log prob
+        wordToken.originalTokens.push(originalToken);
+        let partialLogProb = (originalToken.log_prob || Math.log(originalToken.prob || 1)) * overlapFraction;
+        wordToken.partialLogProbs.push(partialLogProb);
+        
+        // Move to the next original token if we've passed its end
+        if (originalToken.end <= wordToken.end) {
+          originalTokenIndex++;
+        } else {
+          // If the original token extends beyond this word token, we'll need to consider it for the next word token too
+          break;
+        }
+      } else if (originalToken.start > wordToken.end) {
+        // We've moved past the current word token, break the inner loop
+        break;
+      } else {
+        // The original token ends before the word token starts, move to the next original token
+        originalTokenIndex++;
+      }
+    }
+    
+    // Calculate the combined log probability
+    if (wordToken.originalTokens.length > 0) {
+      // Sum partial log probabilities
+      wordToken.logProb = wordToken.partialLogProbs.reduce((sum, logProb) => sum + logProb, 0);
+      // Store the number of tokens that made up this word (including partials)
+      wordToken.tokenCount = wordToken.originalTokens.length;
+      // Store the arithmetic mean of the log probabilities
+      wordToken.logProbMean = wordToken.logProb / wordToken.tokenCount;
+      
+      // If you need the actual probabilities, you can exponentiate:
+      wordToken.prob = Math.exp(wordToken.logProb);
+      wordToken.probGeometricMean = Math.exp(wordToken.logProbMean);
+    }
   }
 
   return convertedTokens;

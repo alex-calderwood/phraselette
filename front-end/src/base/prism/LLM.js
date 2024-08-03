@@ -2,8 +2,9 @@ import { searchForward, miscTokensToWordTokens, gpt2Tokenize } from '../../scrip
 import { Feature } from '../Feature.js';
 import { Prism, setSequenceProb } from './Prism.js';
 
-export class LLMProbabilityPrism extends Prism {
-  STOPLIST = new Set(["_", "�", "」"]);
+export class ContextPrism extends Prism {
+  static STOPLIST = ["_", "~", "-"]; // tokens that should not be the entire prediction
+  static HALTLIST = ["�", "」", "<|endoftext"]; // tokens that should not appear anywhere in the prediction
 
   constructor() {
     super('context', [Feature.Prob], 'words');
@@ -44,29 +45,29 @@ export class LLMProbabilityPrism extends Prism {
 
     for (let prediction of predictions) {
       setSequenceProb(prediction)
-    }
-
-    for (let prediction of predictions) {
-      let words = await miscTokensToWordTokens(prediction.span, document, numWords);
-      prediction.span = words;
-    }
-    
-    // deduplicate based on strippedTextContent
-    predictions = this.deduplicate(predictions);
-    // remove bad predicitons
-    predictions = predictions.filter((prediction) => { return !this.badPrediction(prediction) });
+      let wordTokens = await miscTokensToWordTokens(prediction.span, document, numWords);
+      console.log('prediction', prediction, 'words', wordTokens)
+      // prediction.span = wordTokens;
+    }``
+            
+            // // deduplicate based on strippedTextContent
+            // predictions = this.deduplicate(predictions);
+            // // remove bad predicitons
+            // predictions = predictions.filter((prediction) => { return !this.badPrediction(prediction) });
 
 
-    super.onSearchResults({predictions: predictions}, document, constraints);
+            // super.onSearchResults({predictions: predictions}, document, constraints);
   }
 
   badPrediction(prediction) {
-    if(isNaN(prediction.getAttribute('prob'))) { return true; }
-    if(prediction.span.length === 0) { return true; }
-    if(this.STOPLIST.has(prediction.strippedTextContent)) { return true; }
+    if (isNaN(prediction.getAttribute('prob'))) { return true; }
+    if (prediction.span.length === 0) { return true; }
+    if (ContextPrism.STOPLIST.includes(prediction.strippedTextContent)) { return true; }
+    if (ContextPrism.HALTLIST.some(haltToken => prediction.strippedTextContent.includes(haltToken))) { return true; }
 
     return false;
   }
+
 
   deduplicate(predictions) {
     const seen = new Set();
