@@ -125,9 +125,6 @@ export class Prism {
 
 // TODO put this somewhere better
 export function setSequenceProb(sequence) {
-  // average score (to account for different span lengths)
-  // let seqProb = sequence.span.reduce((acc, token) => { return acc + token.prob; } , 0) / sequence.span.length;
-
   let logProb = sequence.span.reduce((acc, token) => { return acc + token.logProb; }, 0);
   let logProbMean = logProb / sequence.span.length;
   let probGeometricMean = Math.exp(logProbMean);
