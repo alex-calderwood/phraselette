@@ -206,6 +206,7 @@ class App extends Component {
     this.setState({
       constraints: this.state.constraints.concat([constraint])
     });
+    console.log('adding constraint', constraint)
   }
 
   removeConstraint(constraint) {
@@ -280,6 +281,7 @@ class App extends Component {
 
               {/* Display the active prisms */}
               {activePrisms.map((prism) => {
+                console.log('rendering', prism.id);
                 return (
                   <PrismView
                     key={prism.id}

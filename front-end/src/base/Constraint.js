@@ -10,11 +10,18 @@ export function makeConstraint(feature, target) {
       target = target.map(token => token?.pos);
       return new POSConstraint(target);
     case 'rhyme':
-      target = target.map(token => token?.sound?.rhyme || RhymeConstraint.defaultTarget);
+      target = target.map(token => token?.sound?.rhyming_part[0] || RhymeConstraint.defaultTarget);
       return new RhymeConstraint(target);
     case 'sound':
-      target = target.map(token => token?.sound?.sound || SoundConstraint.defaultTarget);
-      return new SoundConstraint(target);
+      let soundTarget = target.map((token) => {
+        let phonemes = token?.sound?.phonemes; 
+        if (phonemes && phonemes.length > 0) {
+          return phonemes[0].split();
+        }
+        return SoundConstraint.defaultTarget;
+      });
+      console.log("sound constraint", target, soundTarget)
+      return new SoundConstraint(soundTarget);
   }
   
   switch(dataType) {
@@ -68,6 +75,7 @@ export class Constraint {
 
   static subsetByFeatures(constraints, features) { 
     // could also hard code the mapping for a speedup
+    console.log("subset by", constraints, features)
     return constraints.filter((constraint) => { return features.includes(constraint.feature); });
   }
 }
@@ -239,7 +247,8 @@ export class RhymeConstraint extends CategoricalConstraint {
   defaultTarget = 'AA'; // TODO
 
   constructor(targetPhones) {
-    super('rhyme', 'category', 'rhyme', RhymeConstraint.defaultTarget);
+    super('rhyme', Feature.Rhyme, RhymeConstraint.defaultTarget);
+
     this.targetSequence = targetPhones.map((rhyme, i) => { return { rhyme: rhyme, index: i }; });
     this.range = ["AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY", "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY", "UH", "UW", "UX", "B", "CH", "D", "DH", "DX", "EL", "EM", "EN", "F", "G", "HH", "JH", "K", "L", "M", "N", "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V", "W", "WH", "Y", "Z", "ZH"];
   }
@@ -248,8 +257,13 @@ export class RhymeConstraint extends CategoricalConstraint {
 class SoundConstraint extends CategoricalConstraint { // untested
   defaultTarget = 'AA'; // TODO
   constructor(targetPhones) {
-    super('sound', 'category', 'sound', SoundConstraint.defaultTarget);
-    this.targetSequence = targetPhones.map((sound, i) => { return { sound: sound, index: i }; });
+    super('sound', Feature.Sound, SoundConstraint.defaultTarget);
+    this.targetSequence = targetPhones.split(" ").map((sound, i) => { return { sound: sound, index: i }; });
+    console.log('target sequence', this.targetSequence)
+    // ARPANET 0's 
+    // 0 typically indicates an unstressed syllable
+    // 1 typically indicates a primary stressed syllable
+    // 2 is sometimes used to indicate secondary stress
     this.range = ["AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY", "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY", "UH", "UW", "UX", "B", "CH", "D", "DH", "DX", "EL", "EM", "EN", "F", "G", "HH", "JH", "K", "L", "M", "N", "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V", "W", "WH", "Y", "Z", "ZH"];
   }
 }

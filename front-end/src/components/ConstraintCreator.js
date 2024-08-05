@@ -10,7 +10,6 @@ export class ConstraintCreator extends Component {
       showFullCreator: false
     }
   }
-
   handleMouseEnter = () => {
     this.setState({ showFullCreator: true });
   }
