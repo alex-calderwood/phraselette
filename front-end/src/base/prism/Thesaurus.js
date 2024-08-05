@@ -32,21 +32,7 @@ export class ThesaurusPrism extends Prism {
   async onSearchResults(insights, document, constraints) {
     let message = insights.message;
     let words = message.definitions;
-    console.log('got words', words)
-    // let predictions = definitions.map((def) => {return new Sequence([new Token({text: def})])})
-
-     // TODO abstract this
-     // Get probabilities
-     // not the way to do this, returns promises
-    // let predictions = words.map(async (word) => {
-    //   let text = document.prefixText + word;
-    //   console.log('getting tokens for', text)
-    //   let range = [0, text.length];
-    //   let tokens = await gpt2Tokenize(text, { tokenizeRange: range });
-    //   let sequence = new Sequence(tokens);
-    //   setSequenceProb(sequence);
-    //   return sequence;
-    // });
+    console.log('thesaurus got words', words)
 
     let predictions = [];
     for (let word of words) {

@@ -49,7 +49,7 @@ export class ContextPrism extends Prism {
       let wordTokens = await miscTokensToWordTokens(prediction.span, document, numWords);
       prediction.span = wordTokens;
       setSequenceProb(prediction)
-    }``
+    }
             
     // deduplicate based on strippedTextContent
     predictions = this.deduplicate(predictions);

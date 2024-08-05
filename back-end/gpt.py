@@ -82,8 +82,13 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): 
             greedy_output_dict = model.generate(
                 all_ids[:, :i], max_length=max_length, output_scores=True, return_dict_in_generate=True
             )
-            softmax = tf.nn.softmax(greedy_output_dict.scores[0])[0]
-            original_prob = softmax[original_word_id].numpy()
+            token_probs = tf.nn.softmax(greedy_output_dict.scores[0])[0]
+            token_logits = greedy_output_dict.scores[0][0]
+            print('probs', token_probs)
+            print('logits', token_logits)
+            original_prob = token_probs[original_word_id].numpy()
+            original_log_prob = token_logits[original_word_id].numpy()
+
 
             # calculate the character offset from the start of the phrase (not counting the extra context)
             offset = calculate_offset(offsets[:, i - context_len, :], extra_context, start_token_offset)
@@ -91,12 +96,14 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): 
             # Determine the top k alternate words for each token
             alternates = []
             if top_k > 0:
-                top_k_values, top_k_indices = tf.math.top_k(softmax, k=top_k)
+                top_k_values, top_k_indices = tf.math.top_k(token_probs, k=top_k)
                 for index, prob in zip(top_k_indices, top_k_values):
                     token = tokenizer.decode(index)
+                    log_prob = token_logits[index]
                     alternates.append({
                         'token': token,
                         'prob': float(prob),
+                        'log_prob': float(log_prob),
                         'span': [offset[0], offset[0] + len(token)],
                     })
                     
@@ -104,6 +111,7 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): 
                 'token': tokenizer.decode(original_word_id),
                 'span': offset,
                 'prob': float(original_prob), # needs to be a float to serialize to JSON|
+                'log_prob': float(original_log_prob),
                 'alternates': alternates,     # top k alternates
             }
 
@@ -216,9 +224,9 @@ def print_output(output):
 
 if __name__ == "__main__":
     # Example usage
-    # for token in pluck_probs("This is a test.", return_k_alternates=3):
-    #     print(token)
-    #     print(json.dumps(token))
+    for token in pluck_probs("This is a test.", top_k=3):
+        print(token)
+        print(json.dumps(token))
 
-    output = forward_search("When I was walking down the street today I was surprised to see ", top_k=40, depth=3)
-    print_output(output)
+    # output = forward_search("When I was walking down the street today I was surprised to see ", top_k=40, depth=3)
+    # print_output(output)
