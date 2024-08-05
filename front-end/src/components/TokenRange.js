@@ -1,5 +1,5 @@
 import React, { Component, createRef } from "react";
-import { getColor, zeroToOneColor } from "../color";
+import { getColor, zeroToOneColor, categoryToColor } from "../color";
 import { getUniqueUUID, scientific} from "../scripts/utils";
 
 function tokenItemsToShow(tokenType) {
@@ -20,7 +20,9 @@ export class TokenRange extends Component {
     super(props);
     this.tokenBarRef = createRef(); // Create a reference to the token bar div
     this.state = {
-      overflowing: false
+      overflowing: false,
+      hoveredTokenId: null,
+      hoverSequenceId: null,
     };
   }
 
@@ -61,24 +63,14 @@ export class TokenRange extends Component {
       <div className={"token-range-parent " + overflowing}>
           <div id={'tokenbar-' + tokenType} className={`token-range` + wrap}>
               {tokens && tokens.map((tokenOrSeq) => {
-                if (tokenOrSeq.span) { // tokenGroup is a sequence
+                if (tokenOrSeq.span) {
                   let sequence = tokenOrSeq;
-                  let prob = sequence.getAttribute('probGeometricMean');
-                  let probColor = zeroToOneColor(prob);
-                  // let score = sequence?.scores[scoreLookup]?.value;
-                  // let color = zeroToOneColor(score);
-                  return <div key={getUniqueUUID()} className="token-span"> 
-                     { sequence.span.map((token) => { return this.renderToken(tokenType, token); }) }
-                    {/* <div className="item" style={{ backgroundColor: color }}>
-                      {scientific(score)}
-                    </div> */}
-                    {prob ? <div className="item" style={{ backgroundColor: probColor }}>
-                      {scientific(prob)}
-                    </div> : ""}
-                  </div>
+                  const expanded = this.state.hoverSequenceId === sequence.id;
+                  return this.renderSequence(sequence, tokenType, expanded);
                 } else {
                   let token = tokenOrSeq;
-                  return this.renderToken(tokenType, token);
+                  const expanded = this.state.hoveredTokenId === token.id;
+                  return this.renderToken(tokenType, token, expanded);
                 }
               })}
         </div>
@@ -86,10 +78,38 @@ export class TokenRange extends Component {
     );
   }
 
-  renderToken(tokenType, token) {
+  renderSequence(sequence, tokenType, expanded) {
+    let prob = sequence.getAttribute('probGeometricMean');
+    let probColor = zeroToOneColor(prob);
+    // let score = sequence?.scores[scoreLookup]?.value;
+    // let color = zeroToOneColor(score);
+
+    let style = probColor ? { backgroundColor: probColor } : {};
+    const simple = expanded ? '' : 'simple';
+
+    return <div 
+        key={getUniqueUUID()} 
+        className={`sequence ${simple}`}
+        onMouseEnter={() => this.setState({ hoverSequenceId: sequence.id })}
+        onMouseLeave={() => this.setState({ hoverSequenceId: null })}
+        style={style}
+      >
+        {/* Render tokens */}
+        {sequence.span.map((token) => { return this.renderToken(tokenType, token, expanded); })}
+
+        {/* Other sequence data */}
+        {/* <div className="item" style={{ backgroundColor: color }}>
+            {scientific(score)}
+          </div> */}
+        {expanded && prob ? <div className="item" style={{ backgroundColor: probColor }}>
+          {scientific(prob)}
+        </div> : ""}
+    </div>;
+  }
+
+  renderToken(tokenType, token, expanded) {
     let color = tokenType ? getColor(tokenType, token) : 'white';
     let space = token?.isSpacySpace === true ? 'space' : '';
-
     let fields = tokenItemsToShow(tokenType);
 
     let prob = null;
@@ -103,20 +123,35 @@ export class TokenRange extends Component {
     }
 
     let pos = null;
+    let posColor = color;
     if (fields.includes('pos') && token.pos !== undefined) {
       pos = token.pos;
+      posColor = categoryToColor(token.pos);
     }
 
     let onClick = this.props.onTokenClick ? this.props.onTokenClick : () => { };
     let showCharRange = this.props.debugMode && token.start !== undefined && token.end !== undefined;
 
-    return <div key={token.id} className={`token ${space}`} onClick={() => { onClick(token); } }>
-      <div className="item heading">{token.text}</div>
-      {showCharRange  && <div className="item range">[{token.start}-{token.end}]</div>}
-      {pos !== null   && <div className="item" style={{ backgroundColor: color }}>{pos}</div>}
-      {prob !== null  && <div className="item" style={{ backgroundColor: color }}>{prob}</div>}
-      {sound !== null && <div className="item" style={{ backgroundColor: color }}>{sound}</div>}
-    </div>;
+    const simple = expanded ? '' : 'simple';
+
+    let style = color ? { backgroundColor: color } : {};
+
+    return (
+      <div 
+        key={token.id} 
+        className={`token ${space} ${simple}`} 
+        onClick={() => { onClick(token); }}
+        onMouseEnter={() => this.setState({ hoveredTokenId: token.id })}
+        onMouseLeave={() => this.setState({ hoveredTokenId: null })}
+        style={style}
+      >
+        <div className="item heading">{token.text}</div>
+        {expanded && showCharRange  && <div className="item range">[{token.start}-{token.end}]</div>}
+        {expanded && pos !== null   && <div className="item" style={{ backgroundColor: posColor }}>{pos}</div>}
+        {expanded && prob !== null  && <div className="item" style={{ backgroundColor: color }}>{prob}</div>}
+        {expanded && sound !== null && <div className="item" style={{ backgroundColor: color }}>{sound}</div>}
+      </div>
+    );
   }
 }
 

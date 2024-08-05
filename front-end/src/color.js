@@ -2,6 +2,8 @@ import chroma from "chroma-js";
 const colorScale = chroma.scale(['red', 'white', 'green', 'green']).mode('lab');
 const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple', 'cyan', 'coral', 'teal', 'orange', 'skyblue', 'burlywood']).mode('lab');
 
+const brightenFactor = 3;
+
 export function getColor(tokenType, token) {
   let prob = token.prob || 0;
   switch (tokenType) {
@@ -27,7 +29,7 @@ const probToColor = (prob) => {
   return "rgba(" + 0 + ", " + g + ", 0, " + prob + ")";
 };
 
-const categoryToColor = (word) => {
+export const categoryToColor = (word) => {
   // Hash function to convert word to a number between 0 and 255
   if (!word) {
     return 'white';
@@ -43,7 +45,7 @@ const categoryToColor = (word) => {
 
   // rainbow scale
   const alpha = 0.3;
-  let hex = rainbowScale(prob).alpha(alpha).hex();
+  let hex = rainbowScale(prob).brighten(brightenFactor).hex();
   return hex;
 };
 
@@ -61,14 +63,14 @@ export function lengthNormedLogProbToColor(token) {
   let normalized = (prob + 6) / 6; // normalize to [0, 1] weird
   // normalized /= token.text.length || 1; // normalize by length
   let alpha = 0.5;
-  let hex = colorScale(normalized).alpha(alpha).css();
+  let hex = colorScale(normalized).brighten(brightenFactor).css();
   return hex;
 }
 
 
 export function zeroToOneColor(val) {
   let alpha = 0.5;
-  let hex = colorScale(val).alpha(alpha).css();
+  let hex = colorScale(val).brighten(brightenFactor).css();
   return hex;
 }
 

@@ -36,12 +36,12 @@ export async function resolveConstraints(predictions, constraints, sort=true, co
 export function sortPredictions(scoredPredictions, comparator, sortByAttribute) {
     let sortedPredictions = scoredPredictions.sort((a, b) => {
         if (sortByAttribute) {
-            console.log('comparator', comparator, 'by attribute', a, b, a.getAttribute(comparator), b.getAttribute(comparator));
+            // console.log('comparator', comparator, 'by attribute', a, b, a.getAttribute(comparator), b.getAttribute(comparator));
             let aScore = a.getAttribute(comparator);
             let bScore = b.getAttribute(comparator);
             return bScore - aScore;
         }
-        console.log('comparator', comparator, 'by score', a.scores[comparator].value, b.scores[comparator].value);
+        // console.log('comparator', comparator, 'by score', a.scores[comparator].value, b.scores[comparator].value);
         return b.scores[comparator].value - a.scores[comparator].value;
     });
 

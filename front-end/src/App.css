@@ -6,6 +6,7 @@
   --darker-text-color: rgb(80, 80, 80);
   --hover-color: rgb(200, 200, 200);
   --button-height: 1.5em;
+  --radius:3px;
 }
 
 .App {
@@ -192,7 +193,7 @@ we will need to select the text children of the editor */
 }
 
 
-.token-span {
+.sequence {
   display: inline-block;
   /* padding: 4px; */
   margin-left: 2px;
@@ -203,6 +204,7 @@ we will need to select the text children of the editor */
   text-wrap: wrap;
   /* make the cursor a pointer */
   cursor: pointer;
+  border-radius: var(--radius);
 }
 
 .token { /* specific formatting for a token object */ 
@@ -212,11 +214,16 @@ we will need to select the text children of the editor */
   min-height: 100%;
   text-wrap: wrap;
   cursor: pointer;
+  border-radius: var(--radius);
 }
 
 /* 1ch is supposed to be equal to the approximate width of one character but it seems large*/
 .token.space {
   width: 0.4ch;  
+}
+
+.token.simple {
+  /* background-color: aqua; */
 }
 
 .item {
@@ -228,12 +235,13 @@ we will need to select the text children of the editor */
   overflow: hidden;
   min-height: none;
   text-overflow: ellipsis;
+  border-radius: var(--radius);
 }
 
 /* on hover make the token a bit darker */
-.token:hover {
+/* .token:hover {
   background-color: #e1e1e1;
-}
+} */
 
 .token .heading {
   font-size: 12px;
