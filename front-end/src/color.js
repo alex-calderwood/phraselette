@@ -5,16 +5,16 @@ const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple', '
 const brightenFactor = 3;
 
 export function getColor(tokenType, token) {
-  let prob = token.prob || 0;
+  let prob = token.getAttribute('prob', 0);
   switch (tokenType) {
     case 'basic':
       return categoryToColor(token.text);
     case 'context': case 'probability-base': case 'alternate':
       return probColor(token);
     case 'words': case 'POS':
-      return categoryToColor(token.pos);
+      return categoryToColor(token.getAttribute('pos', ''));
     case 'sound':
-      return categoryToColor(token.sound?.rhyming_part?.join(' '));
+      return categoryToColor(token.getAttribute('rhyming_part', []).join(' '));
     default:
       return probToColor(prob);
   }
@@ -59,7 +59,7 @@ const probColor = (token) => {
 };
 
 export function lengthNormedLogProbToColor(token) {
-  let prob = Math.log10(token.prob + 1e-12); // avoid log(0)
+  let prob = Math.log10(token.getAttribute('prob', 0) + 1e-15); // avoid log(0)
   let normalized = (prob + 6) / 6; // normalize to [0, 1] weird
   // normalized /= token.text.length || 1; // normalize by length
   let alpha = 0.5;

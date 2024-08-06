@@ -49,7 +49,7 @@ export function makePrism(type, callbacks) {
       prism = new ThesaurusPrism(randomRole('thesaurus'));
       break;
     case 'sound':
-      prism = new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words');
+      prism = new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words').setActive(true);
       break;
     case 'basic':
       prism = new Prism('basic');

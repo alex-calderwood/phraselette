@@ -18,11 +18,13 @@ export class TokenAlternates extends Component {
   render() {
     let token = this.props.token; 
 
-    if (!token || !token.alternates || token.alternates.length === 0) {
+    if (!token || !token.alternates || token.alternates.size === 0) {
       return <div></div>
     }
     
     let alternates = token.alternates; // array of token objects
+
+    console.log('alternates', alternates)
 
     return <div id={'alternate-' + this.props.token.id} className="alternates">
         <div className='title'> Alternates for {token.text}</div>

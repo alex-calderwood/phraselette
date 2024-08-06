@@ -36,7 +36,9 @@ export class PrismEditor extends Component {
     this.editorNode.addEventListener('keyup', this.onKeyUp.bind(this));
     // this.editorNode.addEventListener('focus', this.handleFocus);
 
-    let initializationText = "A";
+    let initializationText = "E";
+    let testingText = "And now we may know something after all!"
+    initializationText = testingText; // comment this out to be normal
     let content = [];
     let initialId = getUniqueUUID();
     for (let i = 0; i < initializationText.length; i++) {
@@ -193,7 +195,7 @@ export class PrismEditor extends Component {
   }
 
   /*
-   * Color all the characters between token.start and token.end based on token.prob
+   * Color all the characters between token.start and token.end based on token prob
    * Force the component to update.
   */
   updateUITokens(token) {

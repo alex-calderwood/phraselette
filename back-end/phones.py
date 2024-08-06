@@ -26,4 +26,4 @@ def sound_out(word):
     return result
 
 if __name__ == "__main__":
-    pprint(sound_out("april"))
+    pprint(sound_out("works"))

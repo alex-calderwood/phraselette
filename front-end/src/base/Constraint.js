@@ -7,21 +7,22 @@ export function makeConstraint(feature, target) {
   let dataType = feature.dataType;
   switch (name) {
     case 'pos':
-      target = target.map(token => token?.pos);
+      target = target.map(token => token.getAttribute('pos'));
       return new POSConstraint(target);
     case 'rhyme':
-      target = target.map(token => token?.sound?.rhyming_part[0] || RhymeConstraint.defaultTarget);
+      target = target.map(token => token.getAttribute('rhyming_part', [])[0] || RhymeConstraint.defaultTarget);
       return new RhymeConstraint(target);
     case 'sound':
-      let soundTarget = target.map((token) => {
-        let phonemes = token?.sound?.phonemes; 
-        if (phonemes && phonemes.length > 0) {
-          return phonemes[0].split();
-        }
+      let firstPhonemesPerToken = target.map((token) => {
+        let phonemes = token.getAttribute('phonemes', []); 
+        if (phonemes && phonemes.length > 0) { return phonemes[0]; }
         return SoundConstraint.defaultTarget;
       });
-      console.log("sound constraint", target, soundTarget)
-      return new SoundConstraint(soundTarget);
+      let finalTarget = firstPhonemesPerToken.map((tokenPhonemes) => {
+        return tokenPhonemes.split(' ');
+      }).flat().filter(phoneme => phoneme && phoneme.length > 0);
+
+      return new SoundConstraint(finalTarget);
   }
   
   switch(dataType) {
@@ -75,7 +76,6 @@ export class Constraint {
 
   static subsetByFeatures(constraints, features) { 
     // could also hard code the mapping for a speedup
-    console.log("subset by", constraints, features)
     return constraints.filter((constraint) => { return features.includes(constraint.feature); });
   }
 }
@@ -134,8 +134,8 @@ export class CategoricalConstraint extends Constraint {
         console.error('target token is undefined mismatch in token lengths?', i, this.targetSequence, this.newSpan);
         continue;
       }
-      let baselineTag = targetToken[this.feature.name];
-      let newTokenTag = newToken[this.feature.name];
+      let baselineTag = this._getAttribute(targetToken, this.feature.name);
+      let newTokenTag = this._getAttribute(newToken, this.feature.name);
       if (newTokenTag === baselineTag) {
         matches += 1;
       }
@@ -181,10 +181,17 @@ export class CategoricalConstraint extends Constraint {
     }
     return this.targetSequence;
   }
+
+  _getAttribute(token, attribute) {
+    if (token.getAttribute != undefined) {
+      return token.getAttribute(attribute);
+    }
+    return token[attribute];
+  }
 }
 
 export class POSConstraint extends CategoricalConstraint { // may want to make a 'categorical constraint'
-  defaultTarget = 'NN';
+  static defaultTarget = 'NN';
   
   constructor(targetPOSPhrase) {
     super('pos', Feature.POS, POSConstraint.defaultTarget);
@@ -244,27 +251,57 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
  * Should this be responsible for both meter and rhyme?
 */
 export class RhymeConstraint extends CategoricalConstraint {
-  defaultTarget = 'AA'; // TODO
+  static defaultTarget = '';
 
   constructor(targetPhones) {
     super('rhyme', Feature.Rhyme, RhymeConstraint.defaultTarget);
-
     this.targetSequence = targetPhones.map((rhyme, i) => { return { rhyme: rhyme, index: i }; });
     this.range = ["AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY", "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY", "UH", "UW", "UX", "B", "CH", "D", "DH", "DX", "EL", "EM", "EN", "F", "G", "HH", "JH", "K", "L", "M", "N", "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V", "W", "WH", "Y", "Z", "ZH"];
   }
 }
 
-class SoundConstraint extends CategoricalConstraint { // untested
-  defaultTarget = 'AA'; // TODO
+class SoundConstraint extends CategoricalConstraint {
+  static defaultTarget = '';
   constructor(targetPhones) {
     super('sound', Feature.Sound, SoundConstraint.defaultTarget);
-    this.targetSequence = targetPhones.split(" ").map((sound, i) => { return { sound: sound, index: i }; });
-    console.log('target sequence', this.targetSequence)
+    this.targetSequence = targetPhones.map((sound, i) => { return { sound: sound, index: i }; });
+
     // ARPANET 0's 
     // 0 typically indicates an unstressed syllable
     // 1 typically indicates a primary stressed syllable
     // 2 is sometimes used to indicate secondary stress
     this.range = ["AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY", "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY", "UH", "UW", "UX", "B", "CH", "D", "DH", "DX", "EL", "EM", "EN", "F", "G", "HH", "JH", "K", "L", "M", "N", "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V", "W", "WH", "Y", "Z", "ZH"];
+  }
+
+  async getScore(sequence, document) {
+    if (sequence === null || sequence.span.length === 0) {
+      return 0;
+    }
+
+    if (this.targetSequence === null || this.targetSequence.length === 0) {
+      return 0;
+    }
+
+    console.log('getScore target sequence', this.targetSequence)
+    let tokens = sequence.span;
+
+    // zip through the span tokens and the tokens to evaluate
+    let matches = 0;
+    for (let i = 0; i < tokens.length; i++) {
+      let newToken = tokens[i];
+      let targetToken = this.targetSequence[i];
+      if (targetToken === undefined) {
+        console.error('target token is undefined mismatch in token lengths?', i, this.targetSequence, this.newSpan);
+        continue;
+      }
+      let baselineTag = targetToken.getAttribute(this.feature.name);
+      let newTokenTag = newToken[this.feature.name];
+      if (newTokenTag === baselineTag) {
+        matches += 1;
+      }
+    }
+    let avg = matches / tokens.length;
+    return avg;
   }
 }
 
@@ -285,7 +322,8 @@ export class NumericalRangeConstraint extends Constraint {
       return 0;
     }
 
-    let value = sequence.getAttribute(this.feature.name) || 0;
+    let value = sequence.getAttribute(this.feature.name, 0);
+    console.log('numerical score', value, this.feature.name)
     if (value < this.targetMin || value > this.targetMax) {
       return 0;
     }

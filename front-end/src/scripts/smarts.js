@@ -83,26 +83,8 @@ export async function spacyTokenize(text, data = {}) {
   let rawTokenPromise = await tokenGenerator.next();
   while (!rawTokenPromise.done) {
     let rawToken = rawTokenPromise.value;
-    let tokenData = {
-      'start':        rawToken.start,     // inclusive
-      'end':          rawToken.end,       // inclusive
-      "text":         rawToken.text,
-      "pos":          rawToken.tag,
-      "isSpacySpace": rawToken.is_space,
-      "type":         "words",
-      "isWord":       true,
-    }
-    if (rawToken.extra && typeof rawToken.extra === 'object') {
-      for (let key in rawToken.extra) {
-        if (rawToken.extra.hasOwnProperty(key)) {
-          tokenData[key] = rawToken.extra[key];
-        }
-      }
-      delete rawToken.extra;
-    }
-    tokenData['raw'] = rawToken;
-    
-    let token = new Token(tokenData);
+
+    let token = makeWordToken(rawToken);
     tokens.push(token);
 
     // don't wait for the generator to finish
@@ -114,6 +96,23 @@ export async function spacyTokenize(text, data = {}) {
   }
 
   return tokens;
+}
+
+function makeWordToken(rawToken) {
+  let tokenData = {
+    'start':        rawToken.start,     // inclusive
+    'end':          rawToken.end,       // inclusive
+    "text":         rawToken.text,
+    "pos":          rawToken.tag,
+    "isSpacySpace": rawToken.is_space,
+    "type":         "words",
+    "isWord":       true,
+    "extra":        rawToken.extra,
+  }
+
+  let token = new Token(tokenData);
+
+  return token;
 }
 
 export function makeProbToken(rawToken, rawIsInclusive=false) {
@@ -285,7 +284,7 @@ export async function getPhones(words) {
       'start': rawToken.start,     // inclusive
       'end':   rawToken.end,       // inclusive from server
       "text":  rawToken.text,
-      "pos":   rawToken.tag,       // Todo looks like there is also a '.pos' need to see if there is a difference
+      "pos":   rawToken.tag,       // Todo looks like there is also a '.pos'
       "raw":   rawToken,
       "type":  "phone",
     });
@@ -338,7 +337,7 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
   if(maxWords !== null) {
     let wordCount = 0;
     convertedTokens = convertedTokens.filter((token) => {
-      if (token.isSpacySpace || token.pos == "_SP") { return true; }
+      if (token.getAttribute('isSpacySpace') || token.getAttribute('pos') === "_SP") { return true; }
       wordCount++;
       return wordCount <= maxWords;
     });
@@ -359,8 +358,8 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
   let originalTokenIndex = 0;
   for (let i = 0; i < convertedTokens.length; i++) {
     let wordToken = convertedTokens[i];
-    wordToken.originalTokens = []; // Array to store all overlapping original tokens
-    wordToken.partialLogProbs = []; // Array to store partial log probs for tokens that partially overlap
+    let originalTokens = []; // Array to store all overlapping original tokens
+    let partialLogProbs = []; // Array to store partial log probs for tokens that partially overlap
     
     while (originalTokenIndex < tokenSpan.length) {
       let originalToken = tokenSpan[originalTokenIndex];
@@ -377,9 +376,9 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
         let overlapFraction = overlapLength / originalTokenLength;
         
         // Store the original token and its partial log prob
-        wordToken.originalTokens.push(originalToken);
-        let partialLogProb = (originalToken.log_prob || Math.log(originalToken.prob || 1)) * overlapFraction;
-        wordToken.partialLogProbs.push(partialLogProb);
+        originalTokens.push(originalToken);
+        let partialLogProb = (originalToken.getAttribute('logProb', 0) || Math.log(originalToken.getAttribute('prob', 1))) * overlapFraction;
+        partialLogProbs.push(partialLogProb);
         
         // Move to the next original token if we've passed its end
         if (originalToken.end <= wordToken.end) {
@@ -396,19 +395,25 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
         originalTokenIndex++;
       }
     }
+
+    wordToken.setAttribute('partialLogProbs', partialLogProbs)
+    wordToken.setAttribute('originalTokens', originalTokens)
     
     // Calculate the combined log probability
-    if (wordToken.originalTokens.length > 0) {
+    if (originalTokens.length > 0) {
       // Sum partial log probabilities
-      wordToken.logProb = wordToken.partialLogProbs.reduce((sum, logProb) => sum + logProb, 0);
+      let logProb = partialLogProbs.reduce((sum, logProb) => sum + logProb, 0);
+      wordToken.setAttribute('logProb', logProb);
       // Store the number of tokens that made up this word (including partials)
-      wordToken.tokenCount = wordToken.originalTokens.length;
+      let tokenCount = originalTokens.length;
+      wordToken.setAttribute('tokenCount', tokenCount);
       // Store the arithmetic mean of the log probabilities
-      wordToken.logProbMean = wordToken.logProb / wordToken.tokenCount;
+      let logProbMean = logProb / tokenCount;
+      wordToken.setAttribute('logProbMean', logProbMean);
       
-      // If you need the actual probabilities, you can exponentiate:
-      wordToken.prob = Math.exp(wordToken.logProb);
-      wordToken.probGeometricMean = Math.exp(wordToken.logProbMean);
+      // If you need the actual probabilities, exponentiate:
+      wordToken.setAttribute('prob', Math.exp(logProb));
+      wordToken.setAttribute('probGeometricMean', Math.exp(logProbMean));
     }
   }
 

@@ -79,7 +79,7 @@ export class TokenRange extends Component {
   }
 
   renderSequence(sequence, tokenType, expanded) {
-    let prob = sequence.getAttribute('probGeometricMean');
+    let prob = sequence.getAttribute('probGeometricMean', null);
     let probColor = zeroToOneColor(prob);
     // let score = sequence?.scores[scoreLookup]?.value;
     // let color = zeroToOneColor(score);
@@ -109,31 +109,24 @@ export class TokenRange extends Component {
 
   renderToken(tokenType, token, expanded) {
     let color = tokenType ? getColor(tokenType, token) : 'white';
-    let space = token?.isSpacySpace === true ? 'space' : '';
+    let space = token.getAttribute('isSpacySpace') === true ? 'space' : '';
     let fields = tokenItemsToShow(tokenType);
 
-    let prob = null;
-    if (fields.includes('prob') && token.probGeometricMean !== undefined) {
-      prob = scientific(token.probGeometricMean);
+    let prob = fields.includes('prob') ? token.getAttribute('probGeometricMean') : null;
+    if (prob != null) {
+        prob = scientific(prob);
     }
 
-    let sound = null;
-    if (fields.includes('sound') && token.sound !== undefined) {
-      sound = token?.sound?.phonemes ? token.sound.phonemes.join(' ') : null;
-    }
+    let sound = fields.includes('sound') ? token.getAttribute('phonemes', null)?.join(' ') : null;
 
-    let pos = null;
+    let pos = fields.includes('pos') ? token.getAttribute('pos', null) : null;
     let posColor = color;
-    if (fields.includes('pos') && token.pos !== undefined) {
-      pos = token.pos;
-      posColor = categoryToColor(token.pos);
-    }
+    if (pos != null) { posColor = categoryToColor(pos); }
 
     let onClick = this.props.onTokenClick ? this.props.onTokenClick : () => { };
     let showCharRange = this.props.debugMode && token.start !== undefined && token.end !== undefined;
 
     const simple = expanded ? '' : 'simple';
-
     let style = color ? { backgroundColor: color } : {};
 
     return (
@@ -146,10 +139,10 @@ export class TokenRange extends Component {
         style={style}
       >
         <div className="item heading">{token.text}</div>
-        {expanded && showCharRange  && <div className="item range">[{token.start}-{token.end}]</div>}
-        {expanded && pos !== null   && <div className="item" style={{ backgroundColor: posColor }}>{pos}</div>}
-        {expanded && prob !== null  && <div className="item" style={{ backgroundColor: color }}>{prob}</div>}
-        {expanded && sound !== null && <div className="item" style={{ backgroundColor: color }}>{sound}</div>}
+        {expanded && showCharRange && <div className="item range">[{token.start}-{token.end}]</div>}
+        {expanded && pos   != null && <div className="item" style={{ backgroundColor: posColor }}>{pos}</div>}
+        {expanded && prob  != null && <div className="item" style={{ backgroundColor: color }}>{prob}</div>}
+        {expanded && sound != null && <div className="item" style={{ backgroundColor: color }}>{sound}</div>}
       </div>
     );
   }
