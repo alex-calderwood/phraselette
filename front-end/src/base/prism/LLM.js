@@ -33,7 +33,7 @@ export class ContextPrism extends Prism {
 
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
 
-    console.log('searching LLM', {preConstraints, selectionWords, numWords})
+    console.log('searching LLM', {preConstraints, selectionWords, numWords, numTokens})
     await searchForward(document, preConstraints, numTokens).then(
       (predictions) => {
         // TODO document that constraints might have been altererd in the meantime

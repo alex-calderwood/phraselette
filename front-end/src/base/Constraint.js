@@ -116,7 +116,8 @@ export class CategoricalConstraint extends Constraint {
     this.range = null;
     this.mode = CategoricalConstraint.modes[0];
     this.flatten = false;
-  }
+    this.ignore = []; // features to disregard
+}
 
   async getScore(sequence, document) {
     console.log('score mode', this.mode, sequence.textContent);
@@ -129,11 +130,13 @@ export class CategoricalConstraint extends Constraint {
     let tokenFeatures = this.flatten
       ? tokens.flatMap(t => this._getAttribute(t, this.feature.name))
       : tokens.map(t => this._getAttribute(t, this.feature.name));
+    tokenFeatures = tokenFeatures.filter(pos => !this.ignore.includes(pos))
 
     let targetFeatures = this.targetSequence.map(t => this._getAttribute(t, this.feature.name));
     let flattenedTargetFeatures = this.flatten ? targetFeatures.flat() : targetFeatures;
+    flattenedTargetFeatures = flattenedTargetFeatures.filter(pos => !this.ignore.includes(pos))
 
-    console.log('token', tokenFeatures, 'target', targetFeatures)
+    console.log('token', tokenFeatures, 'target', flattenedTargetFeatures)
   
     let score = 0;
   
@@ -267,7 +270,12 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
   
   constructor(targetPOSPhrase) {
     super('pos', Feature.POS, POSConstraint.defaultTarget);
-    this.targetSequence = targetPOSPhrase.map((pos, i) => { return { pos: pos, index: i }; });
+    this.ignore = ["_SP"]
+    this.targetSequence = targetPOSPhrase.filter(
+      pos => !this.ignore.includes(pos)
+    ).map(
+      (pos, i) => { return { pos: pos, index: i }; }
+    );
     this.range = Object.keys({// https://github.com/explosion/spaCy/blob/master/spacy/glossary.py
       "AFX": "affix",
       "CC": "conjunction, coordinating",
