@@ -7,7 +7,7 @@ export class WordView extends Component {
     this.tokenManager = this.props.tokenManager;
   }
 
-  onTokenClick(clickedToken) {
+  onClickSequence(clickedToken) {
     let originalToken = this.tokens[0]; // TODO this is a placeholder since we are currently only supporting one token
     this.props.onSwapToken(originalToken, clickedToken)
   }

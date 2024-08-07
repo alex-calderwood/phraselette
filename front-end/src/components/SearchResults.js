@@ -23,7 +23,7 @@ export class SearchResults extends Component {
     console.log('SearchResults', results, this.tokenType)
     return <div className={"search-results"}>
       {this.props.showLength && <div className="subtitle">{`${results.length} combined results`}</div>}
-      <TokenRange tokenType={this.tokenType} tokens={results} onTokenClick={this.props.onTokenClick} suppressPOS={true} wrap={wrap} />
+      <TokenRange tokenType={this.tokenType} tokens={results} onClickSequence={this.props.onClickSequence} suppressPOS={true} wrap={wrap} />
     </div> 
   }
 }

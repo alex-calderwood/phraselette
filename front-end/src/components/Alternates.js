@@ -8,10 +8,10 @@ export class TokenAlternates extends Component {
     this.prism = this.props.prism;
   }
 
-  onTokenClick(clickedToken, originalToken) {
+  onClickSequence(clickedToken, originalToken) {
     console.log('clicked', clickedToken, originalToken);
-    if (this.props.onTokenClick) {
-      this.props.onTokenClick(originalToken, clickedToken); // swapping the order of the arguments
+    if (this.props.onClickSequence) {
+      this.props.onClickSequence(originalToken, clickedToken); // swapping the order of the arguments
     }
   }
 
@@ -31,7 +31,7 @@ export class TokenAlternates extends Component {
         <TokenRange 
           tokens={alternates}
           tokenType='alternate'
-          onTokenClick={(clickedToken) => { this.onTokenClick(clickedToken, token) }}
+          onClickSequence={(clickedToken) => { this.onClickSequence(clickedToken, token) }}
           />
       </div> 
   }

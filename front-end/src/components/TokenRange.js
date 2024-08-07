@@ -19,6 +19,7 @@ export class TokenRange extends Component {
   constructor(props) {
     super(props);
     this.tokenBarRef = createRef(); // Create a reference to the token bar div
+    this.id = getUniqueUUID();
     this.state = {
       overflowing: false,
       hoveredTokenId: null,
@@ -60,7 +61,7 @@ export class TokenRange extends Component {
     let scoreLookup = tokenType === 'search' ? 'total' : tokenType;
 
     return (
-      <div className={"token-range-parent " + overflowing}>
+      <div className={"token-range-parent " + overflowing} >
           <div id={'tokenbar-' + tokenType} className={`token-range` + wrap}>
               {tokens && tokens.map((tokenOrSeq) => {
                 if (tokenOrSeq.span) {
@@ -78,6 +79,7 @@ export class TokenRange extends Component {
     );
   }
 
+
   renderSequence(sequence, tokenType, expanded) {
     let prob = sequence.getAttribute('probGeometricMean', null);
     let probColor = zeroToOneColor(prob);
@@ -88,11 +90,14 @@ export class TokenRange extends Component {
     const simple = expanded ? '' : 'simple';
 
     return <div 
-        key={getUniqueUUID()} 
+        key={sequence.id}
         className={`sequence ${simple}`}
         onMouseEnter={() => this.setState({ hoverSequenceId: sequence.id })}
         onMouseLeave={() => this.setState({ hoverSequenceId: null })}
         style={style}
+        onClick={() => { 
+          this.props.onClickSequence(sequence); 
+        }}
       >
         {/* Render tokens */}
         {sequence.span.map((token) => { return this.renderToken(tokenType, token, expanded); })}
@@ -123,7 +128,7 @@ export class TokenRange extends Component {
     let posColor = color;
     if (pos != null) { posColor = categoryToColor(pos); }
 
-    let onClick = this.props.onTokenClick ? this.props.onTokenClick : () => { };
+    // let onClick = this.props.onTokenClick ? this.props.onTokenClick : () => { };
     let showCharRange = this.props.debugMode && token.start !== undefined && token.end !== undefined;
 
     const simple = expanded ? '' : 'simple';
@@ -133,10 +138,10 @@ export class TokenRange extends Component {
       <div 
         key={token.id} 
         className={`token ${space} ${simple}`} 
-        onClick={() => { onClick(token); }}
         onMouseEnter={() => this.setState({ hoveredTokenId: token.id })}
         onMouseLeave={() => this.setState({ hoveredTokenId: null })}
         style={style}
+        // onClick={() => { onClick(token); }}
       >
         <div className="item heading">{token.text}</div>
         {expanded && showCharRange && <div className="item range">[{token.start}-{token.end}]</div>}

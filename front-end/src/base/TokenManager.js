@@ -196,6 +196,20 @@ export class TokenManager {
     this.refreshCharIndices(lense);
   }
 
+  swapSequence(oldTokens, newTokens) {
+    const tokenType = oldTokens[0].type; // Assume all tokens are of the same type
+    
+    // Find the index range to replace
+    const startIndex = this.tokens[tokenType].findIndex(t => t.id === oldTokens[0].id);
+    const endIndex = startIndex + oldTokens.length;
+    
+    // Replace the old tokens with the new ones
+    this.tokens[tokenType].splice(startIndex, oldTokens.length, ...newTokens);
+    
+    // Refresh character indices
+    this.refreshCharIndices(tokenType);
+  }
+
   /* 
   * Refresh the character indices for the given lense by looping through all tokens and updating their indices.
   */

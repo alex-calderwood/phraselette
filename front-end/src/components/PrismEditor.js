@@ -28,8 +28,6 @@ export class PrismEditor extends Component {
   componentDidMount() {
     this.editorNode = this.contentRef.current;
 
-    // this.startObserver();
-    
     this.editorNode.addEventListener('input', this.onInput);
     this.editorNode.addEventListener('click', this.onClick);
     this.editorNode.addEventListener('keydown', this.onKeyDown.bind(this));
@@ -37,7 +35,27 @@ export class PrismEditor extends Component {
     // this.editorNode.addEventListener('focus', this.handleFocus);
 
     let initializationText = "E";
-    let testingText = "And now we may know something after all!"
+    let testingText = `rising swoonball shackled gravitywell tickticking pendulum`
+// shackled gravitywell
+
+// tickticking pendulum
+// my parabolic mind swing swung swooning
+// passing yo's
+// to yesterday's mind farts
+// like a yo yo
+// yearning for the slow mo light show
+// of the Wizard's laser harmonograph
+// set to Meyer's ever so slowed concertos
+
+// the yo of a slowly slung
+// back sack on a stick
+// stacked as high as a homesick friend's
+// ransacked slapstick back whack
+
+// which stings 
+// as a shot on the neck
+// flings the stupor at your breakneck fact check`
+
     initializationText = testingText; // comment this out to be normal
     let content = [];
     let initialId = getUniqueUUID();
@@ -245,15 +263,13 @@ export class PrismEditor extends Component {
     range.setStart(textNode, offset);
     range.setEnd(textNode, offset);
 
-
     // set the focus to the editor
-
-
     this.editorNode.focus();
     let selection = rangy.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
 
+    // hold this for debugging until I fix the first character focus issue
     // const testChar = document.createTextNode('|');
     // range.insertNode(testChar);
   }
@@ -543,11 +559,17 @@ export class PrismEditor extends Component {
   }
 
   onClick = (event) => {
+    this.updateSelection();
+  };
+
+  // to call upon other actions that modify the selection
+  updateSelection = () => {
     let selection = this.currentSelection();
     this.keyDownSelection = selection;
     this.keyUpSelection   = selection;
     this.props.setSelection(selection); // give the new selection to the parent
-  };
+    return selection;
+  }
 
   /* 
   * Update the text content of the editor from {start} to {end} with {newText}. 
@@ -577,7 +599,20 @@ export class PrismEditor extends Component {
     range.deleteContents();
     range.insertNode(newSpan);
 
-    // style the new text
+
+    this.editorNode.focus();
+    let selection = this.currentSelection().rangy;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    this.updateSelection();
+
+    // select the new text
+    // this.editorNode.focus();
+    // let selection = rangy.getSelection();
+    // selection.removeAllRanges();
+    // selection.addRange(range);
+
+    // // style the new text
     this.splitIntoCharactersAndStyle(this.contentRef.current);
   }
 

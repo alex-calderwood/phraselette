@@ -74,6 +74,18 @@ export class PrismView extends Component {
     this.props.removeConstraint(constraint);
   }
 
+  prismHandleOnClick(sequence) {
+    let prism = this.prism;
+    let start = this.props.startIndex;
+    let end = this.props.endIndex;
+  
+    let tokens = start !== null ? this.tokenManager.tokensAt(prism.tokenType, start, end) : [];
+    console.log('Handling click on sequence:', tokens, sequence);
+    this.props.onSwapSequence(tokens, sequence);
+  }
+  
+  
+
   tokenContent(prism, start, end, tokens) {
     return <div className="additional-content">
         <TokenRange 
@@ -89,7 +101,7 @@ export class PrismView extends Component {
             alternates={token.alternates}
             tokenManager={this.tokenManager}
             prism={prism}
-            onTokenClick={this.props.onSwapToken} />;
+            onClickSequence={this.props.onClickSequence} />;
         })}
       </div>
   }
@@ -146,9 +158,11 @@ export class PrismView extends Component {
             onAdd={this.props.addConstraint}
             onConstraintUpdate={this.onConstraintUpdate.bind(this)} /> : "" }
           
-          {showResults ? <SearchResults 
+          {showResults ? <SearchResults
                       isSearching={this.props.isSearching} 
-                      tokenType={prism.type} results={results} /> : ""}
+                      tokenType={prism.type}
+                      onClickSequence={this.prismHandleOnClick.bind(this)}
+                      results={results} /> : ""}
         
       </div>
     </div>;

@@ -158,8 +158,9 @@ export class CategoricalConstraint extends Constraint {
         break;
     }
     
+    score = score ? 1 : 0;
     console.log('score', score)
-    return score ? 1 : 0;
+    return score;
   }
 
   _getAttribute(token, attribute) {

@@ -10,8 +10,8 @@ export class ActivePrismIndicator extends Component {
     this.setState({ shouldHighlight: !this.props.prism.shouldHighlight });
 
     // tell the parent that the highlight has changed, which will update the prism.shouldHighlight
-    if (this.props.onHighlightChange) {
-      this.props.onHighlightChange(this.props.prism.id, !this.props.prism.shouldHighlight);
+    if (this.props.onHighlightPrismChange) {
+      this.props.onHighlightPrismChange(this.props.prism.id, !this.props.prism.shouldHighlight);
     }
   }
 

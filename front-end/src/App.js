@@ -125,7 +125,7 @@ class App extends Component {
     // tell the editor it is active and should be the current highlighted prism
     prism.setActive(true);
     prism.setDoHighlight(true);
-    this.onHighlightChange(prism.id, true);
+    this.onHighlightPrismChange(prism.id, true);
     
     // update the state
     let prisms = this.state.prisms;
@@ -148,7 +148,7 @@ class App extends Component {
       return this.state.prisms[key].shouldHighlight;
     });
     highlightPrismID = highlightPrismID.length > 0 ? highlightPrismID[0] : null;
-    if (highlightPrismID) { this.onHighlightChange(highlightPrismID, true); }
+    if (highlightPrismID) { this.onHighlightPrismChange(highlightPrismID, true); }
 
     // Add top level keystroke listeners
     document.addEventListener('keydown', this.onKeyDown.bind(this));
@@ -158,7 +158,7 @@ class App extends Component {
     document.removeEventListener('keydown', this.onKeyDown);
   }
 
-  onHighlightChange(prismID, shouldHighlight) {
+  onHighlightPrismChange(prismID, shouldHighlight) {
     // for now, we only allow one highlighted lense, so we need to uncheck all the other ones
     let prisms = Prism.getActive(this.state.prisms);
     let toHighlight = null;
@@ -186,7 +186,8 @@ class App extends Component {
     let prisms = Prism.getActive(this.state.prisms);
 
     for (let prism of prisms) {
-      prism.search(doc, constraints)
+      // prism.search(doc, constraints)
+      prism.search(doc, [])
     }
   }
   
@@ -225,6 +226,23 @@ class App extends Component {
   swapToken(originalToken, newToken) {
     this.tokenManager.swapToken(originalToken, newToken);
     this.editorRef.current.swapText(originalToken.start, originalToken.end, newToken.text);
+  }
+
+  swapSequence(oldTokens, newSequence) {
+    console.log('swapping for', newSequence, oldTokens);
+    
+    // Calculate the start and end positions
+    const start = oldTokens[0].start;
+    const end = oldTokens[oldTokens.length - 1].end;
+    
+    // Get the new text from the sequence
+    const newText = newSequence.textContent;
+    
+    // Update the tokenManager
+    this.tokenManager.swapSequence(oldTokens, newSequence.span);
+    
+    // Update the editor text
+    this.editorRef.current.swapText(start, end, newText);
   }
 
   onKeyDown(event) {
@@ -289,7 +307,7 @@ class App extends Component {
                     prism={prism}
                     isSearching={prism.isSearching} 
                     startIndex={startIndex} endIndex={endIndex} 
-                    onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
+                    onSwapSequence={this.swapSequence.bind(this)}
                     debugMode={debugMode}
                     constraints={Constraint.subsetByFeatures(this.state.constraints, prism.features)}
                     addConstraint={this.addConstraint.bind(this)}
@@ -300,7 +318,13 @@ class App extends Component {
               })}
 
               {/* Constrained search results */}
-              <SearchResults results={searchResults} isSearching={this.state.isSearching} wrap={false} showLength={true}/>   {/* onTokenClick={this.onTokenClick.bind(this)} /> */}
+              <SearchResults 
+              results={searchResults} 
+              isSearching={this.state.isSearching}
+              wrap={false} 
+              showLength={true}
+              onClickSequence={(originalToken, newToken) => { this.swapSequence(originalToken, newToken)}}
+              />   {/* onClickSequence={this.onClickSequence.bind(this)} /> */}
             </div>
 
             <div className="lenses"> { /* A list of each active lense and a checkbox to activate/deactivate them */}
@@ -313,12 +337,12 @@ class App extends Component {
               <button className="selectButoon" onClick={this.handleAddPrism.bind(this)}>add</button>
               {/* 
                 let shouldHighlight = prism.shouldHighlight;
-                let onHighlightChange = this.onHighlightChange.bind(this)
+                let onHighlightPrismChange = this.onHighlightPrismChange.bind(this)
                 return <ActivePrismIndicator 
                           key={prism.id} 
                           prism={prism} 
                           shouldHighlight={shouldHighlight}
-                          onHighlightChange={onHighlightChange}>{prism.id}</ActivePrismIndicator> */}
+                          onHighlightPrismChange={onHighlightPrismChange}>{prism.id}</ActivePrismIndicator> */}
 
             </div>
           </div>
