@@ -107,41 +107,112 @@ export class AlliterationConstraint extends Constraint {
  * such as part of speech or rhyme scheme
 */
 export class CategoricalConstraint extends Constraint {
+  static modes = ['contains', 'exactly', 'starts with', 'ends with', 'in order'];
+  
   constructor(name, feature, defaultTarget=null) {
     super(name, feature);
     this.defaultTarget = defaultTarget;
     this.targetSequence = null; // what is the goal of the constraint 
     this.range = null;
+    this.mode = CategoricalConstraint.modes[0];
+    this.flatten = false;
   }
 
   async getScore(sequence, document) {
-    if (sequence === null || sequence.span.length === 0) {
+    console.log('score mode', this.mode, sequence.textContent);
+
+    if (sequence === null || sequence.span.length === 0 || this.targetSequence === null || this.targetSequence.length === 0) {
       return 0;
     }
-
-    if (this.targetSequence === null || this.targetSequence.length === 0) {
-      return 0;
-    }
-
+  
     let tokens = sequence.span;
+    let tokenFeatures = this.flatten
+      ? tokens.flatMap(t => this._getAttribute(t, this.feature.name))
+      : tokens.map(t => this._getAttribute(t, this.feature.name));
 
-    // zip through the span tokens and the tokens to evaluate
-    let matches = 0;
-    for (let i = 0; i < tokens.length; i++) {
-      let newToken = tokens[i];
-      let targetToken = this.targetSequence[i];
-      if (targetToken === undefined) {
-        console.error('target token is undefined mismatch in token lengths?', i, this.targetSequence, this.newSpan);
-        continue;
-      }
-      let baselineTag = this._getAttribute(targetToken, this.feature.name);
-      let newTokenTag = this._getAttribute(newToken, this.feature.name);
-      if (newTokenTag === baselineTag) {
-        matches += 1;
+    let targetFeatures = this.targetSequence.map(t => this._getAttribute(t, this.feature.name));
+    let flattenedTargetFeatures = this.flatten ? targetFeatures.flat() : targetFeatures;
+
+    console.log('token', tokenFeatures, 'target', targetFeatures)
+  
+    let score = 0;
+  
+    switch (this.mode) {
+      case 'contains':
+        score = this.contains(tokenFeatures, flattenedTargetFeatures); 
+        break;
+      case 'exactly':
+        score = this.arraysEqual(tokenFeatures, flattenedTargetFeatures);
+        break;
+      case 'starts with':
+        score = this.startsWith(tokenFeatures, flattenedTargetFeatures);
+        break;
+      case 'ends with':
+        score = this.endsWith(tokenFeatures, flattenedTargetFeatures);
+        break;
+      case 'in order':
+        score = this.includesInOrder(tokenFeatures, flattenedTargetFeatures);
+        break;
+    }
+    
+    console.log('score', score)
+    return score ? 1 : 0;
+  }
+
+  _getAttribute(token, attribute) {
+    if (token.getAttribute != undefined) {
+      return token.getAttribute(attribute);
+    }
+    return token[attribute];
+  }
+
+  contains(arr, target) {
+    if (target.length === 0) return true;
+    for (let i = 0; i <= arr.length - target.length; i++) {
+      if (this.arraysEqual(arr.slice(i, i + target.length), target)) {
+        return true;
       }
     }
-    let avg = matches / tokens.length;
-    return avg;
+    return false;
+  }
+
+  containsSubtokens(arr, target) {
+    return target.every(subarray => this.containsAll(arr, subarray));
+  }
+
+  arraysEqual(a, b) {
+    return a.length === b.length && a.every((v, i) => v === b[i]);
+  }
+
+  startsWith(arr, target) {
+    return this.arraysEqual(arr.slice(0, target.length), target);
+  }
+
+  startsWithSubtokens(arr, target) {
+    let flattened = target.flat();
+    return this.startsWith(arr, flattened);
+  }
+
+  endsWith(arr, target) {
+    return this.arraysEqual(arr.slice(-target.length), target);
+  }
+
+  endsWithSubtokens(arr, target) {
+    let flattened = target.flat();
+    return this.endsWith(arr, flattened);
+  }
+
+  includesInOrder(arr, target) {
+    let targetIndex = 0;
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i] === target[targetIndex]) {
+        targetIndex++;
+        if (targetIndex === target.length) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   updateTarget(index, newValue) {
@@ -182,11 +253,12 @@ export class CategoricalConstraint extends Constraint {
     return this.targetSequence;
   }
 
-  _getAttribute(token, attribute) {
-    if (token.getAttribute != undefined) {
-      return token.getAttribute(attribute);
+  changeMode(newMode) {
+    if (CategoricalConstraint.modes.includes(newMode)) {
+      this.mode = newMode;
+    } else {
+      console.error(newMode, 'is not a valid CategoricalConstraintMode')
     }
-    return token[attribute];
   }
 }
 
@@ -256,7 +328,12 @@ export class RhymeConstraint extends CategoricalConstraint {
   constructor(targetPhones) {
     super('rhyme', Feature.Rhyme, RhymeConstraint.defaultTarget);
     this.targetSequence = targetPhones.map((rhyme, i) => { return { rhyme: rhyme, index: i }; });
-    this.range = ["AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY", "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY", "UH", "UW", "UX", "B", "CH", "D", "DH", "DX", "EL", "EM", "EN", "F", "G", "HH", "JH", "K", "L", "M", "N", "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V", "W", "WH", "Y", "Z", "ZH"];
+    this.range = [
+      "AA", "AE", "AH", "AO", "AW", "AY", "B", "CH", "D", "DH",
+      "EH", "ER", "EY", "F", "G", "HH", "IH", "IY", "JH", "K",
+      "L", "M", "N", "NG", "OW", "OY", "P", "R", "S", "SH",
+      "T", "TH", "UH", "UW", "V", "W", "Y", "Z", "ZH"
+    ];
   }
 }
 
@@ -265,43 +342,29 @@ class SoundConstraint extends CategoricalConstraint {
   constructor(targetPhones) {
     super('sound', Feature.Sound, SoundConstraint.defaultTarget);
     this.targetSequence = targetPhones.map((sound, i) => { return { sound: sound, index: i }; });
+    this.flatten = true;
 
-    // ARPANET 0's 
-    // 0 typically indicates an unstressed syllable
-    // 1 typically indicates a primary stressed syllable
-    // 2 is sometimes used to indicate secondary stress
-    this.range = ["AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY", "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY", "UH", "UW", "UX", "B", "CH", "D", "DH", "DX", "EL", "EM", "EN", "F", "G", "HH", "JH", "K", "L", "M", "N", "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V", "W", "WH", "Y", "Z", "ZH"];
+    // ARPAbet http://www.speech.cs.cmu.edu/cgi-bin/cmudict
+    this.range = [
+      "AA", "AE", "AH", "AO", "AW", "AY", "B", "CH", "D", "DH",
+      "EH", "ER", "EY", "F", "G", "HH", "IH", "IY", "JH", "K",
+      "L", "M", "N", "NG", "OW", "OY", "P", "R", "S", "SH",
+      "T", "TH", "UH", "UW", "V", "W", "Y", "Z", "ZH"
+    ];
   }
 
-  async getScore(sequence, document) {
-    if (sequence === null || sequence.span.length === 0) {
-      return 0;
+  _getAttribute(token, attribute) {
+    if (token.sound !== undefined) {
+      // This handles the case where we're dealing with the targetSequence objects
+      return token[attribute];
     }
-
-    if (this.targetSequence === null || this.targetSequence.length === 0) {
-      return 0;
+    
+    // This handles the case where we're dealing with actual tokens
+    let phonemes = token.getAttribute('phonemes', []);
+    if (phonemes.length > 0) {
+      return phonemes[0].split(' ');
     }
-
-    console.log('getScore target sequence', this.targetSequence)
-    let tokens = sequence.span;
-
-    // zip through the span tokens and the tokens to evaluate
-    let matches = 0;
-    for (let i = 0; i < tokens.length; i++) {
-      let newToken = tokens[i];
-      let targetToken = this.targetSequence[i];
-      if (targetToken === undefined) {
-        console.error('target token is undefined mismatch in token lengths?', i, this.targetSequence, this.newSpan);
-        continue;
-      }
-      let baselineTag = targetToken.getAttribute(this.feature.name);
-      let newTokenTag = newToken[this.feature.name];
-      if (newTokenTag === baselineTag) {
-        matches += 1;
-      }
-    }
-    let avg = matches / tokens.length;
-    return avg;
+    return [];
   }
 }
 

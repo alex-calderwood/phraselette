@@ -39,8 +39,6 @@ export class Token {
             }
         }
         this.raw = rawToken;
-
-        console.log('made', rawToken.type, rawToken, this);
     }
 
     setAttribute(name, value) {

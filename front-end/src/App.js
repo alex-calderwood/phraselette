@@ -186,7 +186,8 @@ class App extends Component {
     let prisms = Prism.getActive(this.state.prisms);
 
     for (let prism of prisms) {
-      prism.search(doc, constraints)
+      // prism.search(doc, constraints) // todo get this working again, should be able to pass in the constraints maybe
+      prism.search(doc, []);
     }
   }
   

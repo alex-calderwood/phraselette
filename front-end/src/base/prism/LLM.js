@@ -21,9 +21,9 @@ export class ContextPrism extends Prism {
   */
   async search(document, constraints) {
     this.onSearch(); // UI
-    let targetSequenceWords = Math.max(...constraints.map((constraint) => { return constraint?.targetSequence?.length || 0; }));
+    // let targetSequenceWords = Math.max(...constraints.map((constraint) => { return constraint?.targetSequence?.length || 0; }));
     let selectionWords = document.selectionText.split(' ').length; // TODO I suppose we should have the tokenized words to calculate this...
-    let numWords = targetSequenceWords > 0 ? targetSequenceWords : selectionWords;
+    let numWords = selectionWords;
     numWords = Math.max(numWords, 1);
 
     let numTokens = numWords;
@@ -33,6 +33,7 @@ export class ContextPrism extends Prism {
 
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
 
+    console.log('searching LLM', {preConstraints, selectionWords, numWords})
     await searchForward(document, preConstraints, numTokens).then(
       (predictions) => {
         // TODO document that constraints might have been altererd in the meantime

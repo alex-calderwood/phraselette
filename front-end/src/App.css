@@ -369,6 +369,10 @@ button:hover {
   }
 }
 
+.constraint-mode {
+  margin-right: 2px;
+}
+
 .constraint-target {
   display: flex;
   align-items: center;
