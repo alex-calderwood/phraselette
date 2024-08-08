@@ -49,8 +49,8 @@ class EndlessLogitsProcessor(TFLogitsProcessor):
 
 # Create the LogitsProcessors
 space_aware_processor = SpaceAwareLogitsProcessor();
-# endless_processor = EndlessLogitsProcessor()
-logits_processor = TFLogitsProcessorList([space_aware_processor])
+endless_processor = EndlessLogitsProcessor()
+logits_processor = TFLogitsProcessorList([space_aware_processor, endless_processor])
 
 # A function that generates the probabilities of each token in the phrase
 # it also tokenizes strings using the GPT-2 tokenizer
