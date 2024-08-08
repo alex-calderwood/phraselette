@@ -16,18 +16,41 @@ model = TFGPT2LMHeadModel.from_pretrained("gpt2", pad_token_id=tokenizer.eos_tok
 class SpaceAwareLogitsProcessor(TFLogitsProcessor):
     space_tokens = tf.constant([tokenizer.decode([i]).startswith(' ') for i in range(tokenizer.vocab_size)], dtype=tf.bool)
 
-    def __init__(self, tokenizer, ends_with_space):
-        self.tokenizer = tokenizer
-        self.ends_with_space = ends_with_space
-    
+    def __init__(self):
+        self.ends_with_space = False
+        self.input_len = 0
+        
     def __call__(self, input_ids, scores, cur_len):
-        if self.ends_with_space and cur_len == 1:  # Only apply to the first token
-            print('using space mask')
+        print('shape', input_ids.shape)
+        # Only apply to the first token (doesn't work because we care about when it is the first generated token)
+        if self.ends_with_space and cur_len == self.input_len:
+            # only generate words that start with ' '
+            print('using space mask', cur_len, self.input_len) 
             non_space_mask = tf.logical_not(SpaceAwareLogitsProcessor.space_tokens)
             scores = tf.where(non_space_mask, tf.float32.min, scores)
         else:
-            print('not using space mask')
+            print('not using space mask', cur_len, self.input_len)
         return scores
+    
+    def set_ends_with_space(self, ends_with_space):
+        self.ends_with_space = ends_with_space
+
+    def set_input_len(self, input_len):
+        self.input_len = input_len
+
+# We never want to generate the end of sequence token or a few other tokens
+class EndlessLogitsProcessor(TFLogitsProcessor):
+    stoplist = [tokenizer.eos_token_id, tokenizer.pad_token_id, tokenizer.cls_token_id, tokenizer.sep_token_id]
+    def __call__(self, input_ids, scores, cur_len):
+        # zero out the stoplist tokens
+        for token in EndlessLogitsProcessor.stoplist:
+            scores = tf.where(input_ids == token, tf.float32.min, scores)
+        return scores
+
+# Create the LogitsProcessors
+space_aware_processor = SpaceAwareLogitsProcessor();
+# endless_processor = EndlessLogitsProcessor()
+logits_processor = TFLogitsProcessorList([space_aware_processor])
 
 # A function that generates the probabilities of each token in the phrase
 # it also tokenizes strings using the GPT-2 tokenizer
@@ -154,13 +177,12 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
 
     input_ids = encoding['input_ids']
     offsets = encoding['offset_mapping']
-    max_length = len(input_ids[0]) + depth
+    input_len = len(input_ids[0])
+    max_length = input_len + depth
 
-    # Create the LogitsProcessor
-    space_aware_processor = SpaceAwareLogitsProcessor(tokenizer, ends_with_space)
-    logits_processor = TFLogitsProcessorList([space_aware_processor])
-
-    print('ends with space', ends_with_space)
+    print('ends with space', ends_with_space, 'input_len', input_len, 'max_length', max_length)
+    space_aware_processor.set_ends_with_space(ends_with_space)
+    space_aware_processor.set_input_len(input_len)
 
     beam_output = model.generate(
         input_ids,
@@ -232,9 +254,9 @@ def print_output(output):
 
 if __name__ == "__main__":
     # Example usage
-    for token in pluck_probs("This is a test.", top_k=3):
-        print(token)
-        print(json.dumps(token))
+    # for token in pluck_probs("This is a test.", top_k=3):
+    #     print(token)
+    #     print(json.dumps(token))
 
-    # output = forward_search("When I was walking down the street today I was surprised to see ", top_k=40, depth=3)
-    # print_output(output)
+    output = forward_search("When I was walking down the street today I was surprised to see", top_k=40, depth=3)
+    print_output(output)
