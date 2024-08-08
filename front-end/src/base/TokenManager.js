@@ -208,6 +208,8 @@ export class TokenManager {
     
     // Refresh character indices
     this.refreshCharIndices(tokenType);
+
+    console.log('new tokens', this.tokens);
   }
 
   /* 

@@ -75,11 +75,11 @@ export class PrismView extends Component {
   }
 
   prismHandleOnClick(sequence) {
-    let prism = this.prism;
-    let start = this.props.startIndex;
-    let end = this.props.endIndex;
+    let prism     = this.prism;
+    let startChar = this.props.startIndex;
+    let endChar   = this.props.endIndex - 1;
   
-    let tokens = start !== null ? this.tokenManager.tokensAt(prism.tokenType, start, end) : [];
+    let tokens = startChar !== null ? this.tokenManager.tokensAt(prism.tokenType, startChar, endChar) : [];
     console.log('Handling click on sequence:', tokens, sequence);
     this.props.onSwapSequence(tokens, sequence);
   }

@@ -91,6 +91,7 @@ class App extends Component {
    * Called when the user selects new text.
   */
   setSelection(selection) {
+    console.log('app selection', selection)
     this.setState({ selection: selection });
   }
 
@@ -229,11 +230,15 @@ class App extends Component {
   }
 
   swapSequence(oldTokens, newSequence) {
-    console.log('swapping for', newSequence, oldTokens);
-    
     // Calculate the start and end positions
+    if(oldTokens.length === 0 || !newSequence) {
+      console.error('swapSequence called with', oldTokens, newSequence);
+      return;
+    }
+
     const start = oldTokens[0].start;
     const end = oldTokens[oldTokens.length - 1].end;
+    console.log('app swapSequence for', newSequence, 'from', oldTokens, start, end);
     
     // Get the new text from the sequence
     const newText = newSequence.textContent;
@@ -323,7 +328,7 @@ class App extends Component {
               isSearching={this.state.isSearching}
               wrap={false} 
               showLength={true}
-              onClickSequence={(originalToken, newToken) => { this.swapSequence(originalToken, newToken)}}
+              onClickSequence={(oldS, newS) => { this.swapSequence(oldS, newS)}}
               />   {/* onClickSequence={this.onClickSequence.bind(this)} /> */}
             </div>
 

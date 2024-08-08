@@ -62,7 +62,7 @@ export class TokenRange extends Component {
 
     return (
       <div className={"token-range-parent " + overflowing} >
-          <div id={'tokenbar-' + tokenType} className={`token-range` + wrap}>
+          <div id={`tokenbar-${tokenType}-${this.id}`} className={`token-range` + wrap}>
               {tokens && tokens.map((tokenOrSeq) => {
                 if (tokenOrSeq.span) {
                   let sequence = tokenOrSeq;
@@ -83,6 +83,7 @@ export class TokenRange extends Component {
   renderSequence(sequence, tokenType, expanded) {
     let prob = sequence.getAttribute('probGeometricMean', null);
     let probColor = zeroToOneColor(prob);
+    let id = `${this.id}-sequence-${sequence.id}`;
     // let score = sequence?.scores[scoreLookup]?.value;
     // let color = zeroToOneColor(score);
 
@@ -90,7 +91,8 @@ export class TokenRange extends Component {
     const simple = expanded ? '' : 'simple';
 
     return <div 
-        key={sequence.id}
+        id={id}
+        key={id}
         className={`sequence ${simple}`}
         onMouseEnter={() => this.setState({ hoverSequenceId: sequence.id })}
         onMouseLeave={() => this.setState({ hoverSequenceId: null })}
@@ -134,9 +136,11 @@ export class TokenRange extends Component {
     const simple = expanded ? '' : 'simple';
     let style = color ? { backgroundColor: color } : {};
 
+    let key = `${this.id}-token-${token.id}`;
+
     return (
-      <div 
-        key={token.id} 
+      <div
+        key={key} 
         className={`token ${space} ${simple}`} 
         onMouseEnter={() => this.setState({ hoveredTokenId: token.id })}
         onMouseLeave={() => this.setState({ hoveredTokenId: null })}

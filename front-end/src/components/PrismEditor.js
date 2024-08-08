@@ -82,17 +82,9 @@ export class PrismEditor extends Component {
       setTimeout(() => this.moveSelectionToEndOfEditor(), 0);
     });
 
-  }
-
-  startObserver() {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        console.log("Mutation detected:", mutation);
-        this.moveSelectionToEndOfEditor(); // Adjust this to your context
-      });
-    });
-    observer.observe(this.editorNode, { childList: true, subtree: true });
-  }
+    window.editorNode = this.editorNode;
+    window.currentSelection = this.currentSelection.bind(this);
+  } // didMount
 
   componentWillUnmount() {
     this.editorNode.removeEventListener('input', this.onInput);
@@ -275,6 +267,173 @@ export class PrismEditor extends Component {
   }
 
   /* 
+   * Split the text into individual tokens according to the tokenization strategy specified by the current token.
+   * After the tokenization is complete, the token manager will call the onFinished function, which typically
+   * involves attempting to tokize one more time, as the tokenization may have been incomplete if the user continued to type.
+  */
+  tokenizeOnTextUpdate(text, tokenType, callDepth = 0) {
+    if (this.tokenManager) {
+      let curTokens = this.tokenManager.tokens[tokenType];
+      if (!curTokens) {
+        console.error('on text update tokenType not found', tokenType);
+        return;
+      }
+
+      let tokenizeRange  = TokenManager.getUntokenizedRange(text, curTokens);
+      let shouldTokenize = TokenManager.shouldTokenize(text, tokenizeRange, tokenType);
+
+      // We keep track of the call depth because we want to check to see if there is more tokenization
+      // to take care of after the user has finished typing (some requests may have been denied by the server
+      // due to rate limiting) while typing. TODO this is a bit of a hack and could be cleaned up
+      shouldTokenize = shouldTokenize && callDepth < 2; 
+
+      if (!shouldTokenize) return;
+
+      // Define a function to call after tokenization is complete ()
+      let onFinished = () => {
+        // TODO there is a potential problem where the selection has been updated since the last time we saved it
+        // This could happen if the user navigates with the arrow keys for instance, so perhpas we want to save the selection during arrows
+        let newText = getTextWithWhitespace(this.contentRef.current);
+        this.tokenizeOnTextUpdate(newText, tokenType, callDepth + 1);
+      };
+
+      let data = {
+        tokenizeRange: tokenizeRange,
+        onFinished: onFinished.bind(this),
+      };
+
+      this.tokenManager.tokenize(text, data);
+    }
+  }
+
+  forceTokenize(prisms=this.tokenManager.activePrisms) {
+    console.log("force tokenizing prisms", prisms)
+    if (prisms.length < 1) { return; }
+
+    let document = new Document(
+      getTextWithWhitespace(this.contentRef.current),
+      this.keyDownSelection, // this may be out of date?
+      this.tokenManager
+    );
+    
+    let data = { tokenizeRange: document.range, document: document }; // old versions of tokenizers still use tokenizeRange, should be depracated
+    let curPrism = prisms[0];
+    let remaining = prisms.slice(1);
+
+    if (remaining && remaining.length > 0) {
+      let onFinished = () => { this.forceTokenize(remaining); };
+      data['onFinished']= onFinished.bind(this);
+    }
+
+    this.tokenManager.tokenize(document.text, data, prisms=[curPrism]);
+  }
+
+  manualRetokenizeAction() {
+    console.log('manually tokenizing');
+    this.forceTokenize();
+    this.splitIntoCharactersAndStyle(this.contentRef.current);
+    setTimeout(() => {
+      this.restoreSelection();
+    }, 0);
+  }
+
+  manualSearchAction() {
+    this.onKeyDown();
+    this.manualRetokenizeAction();
+
+    let document = new Document(
+      getTextWithWhitespace(this.contentRef.current),
+      this.keyDownSelection,
+      this.tokenManager
+    );
+
+    console.log('manually searching', document.selectionText);
+    this.props.doSearch(document);
+  }
+
+  /*
+   * Handles keydown events to save the selection before the input event is processed and the text changed.
+  */
+  onKeyDown(event) {
+    this.keyDownSelection = this.currentSelection();
+  }
+
+  /*
+   * Handles keydown events to save the selection before the input event is processed and the text changed.
+  */
+  onKeyUp(event) {
+    this.keyUpSelection = this.currentSelection();
+  }
+
+  onClick = (event) => {
+    this.updateSelection();
+  };
+
+  // to call upon other actions that modify the selection
+  updateSelection = () => {
+    let selection = this.currentSelection();
+    this.keyDownSelection = selection;
+    this.keyUpSelection   = selection;
+    this.props.setSelection(selection); // give the new selection to the parent
+    return selection;
+  }
+
+  /* 
+  * Update the text content of the editor from {start} to {end} with {newText}. 
+  * 
+  * @param {number} start - the start index of the text to replace (inclusive)
+  * @param {number} end - the end index of the text to replace (inclusive)
+  * @param {string} newText - the new text to display
+  */ 
+  swapText = (start, end, newText) => {
+    let startSpan = document.querySelector(`span[c='${start}']`);
+    let endSpan = document.querySelector(`span[c='${end}']`);
+    console.log('start span', startSpan, 'end span', endSpan, start, end, newText)
+
+
+    // select the text to replace
+    let range = rangy.createRange();
+    range.setStart(startSpan, 0);
+    range.setEnd(endSpan, 1);
+
+    // create a span for the new text
+    let newSpan = document.createElement('span');
+    newSpan.textContent = newText;
+
+    let oldText = range.toString();
+    console.log('swap text', start, end, 'for', newText, 'from', oldText);
+
+    // Get the parent node before deleting contents
+    // let startParent = startSpan.parentNode;
+    // let endParent = endSpan.parentNode;
+
+    // replace the text
+    range.deleteContents();
+    range.insertNode(newSpan);
+
+    // Explicitly remove the start span if it's empty
+    // startParent.removeChild(startSpan);
+    // endParent.removeChild(endSpan)
+    startSpan.remove()
+    endSpan.remove()
+
+    // // style the new text
+    this.splitIntoCharactersAndStyle(this.contentRef.current);
+
+    // Create a new range for the inserted text
+    let newRange = rangy.createRange();
+    newRange.selectNodeContents(newSpan);
+
+    // Select the new range
+    let selection = rangy.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+
+    console.log('selection', selection, selection.anchorOffset, selection.focusOffset, 'range', newRange, newRange.startOffset, newRange.endOffset);
+    this.updateSelection();
+  }
+
+  /* 
   * Split a span into multiple spans, each containing a single character.
   * If the span contains a character at index c, the new spans will have indicies c, c+1, c+2, etc.
   * If the span is unstyled (missing an ID and c attribute), assign a unique ID and set the c attribute to c, as well as a color.
@@ -285,7 +444,8 @@ export class PrismEditor extends Component {
   */
   splitSpan(originalSpan, c) {
     // don't delete any spans, just add new ones and remove characters from the old span
-    let text = originalSpan.textContent.replace(/\uFEFF/g, ''); // Remove BOM
+    // let text = originalSpan.textContent.replace(/\uFEFF/g, ''); // Remove BOM
+    let text = originalSpan.textContent;
     let newSpans = [];
     for (let i = 1; i < text.length; i++) {
       c += 1;
@@ -293,7 +453,7 @@ export class PrismEditor extends Component {
       newSpans.push(newSpan);
     }
     // update the original span to contain just the first character
-    originalSpan.textContent = text[0];
+    originalSpan.innerHTML = text[0];
     // insert the new spans after the original span
     for (let i = newSpans.length - 1; i >= 0; i--) {
       let newSpan = newSpans[i];
@@ -457,163 +617,6 @@ export class PrismEditor extends Component {
       child = children[i];
     }
     return newSpans;
-  }
-
-  /* 
-   * Split the text into individual tokens according to the tokenization strategy specified by the current token.
-   * After the tokenization is complete, the token manager will call the onFinished function, which typically
-   * involves attempting to tokize one more time, as the tokenization may have been incomplete if the user continued to type.
-  */
-  tokenizeOnTextUpdate(text, tokenType, callDepth = 0) {
-    if (this.tokenManager) {
-      let curTokens = this.tokenManager.tokens[tokenType];
-      if (!curTokens) {
-        console.error('on text update tokenType not found', tokenType);
-        return;
-      }
-
-      let tokenizeRange  = TokenManager.getUntokenizedRange(text, curTokens);
-      let shouldTokenize = TokenManager.shouldTokenize(text, tokenizeRange, tokenType);
-
-      // We keep track of the call depth because we want to check to see if there is more tokenization
-      // to take care of after the user has finished typing (some requests may have been denied by the server
-      // due to rate limiting) while typing. TODO this is a bit of a hack and could be cleaned up
-      shouldTokenize = shouldTokenize && callDepth < 2; 
-
-      if (!shouldTokenize) return;
-
-      // Define a function to call after tokenization is complete ()
-      let onFinished = () => {
-        // TODO there is a potential problem where the selection has been updated since the last time we saved it
-        // This could happen if the user navigates with the arrow keys for instance, so perhpas we want to save the selection during arrows
-        let newText = getTextWithWhitespace(this.contentRef.current);
-        this.tokenizeOnTextUpdate(newText, tokenType, callDepth + 1);
-      };
-
-      let data = {
-        tokenizeRange: tokenizeRange,
-        onFinished: onFinished.bind(this),
-      };
-
-      this.tokenManager.tokenize(text, data);
-    }
-  }
-
-  forceTokenize(prisms=this.tokenManager.activePrisms) {
-    console.log("force tokenizing prisms", prisms)
-    if (prisms.length < 1) { return; }
-
-    let document = new Document(
-      getTextWithWhitespace(this.contentRef.current),
-      this.keyDownSelection, // this may be out of date?
-      this.tokenManager
-    );
-    
-    let data = { tokenizeRange: document.range, document: document }; // old versions of tokenizers still use tokenizeRange, should be depracated
-    let curPrism = prisms[0];
-    let remaining = prisms.slice(1);
-
-    if (remaining && remaining.length > 0) {
-      let onFinished = () => { this.forceTokenize(remaining); };
-      data['onFinished']= onFinished.bind(this);
-    }
-
-    this.tokenManager.tokenize(document.text, data, prisms=[curPrism]);
-  }
-
-  manualRetokenizeAction() {
-    console.log('manually tokenizing');
-    this.forceTokenize();
-    this.splitIntoCharactersAndStyle(this.contentRef.current);
-    setTimeout(() => {
-      this.restoreSelection();
-    }, 0);
-  }
-
-  manualSearchAction() {
-    this.onKeyDown();
-    this.manualRetokenizeAction();
-
-    let document = new Document(
-      getTextWithWhitespace(this.contentRef.current),
-      this.keyDownSelection,
-      this.tokenManager
-    );
-
-    console.log('manually searching', document.selectionText);
-    this.props.doSearch(document);
-  }
-
-  /*
-   * Handles keydown events to save the selection before the input event is processed and the text changed.
-  */
-  onKeyDown(event) {
-    this.keyDownSelection = this.currentSelection();
-  }
-
-  /*
-   * Handles keydown events to save the selection before the input event is processed and the text changed.
-  */
-  onKeyUp(event) {
-    this.keyUpSelection = this.currentSelection();
-  }
-
-  onClick = (event) => {
-    this.updateSelection();
-  };
-
-  // to call upon other actions that modify the selection
-  updateSelection = () => {
-    let selection = this.currentSelection();
-    this.keyDownSelection = selection;
-    this.keyUpSelection   = selection;
-    this.props.setSelection(selection); // give the new selection to the parent
-    return selection;
-  }
-
-  /* 
-  * Update the text content of the editor from {start} to {end} with {newText}. 
-  * 
-  * @param {number} start - the start index of the text to replace (inclusive)
-  * @param {number} end - the end index of the text to replace (inclusive)
-  * @param {string} newText - the new text to display
-  */ 
-  swapText = (start, end, newText) => {
-    let startSpan = document.querySelector(`span[c='${start}']`);
-    let endSpan = document.querySelector(`span[c='${end}']`);
-
-    // select the text to replace
-    let range = rangy.createRange();
-    range.setStart(startSpan, 0);
-    range.setEnd(endSpan, 1);
-
-    // create a span for the new text
-    let newSpan = document.createElement('span');
-    newSpan.textContent = newText;
-
-    // let oldText = range.toString();
-    // console.log('start span', startSpan, 'end span', endSpan)
-    // console.log('swap text', start, end, 'for', newText, 'from', oldText);
-
-    // replace the text
-    range.deleteContents();
-    range.insertNode(newSpan);
-
-
-    this.editorNode.focus();
-    let selection = this.currentSelection().rangy;
-    selection.removeAllRanges();
-    selection.addRange(range);
-    this.updateSelection();
-
-    // select the new text
-    // this.editorNode.focus();
-    // let selection = rangy.getSelection();
-    // selection.removeAllRanges();
-    // selection.addRange(range);
-
-    // // style the new text
-    this.splitIntoCharactersAndStyle(this.contentRef.current);
   }
 
   render() {

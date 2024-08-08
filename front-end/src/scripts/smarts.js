@@ -322,7 +322,7 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
     ''
   );
 
-  let resultantWordTokens = await spacyTokenize(newText, { 
+  let spacyWordTokens = await spacyTokenize(newText, { 
     onToken: (token) => { }, 
     requests: document.tokenManager.activePrisms.map((prism) => prism.type) 
   });
@@ -330,34 +330,14 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
   // now we need to split it back into the tokens that were in after the given text
   let splitIndex = tokenSpan[0].start;
   if (splitIndex === undefined) { splitIndex = document.prefixText.length; }
-  let convertedTokens = resultantWordTokens.filter((token) => {
-    return token.end >= splitIndex;
-  });
+  let newWordTokens = spacyWordTokens.filter((token) => { return token.end >= splitIndex; });
   
-  if(maxWords !== null) {
-    let wordCount = 0;
-    convertedTokens = convertedTokens.filter((token) => {
-      if (token.getAttribute('isSpacySpace') || token.getAttribute('pos') === "_SP") { return true; }
-      wordCount++;
-      return wordCount <= maxWords;
-    });
-  }
-
-  // // set the correct text, start on the first returned word
-  // // TODO shouldn't this be lastWord?
-  // let firstWord = convertedTokens[0]; // it is possible for this to be undefined if the tokenSpan was just empty space (' ') token(s)
-  // if (firstWord && firstWord.start < splitIndex) {
-
-  //   let diff = splitIndex - firstWord.start;
-  //   firstWord.text = firstWord.text.slice(diff);
-  //   firstWord.start = splitIndex;
-  //   firstWord.incomplete = true;
-  // }
+  if (maxWords !== null) { newWordTokens = cutToMaxWords(maxWords, newWordTokens); }
 
   // grab any information from the original token and assign it to the word token
   let originalTokenIndex = 0;
-  for (let i = 0; i < convertedTokens.length; i++) {
-    let wordToken = convertedTokens[i];
+  for (let i = 0; i < newWordTokens.length; i++) {
+    let wordToken = newWordTokens[i];
     let originalTokens = []; // Array to store all overlapping original tokens
     let partialLogProbs = []; // Array to store partial log probs for tokens that partially overlap
     
@@ -417,5 +397,25 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
     }
   }
 
-  return convertedTokens;
+  return newWordTokens;
+}
+
+function cutToMaxWords(maxWords, tokens) {
+  let wordCount = 0;
+  let result = [];
+  let lastWordIndex = -1;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    const isSpace = token.getAttribute('isSpacySpace') || token.getAttribute('pos') === "_SP";
+    if (wordCount >= maxWords) break;
+
+    if (!isSpace) {
+      wordCount++;
+      lastWordIndex = result.length;
+    }
+
+    result.push(token);
+  }
+  return result;
 }
