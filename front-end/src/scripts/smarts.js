@@ -234,7 +234,7 @@ async function* callSpacy(context, tokenizeRange, additionalRequests) {
 
   returns: [Token] - a list of tokens spans that satisfy the constraints (each token span is a list of tokens)
 */
-export async function searchForward(document, constraints, depth, top_k=50) {
+export async function searchForward(document, constraints, depth, top_k=150) {
   if (document.prefixText.length === 0) {
     return [];
   }

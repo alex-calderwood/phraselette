@@ -414,7 +414,7 @@ export class PrismEditor extends Component {
     // Explicitly remove the start span if it's empty
     // startParent.removeChild(startSpan);
     // endParent.removeChild(endSpan)
-    startSpan.remove()
+    startSpan.remove() // TODO these lines seem to make it so that the selection later isn't accessable I think I'm deleteing the rangy ranges
     endSpan.remove()
 
     // // style the new text

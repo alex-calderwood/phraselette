@@ -11,22 +11,22 @@ tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
 # add the EOS token as PAD token to avoid warnings
 model = TFGPT2LMHeadModel.from_pretrained("gpt2", pad_token_id=tokenizer.eos_token_id)
 
-# # Create a mask for tokens that start with a space
-# print('Creating space token mask')
-# space_tokens = [tokenizer.decode([i]).startswith(' ') for i in range(tokenizer.vocab_size)]
-# space_token_mask = tf.constant(space_tokens, dtype=tf.bool)
-# print('num space tokens', tf.reduce_sum(tf.cast(space_token_mask, tf.int32)).numpy())
-
+# If the word at the end of the input ends with a space, it will throw off GPT so instead
+# we remove the space from the input and constrain the model to generate only words that start with a space
 class SpaceAwareLogitsProcessor(TFLogitsProcessor):
+    space_tokens = tf.constant([tokenizer.decode([i]).startswith(' ') for i in range(tokenizer.vocab_size)], dtype=tf.bool)
+
     def __init__(self, tokenizer, ends_with_space):
         self.tokenizer = tokenizer
         self.ends_with_space = ends_with_space
-        self.space_tokens = tf.constant([tokenizer.decode([i]).startswith(' ') for i in range(tokenizer.vocab_size)], dtype=tf.bool)
     
     def __call__(self, input_ids, scores, cur_len):
         if self.ends_with_space and cur_len == 1:  # Only apply to the first token
-            non_space_mask = tf.logical_not(self.space_tokens)
+            print('using space mask')
+            non_space_mask = tf.logical_not(SpaceAwareLogitsProcessor.space_tokens)
             scores = tf.where(non_space_mask, tf.float32.min, scores)
+        else:
+            print('not using space mask')
         return scores
 
 # A function that generates the probabilities of each token in the phrase
@@ -132,15 +132,14 @@ def calculate_offset(offset, extra_context, start_token_offset):
 
 
 
-def forward_search(text, top_k=1, depth=1, num_beam_groups=3, eos=tokenizer.eos_token):
+def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos_token):
     text = text.replace('\xa0', ' ') # get rid of non-breaking space characters which seem to mess things up
     ends_with_space = text.endswith(' ')
     if ends_with_space:
         text = text[:-1]
 
     num_beams = top_k
-    # Ensure num_beams is divisible by num_beam_groups
-    num_beams = (num_beams // num_beam_groups) * num_beam_groups
+    num_beams = (num_beams // num_beam_groups) * num_beam_groups # Ensure num_beams is divisible by num_beam_groups
     num_beam_groups = min(num_beam_groups, num_beams)
 
     print(f'forward |{text}|', 'k', top_k, 'depth', depth,'beams', num_beams, 'beam groups', num_beam_groups, 'ends space', ends_with_space)
@@ -160,6 +159,8 @@ def forward_search(text, top_k=1, depth=1, num_beam_groups=3, eos=tokenizer.eos_
     # Create the LogitsProcessor
     space_aware_processor = SpaceAwareLogitsProcessor(tokenizer, ends_with_space)
     logits_processor = TFLogitsProcessorList([space_aware_processor])
+
+    print('ends with space', ends_with_space)
 
     beam_output = model.generate(
         input_ids,
@@ -187,8 +188,15 @@ def forward_search(text, top_k=1, depth=1, num_beam_groups=3, eos=tokenizer.eos_
         beam_token_scores = beam_output.scores
         for token_idx, token_id in enumerate(beam_tokens):
             # token_text = tokenizer.decode(token_id, skip_special_tokens=True) # eventually it would be nice to use this but we would have to deal with "" tokens
-            token_text = tokenizer.decode(token_id)
+            token_text= tokenizer.decode(token_id)
 
+            # If it is the first token we generate, remove the prefix space
+            if token_idx == 0:
+                if token_text.startswith(' '):
+                    token_text = token_text[1:]
+                else:   
+                    print('WARNING, token does not start with space:', token_text)
+                    
             # Calculate offset
             token_length = len(token_text)
             offset_end = current_end + token_length - 1
