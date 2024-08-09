@@ -1,7 +1,7 @@
 
 import tensorflow as tf
-from transformers import TFGPT2LMHeadModel, GPT2TokenizerFast, TFLogitsProcessor, TFLogitsProcessorList
-import json
+from transformers import TFGPT2LMHeadModel, GPT2TokenizerFast, TFLogitsProcessorList
+from logits import SpaceAwareLogitsProcessor, EndlessLogitsProcessor
 import traceback
 from tqdm import tqdm
 from pprint import pprint
@@ -11,47 +11,15 @@ tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
 # add the EOS token as PAD token to avoid warnings
 model = TFGPT2LMHeadModel.from_pretrained("gpt2", pad_token_id=tokenizer.eos_token_id)
 
-# If the word at the end of the input ends with a space, it will throw off GPT so instead
-# we remove the space from the input and constrain the model to generate only words that start with a space
-class SpaceAwareLogitsProcessor(TFLogitsProcessor):
-    space_tokens = tf.constant([tokenizer.decode([i]).startswith(' ') for i in range(tokenizer.vocab_size)], dtype=tf.bool)
-
-    def __init__(self):
-        self.ends_with_space = False
-        self.input_len = 0
-        
-    def __call__(self, input_ids, scores, cur_len):
-        print('shape', input_ids.shape)
-        # Only apply to the first token (doesn't work because we care about when it is the first generated token)
-        if self.ends_with_space and cur_len == self.input_len:
-            # only generate words that start with ' '
-            print('using space mask', cur_len, self.input_len) 
-            non_space_mask = tf.logical_not(SpaceAwareLogitsProcessor.space_tokens)
-            scores = tf.where(non_space_mask, tf.float32.min, scores)
-        else:
-            print('not using space mask', cur_len, self.input_len)
-        return scores
-    
-    def set_ends_with_space(self, ends_with_space):
-        self.ends_with_space = ends_with_space
-
-    def set_input_len(self, input_len):
-        self.input_len = input_len
-
-# We never want to generate the end of sequence token or a few other tokens
-end_stoplist = [tokenizer.eos_token_id, tokenizer.pad_token_id, tokenizer.cls_token_id, tokenizer.sep_token_id]
-class EndlessLogitsProcessor(TFLogitsProcessor):
-    stoplist_mask = tf.constant([id in end_stoplist for id in range(tokenizer.vocab_size)], dtype=tf.bool)
-    
-    def __call__(self, input_ids, scores, cur_len):
-        # Zero out the scores for stoplist tokens
-        scores = tf.where(EndlessLogitsProcessor.stoplist_mask, tf.float32.min, scores)
-        return scores
+print('loaded', model)
 
 # Create the LogitsProcessors
-space_aware_processor = SpaceAwareLogitsProcessor();
-endless_processor = EndlessLogitsProcessor()
-logits_processor = TFLogitsProcessorList([space_aware_processor, endless_processor])
+space_aware_processor = SpaceAwareLogitsProcessor(tokenizer);
+endless_processor = EndlessLogitsProcessor(tokenizer)
+logits_processor = TFLogitsProcessorList([
+    space_aware_processor, 
+    endless_processor, 
+])
 
 # A function that generates the probabilities of each token in the phrase
 # it also tokenizes strings using the GPT-2 tokenizer
@@ -108,8 +76,6 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): 
             )
             token_probs = tf.nn.softmax(greedy_output_dict.scores[0])[0]
             token_logits = greedy_output_dict.scores[0][0]
-            print('probs', token_probs)
-            print('logits', token_logits)
             original_prob = token_probs[original_word_id].numpy()
             original_log_prob = token_logits[original_word_id].numpy()
 
@@ -153,10 +119,7 @@ def calculate_offset(offset, extra_context, start_token_offset):
     offset[1] = len(extra_context) + offset[1] - start_token_offset
     return offset
 
-
-
-
-def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos_token):
+def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos_token, logits_processor=logits_processor):
     text = text.replace('\xa0', ' ') # get rid of non-breaking space characters which seem to mess things up
     ends_with_space = text.endswith(' ')
     if ends_with_space:
@@ -245,10 +208,10 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
         yield sequence
 
 
-def print_output(output):
+def print_output(input, output):
     for span in output:
         # pprint(span)
-        print(''.join([s['token'] for s in span]))
+        print(input + ''.join([s['token'] for s in span]))
         print('------')
         # pprint(json.dumps(span))
 
@@ -259,5 +222,7 @@ if __name__ == "__main__":
     #     print(token)
     #     print(json.dumps(token))
 
-    output = forward_search("When I was walking down the street today I was surprised to see", top_k=40, depth=3)
-    print_output(output)
+
+    input = "I like mountains "
+    output = forward_search(input, top_k=10, depth=18, logits_processor=logits_processor)
+    print_output(input, output)
