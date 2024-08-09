@@ -32,13 +32,19 @@ export class ThesaurusPrism extends Prism {
 
   async onSearchResults(insights, document, constraints) {
     let message = insights.message;
-    let words = message.definitions;
+    let words = message.revisions;
     console.log('thesaurus got words', words)
 
+    let predictions = await ThesaurusPrism.processRevisions(words, document);
+    
+    super.onSearchResults({predictions: predictions}, document, constraints);
+  }
+
+  static async processRevisions(words, document) {
     let predictions = [];
     for (let word of words) {
       let text = document.prefixText + word;
-      let range = [document.prefixText.length, text.length];           // is this range correct?
+      let range = [document.prefixText.length, text.length]; // is this range correct?
       let tokens = await gpt2Tokenize(text, { tokenizeRange: range }); // TODO debug why these are coming through with 0 prob
       let sequence = new Sequence(tokens);
       setSequenceProb(sequence);
@@ -50,7 +56,6 @@ export class ThesaurusPrism extends Prism {
       let words = await miscTokensToWordTokens(prediction.span, document);
       prediction.span = words;
     }
-    
-    super.onSearchResults({predictions: predictions}, document, constraints);
+    return predictions;
   }
 }

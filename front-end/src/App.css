@@ -7,6 +7,8 @@
   --hover-color: rgb(200, 200, 200);
   --button-height: 1.5em;
   --radius:3px;
+  --normal-font-size: 12px;
+  --small-font-size: 10px;
 }
 
 .App {
@@ -69,7 +71,7 @@
 
 .editor {
   height: 100%;
-  font-size: 12px;
+  font-size: var(--normal-font-size);
   background-color: white;
   box-shadow: 0 10px 20px rgba(0,0,0,0.30), 0 10px 20px rgba(0,0,0,0.22);
   
@@ -155,6 +157,17 @@ we will need to select the text children of the editor */
   }
 }
 
+.bullets {
+  color: var(--darker-text-color);
+  font-size: var(--small-font-size);
+  padding-left: 1em;
+  margin: 0;
+}
+
+.bullet {
+
+}
+
 .search-results {
   width: 100%;
 }
@@ -169,13 +182,13 @@ we will need to select the text children of the editor */
 
 .subtitle {
   color:rgb(172, 172, 172);
-  font-size: 10px;
+  font-size: var(--small-font-size);
   padding-right: 2px;
 }
 
 .text {
   color:rgb(172, 172, 172);
-  font-size: 10px;
+  font-size: var(--small-font-size);
 }
 
 .major-text {
@@ -403,7 +416,7 @@ textarea {
   border: none;
   outline: none;
   width: 100%;
-  height: 1.5em;
+  /* height: 1.5em; */
 }
 
 /* input of type checkbox */

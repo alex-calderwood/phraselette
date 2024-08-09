@@ -3,7 +3,7 @@ import { Constraint } from '../Constraint.js';
 import { getUniqueUUID } from '../../scripts/utils.js';
 
 export class Prism {
-  static TYPES = ['words', 'context', 'critic', 'thesaurus', 'sound', 'basic', 'probability-base'];
+  static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'basic', 'probability-base'];
   /**
    * Create a Prism.
    * @param {string} type - The category of the prism

@@ -1,10 +1,11 @@
 import { sendMessage } from "../../scripts/socket.js";
 import { Prism } from './Prism.js';
+import { ThesaurusPrism } from './Thesaurus.js';
 
-export class CriticPrism extends Prism {
+export class ReaderPrism extends Prism {
   constructor(description) {
-    // super('critic', ['prob']); // eventually... ahh ahh ahh ahhhhh
-    super('critic', []);
+    // super('reader', ['prob']); // eventually... ahh ahh ahh ahhhhh
+    super('reader', []);
 
     this.textFeatures = {
       'description': {text: description, name: 'description'}
@@ -21,7 +22,7 @@ export class CriticPrism extends Prism {
     this.onSearchTriggered();
     let description = this.textFeatures.description.text;
     sendMessage({
-      type: "critic",
+      type: "reader",
       context: document.prefixText,
       selection: document.selectionText,
       description: description,
@@ -31,6 +32,11 @@ export class CriticPrism extends Prism {
 
   async onSearchResults(insights, document, constraints) {
     let message = insights.message;
-    super.onSearchResults( {predictions: [], text: message.response}, document, constraints);
+    let revisions = message.revisions;
+    console.log('critic got words', revisions)
+
+    let predictions = await ThesaurusPrism.processRevisions(revisions, document);
+    
+    super.onSearchResults({predictions: predictions, text: message.response}, document, constraints);
   }
 }

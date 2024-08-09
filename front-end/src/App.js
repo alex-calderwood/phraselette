@@ -72,17 +72,17 @@ class App extends Component {
       dictPrism.onSearchResults({message: msg}, doc, constraints);
     }
 
-    function handleCriticResponse(msg) {
+    function handleReaderResponse(msg) {
       let doc = this._currentDocument();
-      let critic = Prism.getByID(this.state.prisms, msg.prism);
-      console.log('critic prism', critic, this.state.prisms, msg);
-      let constraints = Constraint.subsetByFeatures(this.state.constraints, critic.features);
-      critic.onSearchResults({message: msg}, doc, constraints);
+      let reader = Prism.getByID(this.state.prisms, msg.prism);
+      console.log('reader prism', reader, this.state.prisms, msg);
+      let constraints = Constraint.subsetByFeatures(this.state.constraints, reader.features);
+      reader.onSearchResults({message: msg}, doc, constraints);
     }
 
     let handlers = {
       "thesaurusResponse": handleDictResponse.bind(this),
-      "criticResponse": handleCriticResponse.bind(this),
+      "readerResponse": handleReaderResponse.bind(this),
     }
     assignSocket(socketProtocol, loc.host+'/'+loc.hash.replace('#', '?'), handlers)
   }

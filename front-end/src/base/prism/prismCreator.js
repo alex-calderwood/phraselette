@@ -1,26 +1,31 @@
 import { Prism } from './Prism';
 import { ContextPrism } from './LLM';
 import { ThesaurusPrism } from './Thesaurus';
-import { CriticPrism } from './Critic';
+import { ReaderPrism } from './Reader';
 import { Feature } from '../Feature';
 
 const roles = {
   'thesaurus': [
     "the Spacefarer's Almanac",
     "A Tralfamadorian dictionary",
-    "a precise academic thesaurus",
+    "a precise academic/scientific thesaurus",
+    "Deleuze and Guattari's thesaurus",
     "Emily Dickenson's lexicon",
-    "Jane Austen's word-hoard",
+    "Jane Austen's words",
     "the thesaurus James Joyce used for Ulysses",
     "an everyday English thesaurus",
-    "Alfred Jarry's inverted dictionary",
+    "Alfred Jarry's inverted dictionary of pataphysics",
+    "a Wizard's spellbook",
   ],
-  'critic': [
+  'reader': [
     "a thoughtful kind colleague open to constructively critiquing and red-teaming my ideas",
-    "a stern Ph.D. advisor named Stacy",
-    "Zora Neale Hurston in her role as spirit-guide and text scholar",
     "Noah Wardrip-Fruin, Michael Mateas, Samantha Gorman, and Allison Parrish, a computational media and digital arts PhD committee",
-    "the Midjourney narrative team, a group of academic-developers who are exports in computational narrative",
+    "the Midjourney narrative team",
+    "a group of friends who are all writers and editors and know what it's like to dish some criticism out",
+    "a surrealist in the mold of Max Ernst, Marcel Duchamp, and Andre Breton",
+    "Tristan Tzara, the Dadaist poet",
+    "William S. Burroughs, the beat writer",
+    "Mark Leyner. Leyner employs an intense and unconventional style in his works of fiction. His stories are generally humorous and absurd: In The Tetherballs of Bougainville, Mark's father survives a lethal injection at the hands of the New Jersey penal system, and so is freed but must live the remainder of his life in fear of being executed, at New Jersey's discretion, in any situation and regardless of collateral damage. They frequently incorporate elements of meta-fiction: In the same novel, an adolescent Mark produces a film adaptation of the story of his father's failed execution, although he reads a newspaper review of the movie to the prison's warden, and then dies, before even leaving the prison. At the sentence level, Leyner uses sprawling imagery and an extravagant vocabulary, bordering on prose poetry.",
   ],
 }
 
@@ -40,17 +45,17 @@ export function makePrism(type, callbacks) {
       prism = new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true);
       break;
     case 'context':
-      prism = new ContextPrism().setActive(true);
+      prism = new ContextPrism().setActive(false);
       break;
-    case 'critic':
-      prism = new CriticPrism(randomRole('critic'));
+    case 'reader':
+      prism = new ReaderPrism(randomRole('reader')).setActive(true);
       break;
     case 'thesaurus':
-      prism = new ThesaurusPrism(randomRole('thesaurus')).setActive(true);
+      prism = new ThesaurusPrism(randomRole('thesaurus')).setActive(false);
       break;
       break;
     case 'sound':
-      prism = new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words').setActive(true);
+      prism = new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words').setActive(false);
       break;
     case 'basic':
       prism = new Prism('basic');

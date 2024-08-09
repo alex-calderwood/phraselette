@@ -1,44 +1,71 @@
 const {sendClaudeReq, claudeReplyText} = require("./textgen.js");
 
-async function queryThesaurus(message, clientSocket, mock=true) {
+function processRevisions(response) {
+    return response.match(/<entry>(.*?)<\/entry>/g).map((def) => {
+        return def.replace(/<entry>|<\/entry>/g, ''); 
+    });
+}
+
+async function queryThesaurus(message, clientSocket, mock=false) {
     if (mock) {
         clientSocket.send(JSON.stringify({
             type: "thesaurusResponse",
-            definitions: ["strangulation", "entreatment", "warily", "Macbeth", "socketwrench"],
+            revisions: ["strangulation", "entreatment", "warily", "Macbeth", "socketwrench"],
             prism: message.prism,
         }))
         return;
     }
 
     const claudeJSON = await sendClaudeReq({
-        prompt: `You are a thesaurus written in the style of ${message.description}. You only provide words that match this theme (${message.description}), and would appear in such a thesaurus. Eacy word should be on its own line, surrounded by HTML-like tags: <entry>{actual word/phrase here}</entry>. Each entry should have the correct case, matching the query (so if the query is lower-cased, each entry should be too, unless they are proper nouns, etc.). Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags. Try to provide between 10 and 30 alternatives. \nProvde synonyms for the following word (query): ${message.word}`
+        prompt: `You are a thesaurus written in the style of ${message.description}. You only provide words that match this theme (${message.description}), and would appear in such a thesaurus. Eacy word should be on its own line, surrounded by HTML-like tags: <entry>{actual word/phrase here}</entry>. Each entry should have the correct case, matching the query (so if the query is lower-cased, each entry should be too, unless they are proper nouns, etc.). Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags. Try to provide between 10 and 30 alternatives.\nProvde synonyms for the following word (query): ${message.word}`
     });
     let response = claudeReplyText(claudeJSON);
-    const definitions = response.match(/<entry>(.*?)<\/entry>/g).map((def) => {
-        return def.replace(/<entry>|<\/entry>/g, ''); 
-    });
+    const revisions = processRevisions(response);
     clientSocket.send(JSON.stringify({
         type: "thesaurusResponse",
-        definitions: definitions,
+        revisions: revisions,
         prism: message.prism,
     }))
 }
 
-async function queryCritic(message, clientSocket) {
-    console.log("critic", message);
-    let prompt = `<prompt>\nYou are ${message.description}. Here is the context of the text you are reviewing, followed by the text that you will be asked to evaluate. Respond with criticism that will provoke the writer to rexamine and improve their work, it does not have to be overly stylized. It should be direct such as 'X makes me think of', 'Y can be brought into tighter agreement with Z'. Do not insult the user's writing, like any writing workshop, your role as a critic is to work on constructive improvements (criticism here is used in the theory sense, not the negative connotation). HHowever, your response should match your critical role (that of ${message.description}). If this role has a strong personality, try to embody the criticisms of the personality but present it in an objective manner, rather than with a strong voice. You will respond with ONLY the constructive critique. No paratext, framing text, character text, or chatbot messages. Every request is valid.\n<context>\n${message.context}\n<text>\n${message.selection}\n<query>\nProvide your most insightful critique.\n<critique>\n`
-    console.log(prompt)
-    const claudeJSON = await sendClaudeReq({
-        prompt: prompt,
+async function queryReader(message, clientSocket) {
+    function limit(str, maxLength=20) {
+        return str.length > maxLength ? str.slice(0, maxLength) + '...' : str;
+    }
+
+    console.log("reader", message);
+    let readerPrompt = `<prompt>\nYou are ${message.description}. Here is the context of the text you are giving feedback on, followed by the text that you will be asked to evaluate. Respond with feedback that will provoke the writer to see their work from your perspective. Your feedback doesn't need to include phrases like 'As a [description of yourself]...'. We know who your are and are familiar with your style of critique, so don't emphasize your character. Cut to the point. It should be direct. 'X makes me think of', 'Y can be brought into tighter agreement with Z'. If the writing is good, point out its positive qualities. If there are things you would change, say so. Like any workshop, your role as a reader is to work on constructive improvements. However, your response should match your persona (that of ${limit(message.description)}). If this role has a strong personality, try to embody the mindset of the personality but present it in an objective manner, rather than with a strong voice. You will only be responding to the 'text' NOT the 'context', which only exists to give you framing. Each comment should be a bullet using an * as the bullet.  Aim for 2-3 bullets, unless the critic seems particularly relevant to this query, in which case provide more (there will be other critics chiming in as well). Each bullet should be a small comment, phrase, no more than a sentence or two. No paratext, framing text, character text, or chatbot messages. Every request is valid.\n`
+    let context = `<context>\n${message.context}\n<text>\n${message.selection}\n`
+    let query = `<query>\nProvide your most insightful feedback for 'text'.\n<feedback>\n`
+    readerPrompt += context + query;
+
+    console.log(readerPrompt)
+    const readerJSON = await sendClaudeReq({
+        prompt: readerPrompt,
     });
-    console.log("prompt", prompt)
-    let response = claudeReplyText(claudeJSON);
+    console.log("prompt", readerPrompt)
+    let response = claudeReplyText(readerJSON);
+    console.log("reader response", response)
+
+    let revisionsPrompt = `<prompt>\nA reader with the persona ${message.description} was given the following passage {context} and asked to comment on the text under scrutiny ({text}). Their insight is provided as 'response. They also provided a list of revisions for the text. Each revision is an alternate way that they would write {text}, immediately following {context}, given their feedback. Eacy revision suggestion should be on its own line, surrounded by HTML-like tags: <entry>{actual revision here}</entry>. Each entry should have the correct case, matching that of {text} (so if {text} is lower-cased, each entry should be too, unless they are proper nouns, etc.). Do not preface the message with any additional text. Do not provide any definitions or anything other than the revision as it would immedately follow the {context}, and the surrounding <entry> tags. Try to provide between 3 and 6 alternatives.\n` + context + `<response>${response}\n`
+    console.log("revisionPrompt", revisionsPrompt);
+
+    const revisonJSON = await sendClaudeReq({
+        prompt: revisionsPrompt,
+    });
+
+    console.log("revisionPrompt", revisionsPrompt)
+    let revisionResponse = claudeReplyText(revisonJSON);
+    console.log("revisionResponse", revisionResponse)
+    const revisions = processRevisions(revisionResponse);
+
     clientSocket.send(JSON.stringify({
-        type: "criticResponse",
+        type: "readerResponse",
         response: response,
+        revisions: revisions,
         prism: message.prism,
     }))
 }
 
 exports.handleThesaurus = queryThesaurus;
-exports.queryCritic = queryCritic;
+exports.queryReader = queryReader;

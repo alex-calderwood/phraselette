@@ -10,8 +10,14 @@ import { Document } from "../base/Document";
 * return our previously computed character offset based on the 'c' attribute
 */
 function getCharIndex(span) {
-  if (span === null) return null;
-  return parseInt(span.getAttribute('c'));
+  try {
+    if (span) {
+      return parseInt(span.getAttribute('c'));
+    }
+  } catch (e) {
+    console.error('getCharIndex called with null span', span);
+    return null;
+  }
 }
 
 // A text editor that tracks all sorts of information about the words as they are typed
@@ -37,7 +43,7 @@ export class PrismEditor extends Component {
     // this.editorNode.addEventListener('focus', this.handleFocus);
 
     let initializationText = "E";
-    let testingText = `rising swoonball shackled gravitywell tickticking pendulum`
+    let testingText = `I arrived without a ladder, deciding it was better to be on time than prepared.`
 // shackled gravitywell
 
 // tickticking pendulum
@@ -148,12 +154,12 @@ export class PrismEditor extends Component {
 
       if (anchor.tagName === 'SPAN') {
         anchorSpan = anchor;
-        focusSpan = focus;
+        focusSpan  = focus;
       }
 
       if (anchor.tagName === 'DIV') {
         anchorSpan = anchor;
-        focusSpan = focus;
+        focusSpan  = focus;
       }
 
       let startIndex = getCharIndex(anchorSpan) + windowSelection.anchorOffset;

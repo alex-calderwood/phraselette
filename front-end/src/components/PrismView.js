@@ -102,6 +102,17 @@ export class PrismView extends Component {
       </div>
   }
 
+  bulletedText(text) {
+    const items = text.split('*').filter(item => item.trim() !== '');
+    return (
+      <ul className="bullets">
+        {items.map((line, index) => (
+          <li key={index} className="bullet">{line.trim()}</li>
+        ))}
+      </ul>
+    );
+  }
+
   render() {
     let prism = this.prism;
     let start = this.props.startIndex;
@@ -125,6 +136,9 @@ export class PrismView extends Component {
     let title = prism.title != prism.type && !activeNotHidden ? 
       <span className="subtitle"> ({prism.title})</span> : ""
 
+    let textContent = showtext ? this.bulletedText(text) : "";
+    console.log('text', text, textContent)
+
     return <div className={`prism`}>
         <div className={`title ${rotated}`} onClick={this.toggleHidden.bind(this)}>
           {prism.type} {title}
@@ -135,7 +149,7 @@ export class PrismView extends Component {
             return <PrismEditableTextFeature key={feature.text} feature={feature} prism={prism} />
           }) : ""}
 
-          {showtext ? <div className="text">{text}</div> : ""}
+          {textContent}
 
           {showTokenContent ? this.tokenContent(prism, start, end, tokens) : ""}
 
