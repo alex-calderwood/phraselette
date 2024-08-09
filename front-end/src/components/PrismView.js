@@ -60,15 +60,6 @@ export class PrismView extends Component {
     this.forceUpdate();
   }
 
-  onConstraintUpdate() {
-    // Doesn't seem to do anything yet
-    let predictions = this.prism?.insights?.results || [];
-    let document = this.props.getDocument();  // TODO is this going to be out of date?
-    let constraints = this.props.constraints; // TODO it's also possible this is out of date
-    console.log("updating constraints", predictions, document, constraints);
-    this.prism.onSearchResults({ predictions: predictions}, document, constraints );
-  }
-
   removeConstraint() {
     let constraint = this.props.constraints.pop();
     this.props.removeConstraint(constraint);
@@ -82,6 +73,12 @@ export class PrismView extends Component {
     let tokens = startChar !== null ? this.tokenManager.tokensAt(prism.tokenType, startChar, endChar) : [];
     console.log('Handling click on sequence:', tokens, sequence);
     this.props.onSwapSequence(tokens, sequence);
+  }
+
+  prismHandleOnConstraintUpdate() {
+    console.log('updating ui on constraint' , this.prism);
+    this.props.onConstraintUpdate(this.prism);
+    this.forceUpdate();
   }
 
   tokenContent(prism, start, end, tokens) {
@@ -147,7 +144,7 @@ export class PrismView extends Component {
               key={constraint.id} 
               constraint={constraint} 
               onDelete={this.props.removeConstraint}
-              onConstraintUpdate={this.onConstraintUpdate.bind(this)}/>}) : ""
+              onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)}/>}) : ""
           }
 
           {showTokenContent ? <ConstraintCreator
@@ -155,7 +152,7 @@ export class PrismView extends Component {
             startIndex={start} endIndex={end}
             prism={prism}
             onAdd={this.props.addConstraint}
-            onConstraintUpdate={this.onConstraintUpdate.bind(this)} /> : "" }
+            onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)} /> : "" }
           
           {showResults ? <SearchResults
                       isSearching={this.props.isSearching} 

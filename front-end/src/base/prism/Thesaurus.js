@@ -18,7 +18,8 @@ export class ThesaurusPrism extends Prism {
   }
 
   async search(document, constraints) {
-    this.onSearch();
+
+    this.onSearchTriggered();
     let description = this.textFeatures.description.text;
     console.log('searching with description', description)
     sendMessage({

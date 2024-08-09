@@ -18,7 +18,7 @@ export class CriticPrism extends Prism {
   }
 
   async search(document, constraints) {
-    this.onSearch();
+    this.onSearchTriggered();
     let description = this.textFeatures.description.text;
     sendMessage({
       type: "critic",

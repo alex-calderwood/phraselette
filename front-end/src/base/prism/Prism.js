@@ -1,4 +1,5 @@
 import { resolveConstraints, sortPredictions } from '../../scripts/resolution.js';
+import { Constraint } from '../Constraint.js';
 import { getUniqueUUID } from '../../scripts/utils.js';
 
 export class Prism {
@@ -42,7 +43,7 @@ export class Prism {
   }
 
   // Triggered at the beginning of a search
-  onSearch() {
+  onSearchTriggered() {
     this.isSearching = true;
   }
 
@@ -59,8 +60,10 @@ export class Prism {
   */
   async onSearchResults(insights, document, constraints) {
     let predictions = insights?.predictions || [];
-    let results = await resolveConstraints(predictions, constraints, false);
 
+    constraints = Constraint.subsetByFeatures(constraints, this.features)
+    const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
+    let results = await resolveConstraints(predictions, constraints, false);
     results = sortPredictions(results, this.sortBy, true);
 
     console.log(`search results for ${this.type}:`, results);

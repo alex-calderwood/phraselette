@@ -174,6 +174,7 @@ class App extends Component {
 
     // console.log('on highlight change', prismID, shouldHighlight, prisms, toHighlight);
 
+    
     this.setState({ prismToHighlight: prismID});
   }
 
@@ -187,8 +188,8 @@ class App extends Component {
     let prisms = Prism.getActive(this.state.prisms);
 
     for (let prism of prisms) {
-      // prism.search(doc, constraints)
-      prism.search(doc, [])
+      prism.search(doc, constraints)
+      // prism.search(doc, [])
     }
   }
   
@@ -260,6 +261,15 @@ class App extends Component {
     }
   }
 
+  onConstraintUpdate(prism) {
+    let predictions = prism?.insights?.results || [];
+    let document = this._currentDocument(); // still don't love this
+    let constraints = Constraint.subsetByFeatures(this.state.constraints, prism.features);
+    console.log("updating constraints in app", predictions, document, constraints);
+    prism.onSearchResults({ predictions: predictions}, document, constraints );
+
+  }
+
   render() {
     let startIndex    = this.state.selection ? this.state.selection.startIndex : null;
     let endIndex      = this.state.selection ? this.state.selection.endIndex: null;
@@ -302,6 +312,15 @@ class App extends Component {
                 debugMode={debugMode}
               />
 
+               {/* Constrained search results */}
+               <SearchResults 
+              results={searchResults} 
+              isSearching={this.state.isSearching}
+              wrap={false} 
+              showLength={true}
+              onClickSequence={(oldS, newS) => { this.swapSequence(oldS, newS)}}
+              />   {/* onClickSequence={this.onClickSequence.bind(this)} /> */}
+
               {/* Display the active prisms */}
               {activePrisms.map((prism) => {
                 console.log('rendering', prism.id);
@@ -316,20 +335,13 @@ class App extends Component {
                     debugMode={debugMode}
                     constraints={Constraint.subsetByFeatures(this.state.constraints, prism.features)}
                     addConstraint={this.addConstraint.bind(this)}
-                    getDocument={() => { return this._currentDocument(); }} // TODO I don't like that onConstraintUpdate needs this, will prob be slow
                     removeConstraint={this.removeConstraint.bind(this)}
+                    onConstraintUpdate={this.onConstraintUpdate.bind(this)}
                   />
                 );
               })}
 
-              {/* Constrained search results */}
-              <SearchResults 
-              results={searchResults} 
-              isSearching={this.state.isSearching}
-              wrap={false} 
-              showLength={true}
-              onClickSequence={(oldS, newS) => { this.swapSequence(oldS, newS)}}
-              />   {/* onClickSequence={this.onClickSequence.bind(this)} /> */}
+             
             </div>
 
             <div className="lenses"> { /* A list of each active lense and a checkbox to activate/deactivate them */}

@@ -1,27 +1,26 @@
-import { searchForward, miscTokensToWordTokens, gpt2Tokenize } from '../../scripts/smarts.js';
+import { searchForward, miscTokensToWordTokens } from '../../scripts/smarts.js';
 import { Feature } from '../Feature.js';
+import { Constraint } from '../Constraint.js';
 import { Prism, setSequenceProb } from './Prism.js';
 
 export class ContextPrism extends Prism {
-  static STOPLIST = ["_", "~", "-"]; // tokens that should not be the entire prediction
+  static STOPLIST = ["_", "~", "-"];            // tokens that should not be the entire prediction
   static HALTLIST = ["�", "」", "<|endoftext"]; // tokens that should not appear anywhere in the prediction
 
   constructor() {
     super('context', [Feature.Prob], 'words');
-
-    // search settings
-    this.minTokens = 1;
+   
+    this.minTokens = 1;  // search settings
     this.maxTokens = 25;
 
-    this.sortBy = 'probGeometricMean'; // default sorting // TODO take a look at this
+    this.sortBy = 'probGeometricMean'; // default sorting
   }
 
   /*
    * Given a document and a list of constraints, return a list of sequences that maximally satisfy the constraints.
   */
   async search(document, constraints) {
-    this.onSearch(); // UI
-    // let targetSequenceWords = Math.max(...constraints.map((constraint) => { return constraint?.targetSequence?.length || 0; }));
+    this.onSearchTriggered(); // UI
     let selectionWords = document.selectionText.split(' ').length; // TODO I suppose we should have the tokenized words to calculate this...
     let numWords = selectionWords;
     numWords = Math.max(numWords, 1);
@@ -31,6 +30,7 @@ export class ContextPrism extends Prism {
     numTokens = Math.floor(numWords * 4/3 + longestExpeectedWordInTokens);                            // enough tokens to approximate the correct word count
     numTokens = Math.max(this.minTokens, Math.min(this.maxTokens, numTokens)); // clamp it
 
+    constraints = Constraint.subsetByFeatures(constraints, this.features)
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
 
     console.log('searching LLM', {preConstraints, selectionWords, numWords, numTokens})

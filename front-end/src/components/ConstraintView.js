@@ -90,6 +90,7 @@ class CategoricalConstraintView extends Component {
     const newMode = event.target.value;
     this.props.constraint.changeMode(newMode);
     this.setState({ mode: newMode })
+    this.props.onConstraintUpdate();
   }
 
   render() {

@@ -1,6 +1,15 @@
 const {sendClaudeReq, claudeReplyText} = require("./textgen.js");
 
-async function queryThesaurus(message, clientSocket) {
+async function queryThesaurus(message, clientSocket, mock=true) {
+    if (mock) {
+        clientSocket.send(JSON.stringify({
+            type: "thesaurusResponse",
+            definitions: ["strangulation", "entreatment", "warily", "Macbeth", "socketwrench"],
+            prism: message.prism,
+        }))
+        return;
+    }
+
     const claudeJSON = await sendClaudeReq({
         prompt: `You are a thesaurus written in the style of ${message.description}. You only provide words that match this theme (${message.description}), and would appear in such a thesaurus. Eacy word should be on its own line, surrounded by HTML-like tags: <entry>{actual word/phrase here}</entry>. Each entry should have the correct case, matching the query (so if the query is lower-cased, each entry should be too, unless they are proper nouns, etc.). Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags. Try to provide between 10 and 30 alternatives. \nProvde synonyms for the following word (query): ${message.word}`
     });

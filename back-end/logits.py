@@ -22,7 +22,7 @@ class SpaceAwareLogitsProcessor(TFLogitsProcessor):
     def __call__(self, input_ids: tf.Tensor, scores: tf.Tensor, cur_len: int) -> tf.Tensor:
         batch_size, num_tokens = scores.shape
         if self.ends_with_space and cur_len == self.input_len:
-            non_space_mask = tf.logical_not(SpaceAwareLogitsProcessor.space_tokens)
+            non_space_mask = tf.logical_not(self.space_tokens)
             scores = tf.where(non_space_mask, tf.float32.min, scores)
         return scores
 
