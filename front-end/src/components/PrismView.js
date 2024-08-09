@@ -83,8 +83,6 @@ export class PrismView extends Component {
     console.log('Handling click on sequence:', tokens, sequence);
     this.props.onSwapSequence(tokens, sequence);
   }
-  
-  
 
   tokenContent(prism, start, end, tokens) {
     return <div className="additional-content">
@@ -92,7 +90,8 @@ export class PrismView extends Component {
           tokens={tokens}
           tokenType={prism.type}
           startIndex={start} endIndex={end}
-          debugMode={this.props.debugMode} /> 
+          debugMode={this.props.debugMode} 
+          expanded={true} />
 
         {tokens.map((token) => {
           return <TokenAlternates

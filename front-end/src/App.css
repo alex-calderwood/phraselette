@@ -69,15 +69,15 @@
 
 .editor {
   height: 100%;
-  font-size: 14px;
+  font-size: 12px;
   background-color: white;
   box-shadow: 0 10px 20px rgba(0,0,0,0.30), 0 10px 20px rgba(0,0,0,0.22);
   
   outline: none; /* remove the blue outline */
   border-radius: 2px; /* curve the corners*/
 
-  margin: 10px;
-  padding: 30px;
+  margin: 6px;
+  padding: 20px;
   
   /* z-index: 1; */
   flex: 1; /* Take up all the space */
@@ -86,7 +86,25 @@
 
   word-wrap: break-word;
   overflow-wrap: break-word;
-  white-space: normal;	 
+
+  /* Preserve whitespace (spaces, tabs) and allow text wrapping
+     - Collapses multiple spaces into one visually, but preserves them in the text
+     - Allows automatic line breaks at word boundaries
+     - Preserves manual line breaks (\n) in the text (creates div/brs in chrome)
+     - Supported in all modern browsers
+  */
+  white-space: pre-wrap;
+
+  /* Modern browsers: Enhance space handling beyond pre-wrap
+     - Does everything that pre-wrap does
+     - Additionally:
+       1. Preserves spaces at the end of lines visually
+       2. Allows line breaks to occur at any space character, even mid-word
+       3. Useful for displaying space characters more explicitly
+     - Fallback to pre-wrap in browsers that don't support break-spaces
+  */
+  white-space: break-spaces;
+
 }
 
 /* make the z index of the text on the editor slightly higher so we can put something in between, so

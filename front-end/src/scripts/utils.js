@@ -23,3 +23,15 @@ export function scientific(num) {
   if (num?.toPrecision) return num.toPrecision(3);
   return num;
 }
+
+export function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}

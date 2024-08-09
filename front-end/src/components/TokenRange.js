@@ -1,6 +1,6 @@
 import React, { Component, createRef } from "react";
 import { getColor, zeroToOneColor, categoryToColor } from "../color";
-import { getUniqueUUID, scientific} from "../scripts/utils";
+import { getUniqueUUID, scientific, debounce } from "../scripts/utils";
 
 function tokenItemsToShow(tokenType) {
   let show = {
@@ -25,6 +25,16 @@ export class TokenRange extends Component {
       hoveredTokenId: null,
       hoverSequenceId: null,
     };
+    this.debouncedSetHoveredSequenceId = debounce(this.setHoveredSequenceId, 50);
+    this.debouncedSetHoveredTokenId = debounce(this.setHoveredTokenId, 50);
+  }
+
+  setHoveredSequenceId = (id) => {
+    this.setState({ hoverSequenceId: id });
+  }
+
+  setHoveredTokenId = (id) => {
+    this.setState({ hoveredTokenId: id });
   }
 
   componentDidMount() {
@@ -48,6 +58,7 @@ export class TokenRange extends Component {
     let tokenType = this.props.tokenType;
     let overflowing = this.state.overflowing ? "overflowing" : "";
     let filterSpaces = this.props.filterSpaces || false;
+    let forceExpand = this.props.expanded || false;
 
     // filter out ' ' and &nbsp;
     let isSpace = (text) => { return text === ' ' || text === '\u00A0' };
@@ -60,17 +71,19 @@ export class TokenRange extends Component {
     let wrap = this.props.wrap ? ' wrap' : ' nowrap';
     let scoreLookup = tokenType === 'search' ? 'total' : tokenType;
 
+    console.log('TokenRange', tokenType, tokens);
+
     return (
       <div className={"token-range-parent " + overflowing} >
           <div id={`tokenbar-${tokenType}-${this.id}`} className={`token-range` + wrap}>
               {tokens && tokens.map((tokenOrSeq) => {
                 if (tokenOrSeq.span) {
                   let sequence = tokenOrSeq;
-                  const expanded = this.state.hoverSequenceId === sequence.id;
+                  const expanded = forceExpand || this.state.hoverSequenceId === sequence.id;
                   return this.renderSequence(sequence, tokenType, expanded);
                 } else {
                   let token = tokenOrSeq;
-                  const expanded = this.state.hoveredTokenId === token.id;
+                  const expanded = forceExpand || this.state.hoveredTokenId === token.id;
                   return this.renderToken(tokenType, token, expanded);
                 }
               })}
@@ -94,8 +107,8 @@ export class TokenRange extends Component {
         id={id}
         key={id}
         className={`sequence ${simple}`}
-        onMouseEnter={() => this.setState({ hoverSequenceId: sequence.id })}
-        onMouseLeave={() => this.setState({ hoverSequenceId: null })}
+        onMouseEnter={() => this.debouncedSetHoveredSequenceId(sequence.id)}
+        onMouseLeave={() => this.debouncedSetHoveredSequenceId(null)}
         style={style}
         onClick={() => { 
           this.props.onClickSequence(sequence); 
@@ -135,15 +148,16 @@ export class TokenRange extends Component {
 
     const simple = expanded ? '' : 'simple';
     let style = color ? { backgroundColor: color } : {};
-
     let key = `${this.id}-token-${token.id}`;
 
     return (
       <div
         key={key} 
         className={`token ${space} ${simple}`} 
-        onMouseEnter={() => this.setState({ hoveredTokenId: token.id })}
-        onMouseLeave={() => this.setState({ hoveredTokenId: null })}
+        // onMouseEnter={() => this.setState({ hoveredTokenId: token.id })}
+        // onMouseLeave={() => this.setState({ hoveredTokenId: null })}
+        onMouseEnter={() => this.debouncedSetHoveredTokenId(token.id)}
+        onMouseLeave={() => this.debouncedSetHoveredTokenId(null)}
         style={style}
         // onClick={() => { onClick(token); }}
       >

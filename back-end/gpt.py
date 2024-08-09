@@ -39,12 +39,13 @@ class SpaceAwareLogitsProcessor(TFLogitsProcessor):
         self.input_len = input_len
 
 # We never want to generate the end of sequence token or a few other tokens
+end_stoplist = [tokenizer.eos_token_id, tokenizer.pad_token_id, tokenizer.cls_token_id, tokenizer.sep_token_id]
 class EndlessLogitsProcessor(TFLogitsProcessor):
-    stoplist = [tokenizer.eos_token_id, tokenizer.pad_token_id, tokenizer.cls_token_id, tokenizer.sep_token_id]
+    stoplist_mask = tf.constant([id in end_stoplist for id in range(tokenizer.vocab_size)], dtype=tf.bool)
+    
     def __call__(self, input_ids, scores, cur_len):
-        # zero out the stoplist tokens
-        for token in EndlessLogitsProcessor.stoplist:
-            scores = tf.where(input_ids == token, tf.float32.min, scores)
+        # Zero out the scores for stoplist tokens
+        scores = tf.where(EndlessLogitsProcessor.stoplist_mask, tf.float32.min, scores)
         return scores
 
 # Create the LogitsProcessors
