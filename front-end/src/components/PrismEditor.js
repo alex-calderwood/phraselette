@@ -32,6 +32,8 @@ export class PrismEditor extends Component {
     this.editorNode.addEventListener('click', this.onClick);
     this.editorNode.addEventListener('keydown', this.onKeyDown.bind(this));
     this.editorNode.addEventListener('keyup', this.onKeyUp.bind(this));
+    this.editorNode.addEventListener('paste', this.handlePaste);
+
     // this.editorNode.addEventListener('focus', this.handleFocus);
 
     let initializationText = "E";
@@ -91,6 +93,7 @@ export class PrismEditor extends Component {
     this.editorNode.removeEventListener('click', this.onClick);
     this.editorNode.removeEventListener('keydown', this.onKeyDown);
     this.editorNode.removeEventListener('keyup', this.onKeyUp);
+    this.editorNode.removeEventListener('paste', this.handlePaste);
     // this.editorNode.removeEventListener('focus', this.handleFocus);
   }
 
@@ -367,6 +370,13 @@ export class PrismEditor extends Component {
 
   onClick = (event) => {
     this.updateSelection();
+  };
+
+  handlePaste = (event) => {
+    event.preventDefault();
+    const text = (event.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+    this.splitIntoCharactersAndStyle(this.contentRef.current);
   };
 
   // to call upon other actions that modify the selection
