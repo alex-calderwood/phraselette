@@ -16,7 +16,8 @@ export class Prism {
     this.type = type;
     this.title = type;
     this.active = false;
-    this.description = description
+    this.description = description;
+    this.editable = false;
 
     // which tokens to look up in the tokenManager
     this.tokenType = tokenType ? tokenType : this.type;  

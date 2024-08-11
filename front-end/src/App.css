@@ -477,7 +477,6 @@ div.searching {
   display: flex;
   overflow-x: auto;
   padding: 10px;
-  background-color: var(--accent-color);
   scroll-behavior: smooth;
 }
 

@@ -43,19 +43,21 @@ export function makePrism(type, callbacks) {
   switch(type) {
     case 'words':
       prism = new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true);
-      prism.description="Allows you to view and constraint words based on their part of speech.";
+      prism.description="View and constrain words based on their part of speech.";
       break;
     case 'context':
       prism = new ContextPrism().setActive(false);
-      prism.description="Let's you view and constraint words based on their statistical probability of following their context.";
+      prism.description="View and constraint words based on their statistical probability of following their context.";
       break;
     case 'reader':
       prism = new ReaderPrism(randomRole('reader')).setActive(true);
       prism.description="A computational reader model that will provide feedback and alternatives of your text based on their understanding of the text.";
+      prism.editable = true;
       break;
     case 'thesaurus':
       prism = new ThesaurusPrism(randomRole('thesaurus')).setActive(false);
       prism.description="A stylized thesaurus that allows you to specify";
+      prism.editable = true;
       break;
     case 'sound':
       prism = new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words').setActive(false);

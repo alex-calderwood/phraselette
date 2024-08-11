@@ -32,9 +32,13 @@ const PrismSelector = ({ prisms, onAddPrism }) => {
     }
   }, []);
 
+  const displayPrisms = Object.values(prisms).filter(prism => 
+    prism.editable || !prism.active
+  )
+
   return (
     <div className="prism-selector" ref={selectorRef}>
-      {Object.values(prisms).map((prism) => (
+      {displayPrisms.map((prism) => (
         <div 
           key={prism.id} 
           className="prism-item"
