@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect} from 'react';
 import { IoPrismOutline } from "react-icons/io5";
 
-const PrismSelector = ({ prisms, onAddPrism }) => {
+const PrismSelector = ({ prisms, activePrisms, onAddPrism }) => {
   const [hoveredPrism, setHoveredPrism] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const selectorRef = useRef(null);
@@ -33,7 +33,7 @@ const PrismSelector = ({ prisms, onAddPrism }) => {
   }, []);
 
   const displayPrisms = Object.values(prisms).filter(prism => 
-    prism.editable || !prism.active
+    prism.editable || !activePrisms.includes(prism.type)
   )
 
   return (

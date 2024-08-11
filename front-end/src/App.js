@@ -144,7 +144,7 @@ class App extends Component {
     let prisms = this.state.prisms;
     this.setState({
       prisms: { ...prisms, [prism.id]: prism },
-      activePrisms: Prism.getActive(prisms),
+      activePrisms: Prism.getActive({ ...prisms, [prism.id]: prism }),
     });
 
     // update the tokenManager
@@ -430,6 +430,7 @@ class App extends Component {
             <div className="lenses">
               <PrismSelector 
                 prisms={this.state.prisms} 
+                activePrisms={this.state.activePrisms}
                 onAddPrism={this.handleAddPrism.bind(this)} 
               />
             </div>
