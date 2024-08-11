@@ -1,8 +1,6 @@
 import { Token } from "../base/Token.js";
 import { Sequence } from "../base/Sequence.js";
-
-// Something unlikely to be seen, must match the tokenization in the backend (server.py)
-const breakToken = "&&VE*A=]";
+import { streamFromWebSocket } from "./socket.js";
 
 function badData(text) {
   if (!text || text.length === 0) {
@@ -18,44 +16,6 @@ function makeTokenizationRange(text, data) {
     return data.tokenizeRange;
   } else {
     return [0, text.length - 1]
-  }
-}
-
-async function* streamFromServer(endpoint, data) {
-  try {
-    const response = await fetch(`http://127.0.0.1:5000/${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split(breakToken);
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        if (line.trim()) {
-          const token = JSON.parse(line);
-          yield token;
-        }
-      }
-    }
-  } catch (error) {
-    console.error(`There has been a problem with your ${endpoint} fetch operation:`, error);
   }
 }
 
@@ -209,7 +169,7 @@ async function* callGPT2(context, tokenizeRange, alternates=0) {
     top_k: alternates,
   };
 
-  await (yield* streamFromServer("probs", data));
+  await (yield* streamFromWebSocket("probs", data));
 }
 
 async function* callSpacy(context, tokenizeRange, additionalRequests) {
@@ -222,7 +182,7 @@ async function* callSpacy(context, tokenizeRange, additionalRequests) {
     requests: additionalRequests,
   };
 
-  await (yield* streamFromServer('spacy', data));
+  await (yield* streamFromWebSocket('spacy', data));
 }
 
 /* 
@@ -270,7 +230,7 @@ async function* callSearch(prefix, top_k, depth) {
     depth: depth,
   };
 
-  await (yield* streamFromServer('search', data)); // TODO I'm not sure if this await is going to batch everything?
+  await (yield* streamFromWebSocket('search', data)); // TODO I'm not sure if this await is going to batch everything?
 }
 
 export async function getPhones(words) {
@@ -300,7 +260,7 @@ async function* callPhones(text) {
     text: text
   };
 
-  await (yield* streamFromServer('phones', data));
+  await (yield* streamFromWebSocket('phones', data));
 }
 
 /*

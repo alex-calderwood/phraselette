@@ -1,3 +1,4 @@
+*.prettierrc
 credentials.json
 project.txt
 
