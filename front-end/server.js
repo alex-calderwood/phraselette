@@ -12,7 +12,7 @@ const ws = require("ws");
 const {handleDictionary, testClaude} = require('./src/server/dictionary.js');
 
 // config
-const myHostname = "0.0.0.0";
+const myHostname = "localhost";
 const myPort = 5026;
 
 const app = express();

@@ -1,7 +1,8 @@
 import { Token } from "../document/Token.js";
 import { Sequence } from "../document/Sequence.js";
 
-const PYTHON_SERVER = 'http://localhost:5025';
+// const PYTHON_SERVER = 'http://localhost:5025';
+const PYTHON_SERVER = "https://e12e-34-42-53-243.ngrok-free.app"
 console.log(`Communicating with python server at ${PYTHON_SERVER}`);
 console.warn("WARNING TODO THIS ISN'T USING THE ENV VARIABLE");
 
