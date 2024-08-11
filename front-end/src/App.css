@@ -131,6 +131,27 @@ we will need to select the text children of the editor */
   margin: 10px;
 }
 
+.control-buttons {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.control-buttons button {
+  margin: 0 5px;
+}
+
+.instructions-view {
+  padding: 20px;
+  text-align: center;
+  color: var(--primary-text-color);
+}
+
+.instructions-view p {
+  font-size: 0.5em;
+  margin-bottom: 5px;
+}
+
 .prism {
   /* put a box around it */
   margin-bottom: 10px;
@@ -434,22 +455,28 @@ textarea {
 /* make the brackground gradient bounce left and right */
 /* Specific styles for the div when the searching class is added */
 div.searching {
-  background: linear-gradient(to right, #ffffff 0%, #dfdfdf 100%);
-  background-size: 200% 100%;
-  animation: slide 2s linear infinite;
+  background: linear-gradient(45deg, #ffffff, #dfdfdf, #ffffff);
+  background-size: 200% 200%;
+  animation: slide 4s ease infinite;
   width: 100%;
   min-height: 1.5em;
 }
 
-/* Animation keyframes */
 @keyframes slide {
   0%, 100% {
-    background-position: 100% 0%;
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 100% 30%;
   }
   50% {
-    background-position: 50% 100%;
+    background-position: 100% 50%;
+  }
+  75% {
+    background-position: 0% 70%;
   }
 }
+
 
 /*** Mozilla based browsers ***/
 ::-moz-selection {
