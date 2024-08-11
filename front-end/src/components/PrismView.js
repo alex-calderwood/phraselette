@@ -4,13 +4,13 @@ import { TokenAlternates } from "./Alternates";
 import { ConstraintRender } from "./ConstraintView";
 import { ConstraintCreator } from "./ConstraintCreator";
 import { SearchResults } from "./SearchResults";
-import { TokenManager } from "../document/TokenManager";
-import { Prism } from "../document/Prism";
+import { TokenManager } from "../base/TokenManager";
+import { Prism } from "../base/prism/Prism";
 
 class PrismEditableTextFeature extends Component {
   constructor(props) {
     super(props)
-    this.id = `text-feature-area-` + this.props.feature.name
+    this.id = `text-feature-${this.props.feature.name}-${this.props.prism.id}`;
     this.state = {
       text: this.props.feature.text,
     };
@@ -33,7 +33,7 @@ class PrismEditableTextFeature extends Component {
 /**
  * @typedef {Object} PrismViewProps
  * @property {TokenManager} tokenManager - The global token manager used by the App
- * @property {Prism} prism - the prism instance
+ * @property {Prism} prism - the prism instance 
  */
 
 
@@ -60,23 +60,35 @@ export class PrismView extends Component {
     this.forceUpdate();
   }
 
-  onConstraintUpdate() {
-    let document = this.props.getDocument(); // TOOD is this going to be out of date?
-    this.prism.onSearchResults(this.prism.results, document, this.state.constraints);
-  }
-
   removeConstraint() {
     let constraint = this.props.constraints.pop();
     this.props.removeConstraint(constraint);
   }
 
-  additionalContent(prism, start, end, tokens) {
+  prismHandleOnClick(sequence) {
+    let prism     = this.prism;
+    let startChar = this.props.startIndex;
+    let endChar   = this.props.endIndex - 1;
+  
+    let tokens = startChar !== null ? this.tokenManager.tokensAt(prism.tokenType, startChar, endChar) : [];
+    console.log('Handling click on sequence:', tokens, sequence);
+    this.props.onSwapSequence(tokens, sequence);
+  }
+
+  prismHandleOnConstraintUpdate() {
+    console.log('updating ui on constraint' , this.prism);
+    this.props.onConstraintUpdate(this.prism);
+    this.forceUpdate();
+  }
+
+  tokenContent(prism, start, end, tokens) {
     return <div className="additional-content">
         <TokenRange 
           tokens={tokens}
-          tokenType={prism.name}
+          tokenType={prism.type}
           startIndex={start} endIndex={end}
-          debugMode={this.props.debugMode} /> 
+          debugMode={this.props.debugMode} 
+          expanded={true} />
 
         {tokens.map((token) => {
           return <TokenAlternates
@@ -85,9 +97,20 @@ export class PrismView extends Component {
             alternates={token.alternates}
             tokenManager={this.tokenManager}
             prism={prism}
-            onTokenClick={this.props.onSwapToken} />;
+            onClickSequence={this.props.onClickSequence} />;
         })}
       </div>
+  }
+
+  bulletedText(text) {
+    const items = text.split('*').filter(item => item.trim() !== '');
+    return (
+      <ul className="bullets">
+        {items.map((line, index) => (
+          <li key={index} className="bullet">{line.trim()}</li>
+        ))}
+      </ul>
+    );
   }
 
   render() {
@@ -95,47 +118,60 @@ export class PrismView extends Component {
     let start = this.props.startIndex;
     let end = this.props.endIndex;
 
-    let tokens = start !== null ? this.tokenManager.tokensAt(prism.parentToken, start, end) : [];
-    let results = prism.results || [];
+    let tokens = start !== null ? this.tokenManager.tokensAt(prism.tokenType, start, end) : [];
+    let results = prism?.insights?.results || [];
+
+    let text = prism?.insights?.text || null;
 
     let activeNotHidden = prism.active && !prism.hidden;
-    let collapsed       = activeNotHidden && tokens.length > 0;
+    let showTokenContent       = activeNotHidden && tokens.length > 0;
     let showResults     = activeNotHidden && (results.length > 0 || this.props.isSearching)
-    let displayingFull  = collapsed || showResults;
+    let showtext        = activeNotHidden && text;
+    let displayingFull  = showTokenContent || showResults;
 
     let rotated = activeNotHidden ? "rotated" : "";
     let border  = activeNotHidden ? "border"  : "";
+    let searching = this.props.isSearching ? "searching" : "";
 
-    let subtitle = prism.subTitle != prism.name && !activeNotHidden ? 
-      <span className="subtitle"> ({prism.subTitle})</span> : ""
+    let title = prism.title != prism.type && !activeNotHidden ? 
+      <span className="subtitle"> ({prism.title})</span> : ""
+
+    let textContent = showtext ? this.bulletedText(text) : "";
 
     return <div className={`prism`}>
         <div className={`title ${rotated}`} onClick={this.toggleHidden.bind(this)}>
-          {prism.name} {subtitle}
+          {prism.type} {title}
         </div>
 
-        <div className={`prism-content ${border}`}>
+        <div className={`prism-content ${border} ${searching}`}>
           {activeNotHidden ? Object.values(prism.textFeatures).map((feature) => {
             return <PrismEditableTextFeature key={feature.text} feature={feature} prism={prism} />
           }) : ""}
 
-          {showResults ? <SearchResults 
-            isSearching={this.props.isSearching} 
-            tokenType={prism.name} results={results} /> : ""}
+          {textContent}
 
-          {collapsed ? this.additionalContent(prism, start, end, tokens) : ""}
+          {showTokenContent ? this.tokenContent(prism, start, end, tokens) : ""}
 
-          {activeNotHidden ? this.props.constraints.map((constraint) => {
-            return <ConstraintRender key={constraint.id} constraint={constraint} onConstraintUpdate={this.onConstraintUpdate.bind(this)}/>}) : ""
+          {showTokenContent ? this.props.constraints.map((constraint) => {
+            return <ConstraintRender 
+              key={constraint.id} 
+              constraint={constraint} 
+              onDelete={this.props.removeConstraint}
+              onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)}/>}) : ""
           }
 
-          {activeNotHidden ? <ConstraintCreator
+          {showTokenContent ? <ConstraintCreator
             tokens={tokens}
             startIndex={start} endIndex={end}
             prism={prism}
             onAdd={this.props.addConstraint}
-            onRemove={this.removeConstraint.bind(this)}
-            onConstraintUpdate={this.onConstraintUpdate.bind(this)} /> : "" }
+            onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)} /> : "" }
+          
+          {showResults ? <SearchResults
+                      isSearching={this.props.isSearching} 
+                      tokenType={prism.type}
+                      onClickSequence={this.prismHandleOnClick.bind(this)}
+                      results={results} /> : ""}
         
       </div>
     </div>;

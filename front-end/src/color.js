@@ -2,17 +2,19 @@ import chroma from "chroma-js";
 const colorScale = chroma.scale(['red', 'white', 'green', 'green']).mode('lab');
 const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple', 'cyan', 'coral', 'teal', 'orange', 'skyblue', 'burlywood']).mode('lab');
 
-export function getColor(type, token) {
-  let prob = token.prob || 0;
-  switch (type) {
+const brightenFactor = 3;
+
+export function getColor(tokenType, token) {
+  let prob = token.getAttribute('prob', 0);
+  switch (tokenType) {
     case 'basic':
       return categoryToColor(token.text);
-    case 'likelihood': case 'probability-base': case 'alternate':
+    case 'context': case 'probability-base': case 'alternate':
       return probColor(token);
     case 'words': case 'POS':
-      return categoryToColor(token.pos);
+      return categoryToColor(token.getAttribute('pos', ''));
     case 'sound':
-      return categoryToColor(token.sound?.rhyming_part?.join(' '));
+      return categoryToColor(token.getAttribute('rhyming_part', []).join(' '));
     default:
       return probToColor(prob);
   }
@@ -27,7 +29,7 @@ const probToColor = (prob) => {
   return "rgba(" + 0 + ", " + g + ", 0, " + prob + ")";
 };
 
-const categoryToColor = (word) => {
+export const categoryToColor = (word) => {
   // Hash function to convert word to a number between 0 and 255
   if (!word) {
     return 'white';
@@ -43,7 +45,7 @@ const categoryToColor = (word) => {
 
   // rainbow scale
   const alpha = 0.3;
-  let hex = rainbowScale(prob).alpha(alpha).hex();
+  let hex = rainbowScale(prob).brighten(brightenFactor).hex();
   return hex;
 };
 
@@ -57,18 +59,18 @@ const probColor = (token) => {
 };
 
 export function lengthNormedLogProbToColor(token) {
-  let prob = Math.log10(token.prob + 1e-12); // avoid log(0)
+  let prob = Math.log10(token.getAttribute('prob', 0) + 1e-15); // avoid log(0)
   let normalized = (prob + 6) / 6; // normalize to [0, 1] weird
   // normalized /= token.text.length || 1; // normalize by length
   let alpha = 0.5;
-  let hex = colorScale(normalized).alpha(alpha).css();
+  let hex = colorScale(normalized).brighten(brightenFactor).css();
   return hex;
 }
 
 
 export function zeroToOneColor(val) {
   let alpha = 0.5;
-  let hex = colorScale(val).alpha(alpha).css();
+  let hex = colorScale(val).brighten(brightenFactor).css();
   return hex;
 }
 

@@ -44,7 +44,7 @@ def stream_parse(text, extra_context, requests):
                 'dep': '',
                 # 'shape': token.whitespace_.shape,
                 'is_alpha': False,
-                'is_stop': False,
+            'is_stop': False,
                 'is_space': True,
                 'start': token.idx + len(token.text),
                 'end': token.idx + len(token.text) + len(token.whitespace_) - 1,

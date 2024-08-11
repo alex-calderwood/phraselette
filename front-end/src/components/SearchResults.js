@@ -17,15 +17,13 @@ export class SearchResults extends Component {
 
     let results = this.props.results;
     if (!results || results.length === 0) {
-      return <div className='title'>No results</div>
+      return <div className='subtitle'>No results</div>
     }
-
-    if (!results || results.length === 0) {
-      return <div className='title'>No results</div>
-    }
-
+    
+    console.log('SearchResults', results, this.tokenType)
     return <div className={"search-results"}>
-      <TokenRange tokenType={this.tokenType} tokens={results} onTokenClick={this.props.onTokenClick} suppressPOS={true} wrap={wrap} />
+      {this.props.showLength && <div className="subtitle">{`${results.length} combined results`}</div>}
+      <TokenRange tokenType={this.tokenType} tokens={results} onClickSequence={this.props.onClickSequence} suppressPOS={true} wrap={wrap} />
     </div> 
   }
 }

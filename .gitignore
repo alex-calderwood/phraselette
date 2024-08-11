@@ -1,6 +1,7 @@
-
 env/
+*.prettierrc
 credentials.json
+project.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

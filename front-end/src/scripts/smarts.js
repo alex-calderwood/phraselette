@@ -1,13 +1,6 @@
-import { Token } from "../document/Token.js";
-import { Sequence } from "../document/Sequence.js";
-
-// const PYTHON_SERVER = 'http://localhost:5025';
-const PYTHON_SERVER = "https://e12e-34-42-53-243.ngrok-free.app"
-console.log(`Communicating with python server at ${PYTHON_SERVER}`);
-console.warn("WARNING TODO THIS ISN'T USING THE ENV VARIABLE");
-
-// Something unlikely to be seen, must match the tokenization in the backend (server.py)
-const breakToken = "&&VE*A=]";
+import { Token } from "../base/Token.js";
+import { Sequence } from "../base/Sequence.js";
+import { streamFromWebSocket } from "./socket.js";
 
 function badData(text) {
   if (!text || text.length === 0) {
@@ -23,44 +16,6 @@ function makeTokenizationRange(text, data) {
     return data.tokenizeRange;
   } else {
     return [0, text.length - 1]
-  }
-}
-
-async function* streamFromServer(endpoint, data) {
-  try {
-    const response = await fetch(`${PYTHON_SERVER}/${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split(breakToken);
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        if (line.trim()) {
-          const token = JSON.parse(line);
-          yield token;
-        }
-      }
-    }
-  } catch (error) {
-    console.error(`There has been a problem with your ${endpoint} fetch operation:`, error);
   }
 }
 
@@ -84,33 +39,16 @@ export async function spacyTokenize(text, data = {}) {
   let tokenGenerator = callSpacy(text, tokenizeRange, requests);
 
   let tokens = [];
-
-  // don't wait for the generator to finish
-  // instead, call onToken for each token
+  
   let rawTokenPromise = await tokenGenerator.next();
   while (!rawTokenPromise.done) {
     let rawToken = rawTokenPromise.value;
-    let tokenData = {
-      'start': rawToken.start,     // inclusive
-      'end':   rawToken.end,       // inclusive from server
-      "text":  rawToken.text,
-      "pos":   rawToken.tag,       // Todo looks like there is also a '.pos' need to see if there is a difference
-      "isSpace": rawToken.is_space,
-      "type":  "words",
-      "isWord": true,
-    }
-    if (rawToken.extra && typeof rawToken.extra === 'object') {
-      for (let key in rawToken.extra) {
-        if (rawToken.extra.hasOwnProperty(key)) {
-          tokenData[key] = rawToken.extra[key];
-        }
-      }
-      delete rawToken.extra;
-    }
-    tokenData['raw'] = rawToken;
-    
-    let token = new Token(tokenData);
+
+    let token = makeWordToken(rawToken);
     tokens.push(token);
+
+    // don't wait for the generator to finish
+    // instead, call onToken for each token
     if (onToken) {
       onToken(token);
     }
@@ -120,6 +58,46 @@ export async function spacyTokenize(text, data = {}) {
   return tokens;
 }
 
+function makeWordToken(rawToken) {
+  let tokenData = {
+    'start':        rawToken.start,     // inclusive
+    'end':          rawToken.end,       // inclusive
+    "text":         rawToken.text,
+    "pos":          rawToken.tag,
+    "isSpacySpace": rawToken.is_space,
+    "type":         "words",
+    "isWord":       true,
+    "extra":        rawToken.extra,
+  }
+
+  let token = new Token(tokenData);
+
+  return token;
+}
+
+export function makeProbToken(rawToken, rawIsInclusive=false) {
+  return new Token({
+    // rawToken.span may be exclusive, our start and end is inclusive
+    'start': rawToken.span[0],
+    'end': rawToken.span[1] - (rawIsInclusive ? 0 : 1),
+    "text": rawToken.token,
+    "type": 'probability-base',
+    "prob": rawToken.prob,
+    "logProb": rawToken.log_prob,
+    "alternates": rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
+      "start": alt.span[0],
+      "end": alt.span[1],
+      "text": alt.token,
+      "prob": alt.prob,
+      "logProb": rawToken.log_prob,
+      "type": "alternate",
+    }) } ) : [],
+  })
+}
+
+/* 
+ * Return a list of tokens and their probabilities. 
+*/
 export async function gpt2Tokenize(text, data = {}) {
   if (badData(text)) return;
 
@@ -128,31 +106,21 @@ export async function gpt2Tokenize(text, data = {}) {
   let alternates = 15; // The number of alternate tokens to return (the highest probability tokens according to the LM)
   let tokenGenerator = callGPT2(text, tokenizeRange, alternates);
 
+  let tokens = [];
   // don't wait for the generator to finish
   // instead, call onToken for each token
   let rawTokenPromise = await tokenGenerator.next();
   while (!rawTokenPromise.done) {
     let rawToken = rawTokenPromise.value;
-    let token = new Token({
-      'start': rawToken.span[0],
-      // rawToken.span[1] is exclusive, our start and end is inclusive
-      'end': rawToken.span[1] - 1,
-      "text": rawToken.token,
-      "type": 'probability-base',
-      "prob": rawToken.prob,
-      "alternates": rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({
-        "start": alt.span[0],
-        "end": alt.span[1],
-        "text": alt.token,
-        "prob": alt.prob,
-        "type": "alternate",
-      }) } ) : [],
-    })
+    let token = makeProbToken(rawToken);
+    tokens.push(token);
     if (onToken) {
       onToken(token);
     }
     rawTokenPromise = await tokenGenerator.next();
   }
+
+  return tokens;
 }
 
 export function splitWordTokenize(text, data = {}) {
@@ -201,7 +169,7 @@ async function* callGPT2(context, tokenizeRange, alternates=0) {
     top_k: alternates,
   };
 
-  await (yield* streamFromServer("probs", data));
+  await (yield* streamFromWebSocket("probs", data));
 }
 
 async function* callSpacy(context, tokenizeRange, additionalRequests) {
@@ -214,7 +182,7 @@ async function* callSpacy(context, tokenizeRange, additionalRequests) {
     requests: additionalRequests,
   };
 
-  await (yield* streamFromServer('spacy', data));
+  await (yield* streamFromWebSocket('spacy', data));
 }
 
 /* 
@@ -226,7 +194,7 @@ async function* callSpacy(context, tokenizeRange, additionalRequests) {
 
   returns: [Token] - a list of tokens spans that satisfy the constraints (each token span is a list of tokens)
 */
-export async function searchForward(document, constraints, depth) {
+export async function searchForward(document, constraints, depth, top_k=150) {
   if (document.prefixText.length === 0) {
     return [];
   }
@@ -235,22 +203,18 @@ export async function searchForward(document, constraints, depth) {
     console.error("searchForward called with invalid depth", depth);
     return [];
   }
-
-  let alternates = 200;
-  let tokenGenerator = callSearch(document.prefixText, alternates, depth);
+  let tokenGenerator = callSearch(document.prefixText, top_k, depth);
 
   let promise = await tokenGenerator.next();
   let predictedSequence = [];
   while (!promise.done) {
     let rawSequence = promise.value;
 
-    let sequence = rawSequence.map((alt) => { return new Token({
-      "text": alt.token,
-      "prob": alt.prob,
-      "start": alt.span[0],
-      "end": alt.span[1],
-      "type": "alternate",
-    }) } );
+    let sequence = rawSequence.map((alt) => { 
+      let token = makeProbToken(alt, true); 
+      token.type = "alternate";
+      return token;
+    });
 
     predictedSequence.push(new Sequence(sequence));
     promise = await tokenGenerator.next();
@@ -259,18 +223,18 @@ export async function searchForward(document, constraints, depth) {
   return predictedSequence;
 }
 
-async function* callSearch(prefix, alternates, depth) {
+async function* callSearch(prefix, top_k, depth) {
   const data = {
     text: prefix,
-    top_k: alternates,
+    top_k: top_k,
     depth: depth,
   };
 
-  await (yield* streamFromServer('search', data)); // TODO I'm not sure if this await is going to batch everything?
+  await (yield* streamFromWebSocket('search', data)); // TODO I'm not sure if this await is going to batch everything?
 }
 
 export async function getPhones(words) {
-  let tokenGenerator = callPhones(words);
+  let tokenGenerator = streamFromWebSocket('phones', {text: words})
 
   let tokens = [];
   let rawTokenPromise = await tokenGenerator.next();
@@ -280,7 +244,7 @@ export async function getPhones(words) {
       'start': rawToken.start,     // inclusive
       'end':   rawToken.end,       // inclusive from server
       "text":  rawToken.text,
-      "pos":   rawToken.tag,       // Todo looks like there is also a '.pos' need to see if there is a difference
+      "pos":   rawToken.tag,       // Todo looks like there is also a '.pos'
       "raw":   rawToken,
       "type":  "phone",
     });
@@ -289,14 +253,6 @@ export async function getPhones(words) {
   }
 
   return tokens;
-}
-
-async function* callPhones(text) {
-  const data = {
-    text: text
-  };
-
-  await (yield* streamFromServer('phones', data));
 }
 
 /*
@@ -318,43 +274,100 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
     ''
   );
 
-  let resultantWordTokens = await spacyTokenize(newText, { onToken: (token) => { }, requests: document.activeLenses });
+  let spacyWordTokens = await spacyTokenize(newText, { 
+    onToken: (token) => { }, 
+    requests: document.tokenManager.activePrisms.map((prism) => prism.type) 
+  });
 
   // now we need to split it back into the tokens that were in after the given text
   let splitIndex = tokenSpan[0].start;
   if (splitIndex === undefined) { splitIndex = document.prefixText.length; }
-  let convertedTokens = resultantWordTokens.filter((token) => {
-    return token.end >= splitIndex;
-  });
+  let newWordTokens = spacyWordTokens.filter((token) => { return token.end >= splitIndex; });
   
-  if(maxWords !== null) {
-    let wordCount = 0;
-    convertedTokens = convertedTokens.filter((token) => {
-      wordCount++; 
-      return wordCount <= maxWords;
-    });
+  if (maxWords !== null) { newWordTokens = cutToMaxWords(maxWords, newWordTokens); }
+
+  // grab any information from the original token and assign it to the word token
+  let originalTokenIndex = 0;
+  for (let i = 0; i < newWordTokens.length; i++) {
+    let wordToken = newWordTokens[i];
+    let originalTokens = []; // Array to store all overlapping original tokens
+    let partialLogProbs = []; // Array to store partial log probs for tokens that partially overlap
+    
+    while (originalTokenIndex < tokenSpan.length) {
+      let originalToken = tokenSpan[originalTokenIndex];
+      
+      // Check for any kind of overlap
+      if (originalToken.start <= wordToken.end && originalToken.end >= wordToken.start) {
+        // Calculate the overlap
+        let overlapStart = Math.max(originalToken.start, wordToken.start);
+        let overlapEnd = Math.min(originalToken.end, wordToken.end);
+        let overlapLength = overlapEnd - overlapStart + 1;
+        let originalTokenLength = originalToken.end - originalToken.start + 1;
+        
+        // Calculate the fraction of the original token that overlaps with this word token
+        let overlapFraction = overlapLength / originalTokenLength;
+        
+        // Store the original token and its partial log prob
+        originalTokens.push(originalToken);
+        let partialLogProb = (originalToken.getAttribute('logProb', 0) || Math.log(originalToken.getAttribute('prob', 1))) * overlapFraction;
+        partialLogProbs.push(partialLogProb);
+        
+        // Move to the next original token if we've passed its end
+        if (originalToken.end <= wordToken.end) {
+          originalTokenIndex++;
+        } else {
+          // If the original token extends beyond this word token, we'll need to consider it for the next word token too
+          break;
+        }
+      } else if (originalToken.start > wordToken.end) {
+        // We've moved past the current word token, break the inner loop
+        break;
+      } else {
+        // The original token ends before the word token starts, move to the next original token
+        originalTokenIndex++;
+      }
+    }
+
+    wordToken.setAttribute('partialLogProbs', partialLogProbs)
+    wordToken.setAttribute('originalTokens', originalTokens)
+    
+    // Calculate the combined log probability
+    if (originalTokens.length > 0) {
+      // Sum partial log probabilities
+      let logProb = partialLogProbs.reduce((sum, logProb) => sum + logProb, 0);
+      wordToken.setAttribute('logProb', logProb);
+      // Store the number of tokens that made up this word (including partials)
+      let tokenCount = originalTokens.length;
+      wordToken.setAttribute('tokenCount', tokenCount);
+      // Store the arithmetic mean of the log probabilities
+      let logProbMean = logProb / tokenCount;
+      wordToken.setAttribute('logProbMean', logProbMean);
+      
+      // If you need the actual probabilities, exponentiate:
+      wordToken.setAttribute('prob', Math.exp(logProb));
+      wordToken.setAttribute('probGeometricMean', Math.exp(logProbMean));
+    }
   }
 
-  let firstWord = convertedTokens[0]; // it is possible for this to be undefined if the tokenSpan was just empty space (' ') token(s)
-  if (firstWord && firstWord.start < splitIndex) {
-    let diff = splitIndex - firstWord.start;
-    firstWord.text = firstWord.text.slice(diff);
-    firstWord.start = splitIndex;
-    firstWord.incomplete = true;
-  }
-
-  return convertedTokens;
+  return newWordTokens;
 }
 
-// export async function dictionary(word, description) {
-//   sendMessage({
-//     type: "dictionary",
-//     word: word,
-//     description: description,
-//   });
+function cutToMaxWords(maxWords, tokens) {
+  let wordCount = 0;
+  let result = [];
+  let lastWordIndex = -1;
 
-//   return [
-//     new Sequence([new Token({text: 'follower'})]),
-//     new Sequence([new Token({text: 'given'})]),
-//   ];
-// }
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    const isSpace = token.getAttribute('isSpacySpace') || token.getAttribute('pos') === "_SP";
+    if (wordCount >= maxWords) break;
+
+    if (!isSpace) {
+      wordCount++;
+      lastWordIndex = result.length;
+    }
+
+    result.push(token);
+  }
+  return result;
+}

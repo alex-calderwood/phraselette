@@ -4,6 +4,11 @@
   --accent-color: rgb(229, 229, 229);
   --primary-text-color: rgb(172, 172, 172);
   --darker-text-color: rgb(80, 80, 80);
+  --hover-color: rgb(200, 200, 200);
+  --button-height: 1.5em;
+  --radius:3px;
+  --normal-font-size: 12px;
+  --small-font-size: 10px;
 }
 
 .App {
@@ -66,15 +71,15 @@
 
 .editor {
   height: 100%;
-  font-size: 14px;
+  font-size: var(--normal-font-size);
   background-color: white;
   box-shadow: 0 10px 20px rgba(0,0,0,0.30), 0 10px 20px rgba(0,0,0,0.22);
   
   outline: none; /* remove the blue outline */
   border-radius: 2px; /* curve the corners*/
 
-  margin: 10px;
-  padding: 30px;
+  margin: 6px;
+  padding: 20px;
   
   /* z-index: 1; */
   flex: 1; /* Take up all the space */
@@ -83,7 +88,25 @@
 
   word-wrap: break-word;
   overflow-wrap: break-word;
-  white-space: normal;	 
+
+  /* Preserve whitespace (spaces, tabs) and allow text wrapping
+     - Collapses multiple spaces into one visually, but preserves them in the text
+     - Allows automatic line breaks at word boundaries
+     - Preserves manual line breaks (\n) in the text (creates div/brs in chrome)
+     - Supported in all modern browsers
+  */
+  white-space: pre-wrap;
+
+  /* Modern browsers: Enhance space handling beyond pre-wrap
+     - Does everything that pre-wrap does
+     - Additionally:
+       1. Preserves spaces at the end of lines visually
+       2. Allows line breaks to occur at any space character, even mid-word
+       3. Useful for displaying space characters more explicitly
+     - Fallback to pre-wrap in browsers that don't support break-spaces
+  */
+  white-space: break-spaces;
+
 }
 
 /* make the z index of the text on the editor slightly higher so we can put something in between, so
@@ -134,6 +157,17 @@ we will need to select the text children of the editor */
   }
 }
 
+.bullets {
+  color: var(--darker-text-color);
+  font-size: var(--small-font-size);
+  padding-left: 1em;
+  margin: 0;
+}
+
+.bullet {
+
+}
+
 .search-results {
   width: 100%;
 }
@@ -148,14 +182,24 @@ we will need to select the text children of the editor */
 
 .subtitle {
   color:rgb(172, 172, 172);
-  font-size: 10px;
+  font-size: var(--small-font-size);
   padding-right: 2px;
 }
 
 .text {
   color:rgb(172, 172, 172);
-  font-size: 10px;
+  font-size: var(--small-font-size);
 }
+
+.major-text {
+  color:rgb(172, 172, 172);
+  font-size: 14px;
+}
+
+.token-range-parent {
+  position: relative;
+}
+
 
 .token-range {
   position: relative;
@@ -164,6 +208,10 @@ we will need to select the text children of the editor */
   height: 100%;
   min-height: 3ch;
   margin-bottom: 4px;
+  /* display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  justify-content: center; This will center the content only when it doesn't overflow */
 }
 
 .wrap {
@@ -175,28 +223,19 @@ we will need to select the text children of the editor */
   -ms-overflow-style: none;
 }
 
-.token-range-parent {
-  position: relative;
-}
 
-
-
-/* add a gradient to the right of the token range */
-/* not currently used */
-.overflowing::after {
-  z-index: 2;
-  content: "";
-  position: absolute;
-  top: 0px;
-  right: 0px;
-  width: 70px; /* Adjust the width to your preference */
-  height: 100%;
-  background: linear-gradient(to left, rgba(209, 209, 209, 0.7), rgba(255, 255, 255, 0));
-  pointer-events: none; /* Allow interactions with underlying content */
-}
-
-.card { /* anything that needs to go side to side */
+.sequence {
   display: inline-block;
+  /* padding: 4px; */
+  margin-left: 2px;
+  /* margin-right: 2px; */
+  background-color: #f1f1f1;
+  min-height: 100%;
+  height: 100%;
+  text-wrap: wrap;
+  /* make the cursor a pointer */
+  cursor: pointer;
+  border-radius: var(--radius);
 }
 
 .token { /* specific formatting for a token object */ 
@@ -206,39 +245,39 @@ we will need to select the text children of the editor */
   min-height: 100%;
   text-wrap: wrap;
   cursor: pointer;
+  border-radius: var(--radius);
 }
 
+/* 1ch is supposed to be equal to the approximate width of one character but it seems large*/
 .token.space {
-  width: 0.4ch;  /* 1ch is supposed to be equal to the approximate width of one character but it seems large*/
+  width: 0.4ch;  
+}
+
+.token.simple {
+  /* background-color: aqua; */
 }
 
 .item {
   color: #777777;
-  font-size: 10px;
+  font-size: 8px;
+  text-align: center;
+  /* allow to get cut off rather than resize */
+  white-space: nowrap;
+  overflow: hidden;
+  min-height: none;
+  text-overflow: ellipsis;
+  border-radius: var(--radius);
 }
 
 /* on hover make the token a bit darker */
-.token:hover {
+/* .token:hover {
   background-color: #e1e1e1;
-}
+} */
 
 .token .heading {
-  font-size: 14px;
+  font-size: 12px;
   min-height: 100%;
   text-align: center;
-}
-
-.token-span {
-  display: inline-block;
-  /* padding: 4px; */
-  margin-left: 2px;
-  margin-right: 2px;
-  background-color: #f1f1f1;
-  min-height: 100%;
-  height: 100%;
-  text-wrap: wrap;
-  /* make the cursor a pointer */
-  cursor: pointer;
 }
 
 .hidden {
@@ -262,24 +301,46 @@ label {
 }
 
 select {
-  font-size: 14px;
+  font-size: 12px;
   background-color: var(--accent-color);
   border: none;
   outline: none;
-  margin-left: 3px;
-  margin-right: 3px;
+  margin-left: 0px;
+  margin-right: 0px;
+  
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 0px 0px 0px 0px;
+  text-align: center;
+  min-height: var(--button-height);
+}
+
+select:hover {
+  background-color: var(--hover-color);
+}
+
+select option:checked {
+  background-color: var(--hover-color);
+}
+
+select::-ms-expand {
+  display: none;
 }
 
 button {
-  font-size: 14px;
+  font-size: 12px;
   background-color: var(--accent-color);
   color: var(--darker-text-color);
   border: none;
   outline: none;
+  height: var(--button-height);
 }
 
 button:hover {
-  background-color: rgb(100, 100, 100);
+  /* background-color: rgb(100, 100, 100); */
+  background-color: var(--hover-color);
+  color: #282c34; /* Dark color for text */
 }
 
 .selectButoon {
@@ -289,18 +350,27 @@ button:hover {
 
 .constraint-container {
   font-size: 12px;
-}
-
-.constraint-creator {
-  display: inline-block;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .temp-constraint-container {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  /* height: var(--button-height); */
+  animation: fadeIn 0.3s ease;
 }
 
 .constraint {
-  /* background-color: #f1f1f1; */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  /* margin-bottom: 8px; */
 
   input {
     background-color: #f1f1f1;
@@ -309,13 +379,44 @@ button:hover {
   }
 }
 
+
+.constraint-creator {
+  display: inline-block;
+  min-height: 1.5em;
+  width: 100%;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.constraint-buttons {
+  /* make the buttons appear next to each other and center them */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.3s ease;
+
+  button {
+    margin-right: 4px;   
+  }
+}
+
+.constraint-mode {
+  margin-right: 2px;
+}
+
+.constraint-target {
+  display: flex;
+  align-items: center;
+  margin-right: 2px;
+}
+
 textarea {
-  font-size: 12px;
+  font-size: 10px;
   background-color: var(--accent-color);
   border: none;
   outline: none;
   width: 100%;
-  height: 1.5em;
+  /* height: 1.5em; */
 }
 
 /* input of type checkbox */
@@ -327,20 +428,13 @@ textarea {
 /*** Works on common browsers ***/
 ::selection {
   background-color:  var(--selection-color);
-  /* add a border */
-
   color: rgb(0, 60, 200); /* Change to your preferred text color */
-  /* text-shadow:
-    -1px -1px 0 #282c34,
-      1px -1px 0 #282c34,
-    -1px  1px 0 #000,
-      1px  1px 0 #000; Add a text shadow */
 }
 
 /* make the brackground gradient bounce left and right */
 /* Specific styles for the div when the searching class is added */
 div.searching {
-  background: linear-gradient(to right, #ffffff 0%, #b3b3b3 100%);
+  background: linear-gradient(to right, #ffffff 0%, #dfdfdf 100%);
   background-size: 200% 100%;
   animation: slide 2s linear infinite;
   width: 100%;
@@ -379,4 +473,9 @@ div.searching {
 /*** For Webkit ***/
 ::-webkit-selection {
   background-color:  var(--selection-color);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

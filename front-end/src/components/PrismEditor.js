@@ -1,17 +1,23 @@
 import React, { Component } from "react";
 import rangy from 'rangy';
 import { getUniqueUUID, insertAfter } from "../scripts/utils";
-import { TokenManager } from "../document/TokenManager";
+import { TokenManager } from "../base/TokenManager";
 import { getColor } from "../color";
-import { Document } from "../document/Document";
+import { Document } from "../base/Document";
 
 /* 
 * Given character span <span c="5" id="id14acbb15b7e0e"">f</span>
 * return our previously computed character offset based on the 'c' attribute
 */
 function getCharIndex(span) {
-  if (span === null) return null;
-  return parseInt(span.getAttribute('c'));
+  try {
+    if (span) {
+      return parseInt(span.getAttribute('c'));
+    }
+  } catch (e) {
+    console.error('getCharIndex called with null span', span);
+    return null;
+  }
 }
 
 // A text editor that tracks all sorts of information about the words as they are typed
@@ -22,21 +28,43 @@ export class PrismEditor extends Component {
     this.state = { content: ''};
     this.contentRef = React.createRef();
     this.tokenManager = this.props.tokenManager;
-    this.tokenManager.setOnToken(this.updateUITokens.bind(this));
+    this.tokenManager.setOnToken(this.updateUITokens.bind(this)); // Claude says this causes many unnecessary re-renders and updates could be batched 
   }
 
   componentDidMount() {
     this.editorNode = this.contentRef.current;
 
-    // this.startObserver();
-    
     this.editorNode.addEventListener('input', this.onInput);
     this.editorNode.addEventListener('click', this.onClick);
     this.editorNode.addEventListener('keydown', this.onKeyDown.bind(this));
     this.editorNode.addEventListener('keyup', this.onKeyUp.bind(this));
+    this.editorNode.addEventListener('paste', this.handlePaste);
+
     // this.editorNode.addEventListener('focus', this.handleFocus);
 
-    let initializationText = "|";
+    let initializationText = "E";
+    let testingText = `I arrived without a ladder, deciding it was better to be on time than prepared.`
+// shackled gravitywell
+
+// tickticking pendulum
+// my parabolic mind swing swung swooning
+// passing yo's
+// to yesterday's mind farts
+// like a yo yo
+// yearning for the slow mo light show
+// of the Wizard's laser harmonograph
+// set to Meyer's ever so slowed concertos
+
+// the yo of a slowly slung
+// back sack on a stick
+// stacked as high as a homesick friend's
+// ransacked slapstick back whack
+
+// which stings 
+// as a shot on the neck
+// flings the stupor at your breakneck fact check`
+
+    initializationText = testingText; // comment this out to be normal
     let content = [];
     let initialId = getUniqueUUID();
     for (let i = 0; i < initializationText.length; i++) {
@@ -62,23 +90,16 @@ export class PrismEditor extends Component {
       setTimeout(() => this.moveSelectionToEndOfEditor(), 0);
     });
 
-  }
-
-  startObserver() {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        console.log("Mutation detected:", mutation);
-        this.moveSelectionToEndOfEditor(); // Adjust this to your context
-      });
-    });
-    observer.observe(this.editorNode, { childList: true, subtree: true });
-  }
+    window.editorNode = this.editorNode;
+    window.currentSelection = this.currentSelection.bind(this);
+  } // didMount
 
   componentWillUnmount() {
     this.editorNode.removeEventListener('input', this.onInput);
     this.editorNode.removeEventListener('click', this.onClick);
     this.editorNode.removeEventListener('keydown', this.onKeyDown);
     this.editorNode.removeEventListener('keyup', this.onKeyUp);
+    this.editorNode.removeEventListener('paste', this.handlePaste);
     // this.editorNode.removeEventListener('focus', this.handleFocus);
   }
 
@@ -104,7 +125,7 @@ export class PrismEditor extends Component {
     // this.tokenManager.synchronizeTokens(this.keyDownSelection, this.keyDownSelection, event);
 
     // // pass the new text into the tokenizer to update its token list and associated character indices
-    // this.tokenizeOnTextUpdate(newText, this.props.lenseToHighlight);
+    // this.tokenizeOnTextUpdate(newText, this.props.lenseToHighlight); // TODO this will be prismToHighlight when we bring it back
 
     // give the new text to the parent component
     if (this.props.setText) { this.props.setText(newText); }
@@ -133,12 +154,12 @@ export class PrismEditor extends Component {
 
       if (anchor.tagName === 'SPAN') {
         anchorSpan = anchor;
-        focusSpan = focus;
+        focusSpan  = focus;
       }
 
       if (anchor.tagName === 'DIV') {
         anchorSpan = anchor;
-        focusSpan = focus;
+        focusSpan  = focus;
       }
 
       let startIndex = getCharIndex(anchorSpan) + windowSelection.anchorOffset;
@@ -186,19 +207,18 @@ export class PrismEditor extends Component {
     }
   };
 
-  restoreSelection(event) {
-    // TODO this should use the event data again
+  restoreSelection(event) { // TODO this should use the event data again
     if (this.keyUpSelection) {
       setCursorAtOffset(this.editorNode, this.keyUpSelection.prefixOffset);
     }
   }
 
   /*
-   * Color all the characters between token.start and token.end based on token.prob
+   * Color all the characters between token.start and token.end based on token prob
    * Force the component to update.
   */
   updateUITokens(token) {
-    if (this.props.lenseToHighlight === token.type) {
+    if (this.props.prismToHighlight.tokenType === token.type) {
       this.colorCharSpanByToken(token);
       this.forceUpdate(); // trigger a rerender of the editor
     }
@@ -244,200 +264,15 @@ export class PrismEditor extends Component {
     range.setStart(textNode, offset);
     range.setEnd(textNode, offset);
 
-
     // set the focus to the editor
-
-
     this.editorNode.focus();
     let selection = rangy.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
 
+    // hold this for debugging until I fix the first character focus issue
     // const testChar = document.createTextNode('|');
     // range.insertNode(testChar);
-  }
-
-  /* 
-  * Split a span into multiple spans, each containing a single character.
-  * If the span contains a character at index c, the new spans will have indicies c, c+1, c+2, etc.
-  * If the span is unstyled (missing an ID and c attribute), assign a unique ID and set the c attribute to c, as well as a color.
-  *
-  * @param {HTMLElement} span - the span to split
-  * @param {number} c - the character index of the span
-  * @returns {number} the new character index
-  */
-  splitSpan(originalSpan, c) {
-    // don't delete any spans, just add new ones and remove characters from the old span
-    let text = originalSpan.textContent.replace(/\uFEFF/g, ''); // Remove BOM
-    let newSpans = [];
-    for (let i = 1; i < text.length; i++) {
-      c += 1;
-      const [newSpan, id] = this.createCharacterSpan(text[i], c);
-      newSpans.push(newSpan);
-    }
-    // update the original span to contain just the first character
-    originalSpan.textContent = text[0];
-    // insert the new spans after the original span
-    for (let i = newSpans.length - 1; i >= 0; i--) {
-      let newSpan = newSpans[i];
-      originalSpan.parentNode.insertBefore(newSpan, originalSpan.nextSibling);
-    }
-    return [c, newSpans];
-  }
-
-  setIdIfNotPresent(node) {
-    // If the node does not have an id, assign it a unique id
-    // also, react's content editable sometimes copies divs, leading to duplicate ids
-    // if the id is not unique, assign a new id
-    let shouldSetId = !node.id;
-    if (node.id) {
-      let elements = document.querySelectorAll(`#${node.id}`);
-      if (elements.length > 1) {
-        shouldSetId = true;
-      }
-    }
-
-    if (shouldSetId) {
-      node.id = getUniqueUUID();
-      return node.id;
-    }
-    return null;
-  }
-
-  createCharacterSpan(text, c) {
-    let span = document.createElement('span');
-    span.textContent = text;
-    let newID = this.styleCharacter(span, c);
-    return [span, newID];
-  }
-
-  /* 
-  * Apply our character style and create a character ID if there isn't one.
-  *
-  * <divs> <brs> and <spans> may all be considered characters.
-  * If it is a span, check to see if it should be colored by looking up all active tokens.
-  * (currently there is only one active token)
-  * 
-  * Also, set a unique character ID if it doesn't already exist for the span.
-  */
-  styleCharacter(element, c) {
-    if (typeof c !== 'number') {
-      console.error('styleChild called with', typeof c);
-    } 
-
-    element.setAttribute('c', c);
-    let createdID = this.setIdIfNotPresent(element);
-    if (element.tagName === 'SPAN') {
-      if (this.props.lenseToHighlight === 'basic') { // TODO make basicTokenize use onToken callback so that we don't have to do this
-        this.colorCharacterByProb(element, c);
-      }
-    }
-    return createdID;
-  }
-
-  colorAllCharactersByProb() {
-    // get all spans with a c attribute
-    let spans = document.querySelectorAll('span[c]');
-    for (let i = 0; i < spans.length; i++) {
-      let span = spans[i];
-      let c = getCharIndex(span);
-      
-      this.colorCharacterByProb(span, c);
-    }
-  }
-
-  colorCharSpanByToken(token) {
-    let start = token.start;
-    let end = token.end;
-    let color = getColor(this.props.lenseToHighlight, token);
-    for (let i = start; i <= end; i++) { // [start, end] inclusive
-      let span = document.querySelector(`span[c='${i}']`);
-      if (span) {
-        span.style.backgroundColor = color;
-        continue;
-      } 
-      let div = document.querySelector(`div[c='${i}']`); // TODO
-      if (div) {
-        // nothing needs to be done to color a new line character
-        continue;
-      }
-      console.error("coloring-> no span for", token)
-    }
-  }
-
-  colorCharacterByProb(child, c) {
-    if (typeof c !== 'number') {
-      console.error('colorCharacterByProb called with', typeof c);
-    }
-
-    if (this.tokenManager) {
-      let tokensAt = this.tokenManager.tokensAt(this.props.lenseToHighlight, c);
-      let color;
-      if (tokensAt && tokensAt.length > 0) {
-        let token = tokensAt[0];
-        color = getColor(this.props.lenseToHighlight, token);
-      } else {
-        color = getColor('basic', {});
-      }
-      child.style.backgroundColor = color;
-
-    } else {
-      console.error('No token manager to color');
-    }
-  }
-
-  /*
-  * Split the content into individual characters and apply the appropriate styles.
-  */
-  splitIntoCharactersAndStyle(content) {
-
-    let children = [...traverseDOM(content)];
-
-    let i = 0;
-    let c = 0;
-    let child = children[0];
-
-    let newSpans = [];
-
-    if (!child) {
-      let text = content.textContent;
-      content.innerHTML = '';
-      for (let i = 0; i < text.length; i++) {
-        const [span, newID] = this.createCharacterSpan(text, i);
-        content.appendChild(span);
-        newSpans.push(span);
-      }
-    }
-
-    while (child) {
-      if (child.tagName == "BR") {
-        i++;
-        child = children[i];
-        continue;
-      }
-
-      let newID = this.styleCharacter(child, c);
-      if (newID !== null) {
-        newSpans.push(child);
-      }
-
-      if (child.tagName === 'SPAN') {
-        let text = child.textContent;
-        if (text.length > 1) {
-          // split the span into multiple spans
-          // and update the running character index based on the number of new spans
-          const [newC, brandNewSpans] = this.splitSpan(child, c);
-          c = newC;
-          newSpans.push(...brandNewSpans);
-        }
-      } else if (child.tagName === 'DIV') {
-      }
-
-      i++;
-      c++;
-      child = children[i];
-    }
-    return newSpans;
   }
 
   /* 
@@ -445,12 +280,16 @@ export class PrismEditor extends Component {
    * After the tokenization is complete, the token manager will call the onFinished function, which typically
    * involves attempting to tokize one more time, as the tokenization may have been incomplete if the user continued to type.
   */
-  tokenizeOnTextUpdate(text, lense, callDepth = 0) {
+  tokenizeOnTextUpdate(text, tokenType, callDepth = 0) {
     if (this.tokenManager) {
-      let curTokens = this.tokenManager.tokens[lense];
+      let curTokens = this.tokenManager.tokens[tokenType];
+      if (!curTokens) {
+        console.error('on text update tokenType not found', tokenType);
+        return;
+      }
 
       let tokenizeRange  = TokenManager.getUntokenizedRange(text, curTokens);
-      let shouldTokenize = TokenManager.shouldTokenize(text, tokenizeRange, lense);
+      let shouldTokenize = TokenManager.shouldTokenize(text, tokenizeRange, tokenType);
 
       // We keep track of the call depth because we want to check to see if there is more tokenization
       // to take care of after the user has finished typing (some requests may have been denied by the server
@@ -464,7 +303,7 @@ export class PrismEditor extends Component {
         // TODO there is a potential problem where the selection has been updated since the last time we saved it
         // This could happen if the user navigates with the arrow keys for instance, so perhpas we want to save the selection during arrows
         let newText = getTextWithWhitespace(this.contentRef.current);
-        this.tokenizeOnTextUpdate(newText, lense, callDepth + 1);
+        this.tokenizeOnTextUpdate(newText, tokenType, callDepth + 1);
       };
 
       let data = {
@@ -476,7 +315,8 @@ export class PrismEditor extends Component {
     }
   }
 
-  forceTokenize(prisms=this.tokenManager.activePrismNames) {
+  forceTokenize(prisms=this.tokenManager.activePrisms) {
+    console.log("force tokenizing prisms", prisms)
     if (prisms.length < 1) { return; }
 
     let document = new Document(
@@ -486,15 +326,15 @@ export class PrismEditor extends Component {
     );
     
     let data = { tokenizeRange: document.range, document: document }; // old versions of tokenizers still use tokenizeRange, should be depracated
-    let lense = prisms[0];
-    let remainingLenses = prisms.slice(1);
+    let curPrism = prisms[0];
+    let remaining = prisms.slice(1);
 
-    if (remainingLenses && remainingLenses.length > 0) {
-      let onFinished = () => { this.forceTokenize(remainingLenses); };
+    if (remaining && remaining.length > 0) {
+      let onFinished = () => { this.forceTokenize(remaining); };
       data['onFinished']= onFinished.bind(this);
     }
 
-    this.tokenManager.tokenize(document.text, data, prisms=[lense]);
+    this.tokenManager.tokenize(document.text, data, prisms=[curPrism]);
   }
 
   manualRetokenizeAction() {
@@ -535,11 +375,24 @@ export class PrismEditor extends Component {
   }
 
   onClick = (event) => {
+    this.updateSelection();
+  };
+
+  handlePaste = (event) => {
+    event.preventDefault();
+    const text = (event.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+    this.splitIntoCharactersAndStyle(this.contentRef.current);
+  };
+
+  // to call upon other actions that modify the selection
+  updateSelection = () => {
     let selection = this.currentSelection();
     this.keyDownSelection = selection;
     this.keyUpSelection   = selection;
     this.props.setSelection(selection); // give the new selection to the parent
-  };
+    return selection;
+  }
 
   /* 
   * Update the text content of the editor from {start} to {end} with {newText}. 
@@ -551,6 +404,8 @@ export class PrismEditor extends Component {
   swapText = (start, end, newText) => {
     let startSpan = document.querySelector(`span[c='${start}']`);
     let endSpan = document.querySelector(`span[c='${end}']`);
+    console.log('start span', startSpan, 'end span', endSpan, start, end, newText)
+
 
     // select the text to replace
     let range = rangy.createRange();
@@ -561,16 +416,223 @@ export class PrismEditor extends Component {
     let newSpan = document.createElement('span');
     newSpan.textContent = newText;
 
-    // let oldText = range.toString();
-    // console.log('start span', startSpan, 'end span', endSpan)
-    // console.log('swap text', start, end, 'for', newText, 'from', oldText);
+    let oldText = range.toString();
+    console.log('swap text', start, end, 'for', newText, 'from', oldText);
+
+    // Get the parent node before deleting contents
+    // let startParent = startSpan.parentNode;
+    // let endParent = endSpan.parentNode;
 
     // replace the text
     range.deleteContents();
     range.insertNode(newSpan);
 
-    // style the new text
+    // Explicitly remove the start span if it's empty
+    // startParent.removeChild(startSpan);
+    // endParent.removeChild(endSpan)
+    startSpan.remove() // TODO these lines seem to make it so that the selection later isn't accessable I think I'm deleteing the rangy ranges
+    endSpan.remove()
+
+    // // style the new text
     this.splitIntoCharactersAndStyle(this.contentRef.current);
+
+    // Create a new range for the inserted text
+    let newRange = rangy.createRange();
+    newRange.selectNodeContents(newSpan);
+
+    // Select the new range
+    let selection = rangy.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+
+    console.log('selection', selection, selection.anchorOffset, selection.focusOffset, 'range', newRange, newRange.startOffset, newRange.endOffset);
+    this.updateSelection();
+  }
+
+  /* 
+  * Split a span into multiple spans, each containing a single character.
+  * If the span contains a character at index c, the new spans will have indicies c, c+1, c+2, etc.
+  * If the span is unstyled (missing an ID and c attribute), assign a unique ID and set the c attribute to c, as well as a color.
+  *
+  * @param {HTMLElement} span - the span to split
+  * @param {number} c - the character index of the span
+  * @returns {number} the new character index
+  */
+  splitSpan(originalSpan, c) {
+    // don't delete any spans, just add new ones and remove characters from the old span
+    // let text = originalSpan.textContent.replace(/\uFEFF/g, ''); // Remove BOM
+    let text = originalSpan.textContent;
+    let newSpans = [];
+    for (let i = 1; i < text.length; i++) {
+      c += 1;
+      const [newSpan, id] = this.createCharacterSpan(text[i], c);
+      newSpans.push(newSpan);
+    }
+    // update the original span to contain just the first character
+    originalSpan.innerHTML = text[0];
+    // insert the new spans after the original span
+    for (let i = newSpans.length - 1; i >= 0; i--) {
+      let newSpan = newSpans[i];
+      originalSpan.parentNode.insertBefore(newSpan, originalSpan.nextSibling);
+    }
+    return [c, newSpans];
+  }
+
+  setIdIfNotPresent(node) {
+    // If the node does not have an id, assign it a unique id
+    // also, react's content editable sometimes copies divs, leading to duplicate ids
+    // if the id is not unique, assign a new id
+    let shouldSetId = !node.id;
+    if (node.id) {
+      let elements = document.querySelectorAll(`#${node.id}`);
+      if (elements.length > 1) {
+        shouldSetId = true;
+      }
+    }
+
+    if (shouldSetId) {
+      node.id = getUniqueUUID();
+      return node.id;
+    }
+    return null;
+  }
+
+  createCharacterSpan(text, c) {
+    let span = document.createElement('span');
+    span.textContent = text;
+    let newID = this.setSpanAttributes(span, c);
+    return [span, newID];
+  }
+
+  /* 
+  * Apply our character style and create a character ID if there isn't one.
+  *
+  * <divs> <brs> and <spans> may all be considered characters.
+  * If it is a span, check to see if it should be colored by looking up all active tokens.
+  * (currently there is only one active token)
+  * 
+  * Also, set a unique character ID if it doesn't already exist for the span.
+  */
+  setSpanAttributes(element, c) {
+    if (typeof c !== 'number') {
+      console.error('styleChild called with', typeof c);
+    } 
+
+    element.setAttribute('c', c);
+    let createdID = this.setIdIfNotPresent(element);
+    if (element.tagName === 'SPAN') {
+      if (this.props.prismToHighlight.tokenType === 'basic') { // TODO make basicTokenize use onToken callback so that we don't have to do this
+        this.colorCharacterByProb(element, c);
+      }
+    }
+    return createdID;
+  }
+
+  colorAllCharactersByProb() {
+    // get all spans with a c attribute
+    let spans = document.querySelectorAll('span[c]');
+    for (let i = 0; i < spans.length; i++) {
+      let span = spans[i];
+      let c = getCharIndex(span);
+      
+      this.colorCharacterByProb(span, c);
+    }
+  }
+
+  colorCharSpanByToken(token) {
+    let start = token.start;
+    let end = token.end;
+    let color = getColor(this.props.prismToHighlight.tokenType, token);
+    for (let i = start; i <= end; i++) { // [start, end] inclusive
+      let span = document.querySelector(`span[c='${i}']`);
+      if (span) {
+        span.style.backgroundColor = color;
+        continue;
+      } 
+      let div = document.querySelector(`div[c='${i}']`); // TODO
+      if (div) {
+        // nothing needs to be done to color a new line character
+        continue;
+      }
+      console.error("coloring-> no span for", token)
+    }
+  }
+
+  colorCharacterByProb(child, c) {
+    if (typeof c !== 'number') {
+      console.error('colorCharacterByProb called with', typeof c);
+    }
+
+    let tokenType = this.props.prismToHighlight.tokenType;
+    if (this.tokenManager) {
+      let tokensAt = this.tokenManager.tokensAt(tokenType, c);
+      let color;
+      if (tokensAt && tokensAt.length > 0) {
+        let token = tokensAt[0];
+        color = getColor(tokenType, token);
+      } else {
+        color = getColor('basic', {});
+      }
+      console.log('coloring', tokenType, 'at', c, color);
+      child.style.backgroundColor = color;
+
+    } else {
+      console.error('No token manager to color');
+    }
+  }
+
+  /*
+  * Split the content into individual characters and apply the appropriate styles.
+  */
+  splitIntoCharactersAndStyle(content) {
+    let children = [...traverseDOM(content)];
+
+    let i = 0;
+    let c = 0;
+    let child = children[0];
+
+    let newSpans = [];
+
+    if (!child) {
+      let text = content.textContent;
+      content.innerHTML = '';
+      for (let i = 0; i < text.length; i++) {
+        const [span, newID] = this.createCharacterSpan(text, i);
+        content.appendChild(span);
+        newSpans.push(span);
+      }
+    }
+
+    while (child) {
+      if (child.tagName == "BR") {
+        i++;
+        child = children[i];
+        continue;
+      }
+
+      let newID = this.setSpanAttributes(child, c);
+      if (newID !== null) {
+        newSpans.push(child);
+      }
+
+      if (child.tagName === 'SPAN') {
+        let text = child.textContent;
+        if (text.length > 1) {
+          // split the span into multiple spans
+          // and update the running character index based on the number of new spans
+          const [newC, brandNewSpans] = this.splitSpan(child, c);
+          c = newC;
+          newSpans.push(...brandNewSpans);
+        }
+      } else if (child.tagName === 'DIV') {
+
+      }
+
+      i++;
+      c++;
+      child = children[i];
+    }
+    return newSpans;
   }
 
   render() {

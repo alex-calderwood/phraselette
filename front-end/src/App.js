@@ -1,11 +1,11 @@
 import "./App.css";
 import React, { Component } from "react";
 
-import { Prism, LLMProbabilityPrism, DictionaryPrism } from "./document/Prism";
-import { TokenManager } from "./document/TokenManager";
-import { Document } from "./document/Document"
-import { Constraint } from "./document/Constraint";
-import { Feature } from "./document/Feature";
+import { Prism } from "./base/prism/Prism";
+import { initialPrisms, makePrism} from "./base/prism/prismCreator";
+import { TokenManager } from "./base/TokenManager";
+import { Document } from "./base/Document"
+import { Constraint } from "./base/Constraint";
 
 import { WordView } from "./components/WordView";
 import { PrismEditor } from "./components/PrismEditor";
@@ -14,7 +14,6 @@ import { SearchResults } from "./components/SearchResults";
 
 import { resolveConstraints } from "./scripts/resolution";
 import { assignSocket } from "./scripts/socket";
-import { ConstraintRender } from "./components/ConstraintView";
  
 //         *-*.                                 //        /    /    /
 //      _-',^. `-_.                         //        /   /  /
@@ -29,38 +28,29 @@ import { ConstraintRender } from "./components/ConstraintView";
 //     `-_, :!;;;''             \
 //         `-!'                       \\
 
-const initialPrism = 'words';
+const initialPrismType = 'words';
 const debugMode = false;
 
 class App extends Component {
   constructor(props) {
     super(props);
-    let prisms = {
-      'likelihood': new LLMProbabilityPrism().setActive(true),
-      'words':      new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true),                                                                 
-      'sound':      new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words'),
-      'basic':      new Prism('basic'),                                              
-      'probability-base':  
-                    new Prism('probability-base'),
-      'dictionary': new DictionaryPrism("the Spacefarer's Almanac").setActive(true),
-      // 'critic':       new Prism('critic',      'string'),
+
+    this.prismCallbacks = {
+      onSearchComplete: this.onSearchComplete.bind(this),
     }
-    // bind a UI state callback to the prisms
-    for(let prism of Object.values(prisms)) {
-      prism.onSearchComplete = this.onSearchComplete.bind(this);
-    }
+    let prisms = initialPrisms(this.prismCallbacks);
 
     let activePrisms = Prism.getActive(prisms);
-
-    // eventually move the token management to the prisms themselves... it's a mess at the moment
-    this.tokenManager = new TokenManager(activePrisms.map((prism) => prism.name));
+    this.tokenManager = new TokenManager(activePrisms);
     window.tokenManager = this.tokenManager; // for debugging
+    let prismToHighlight = Prism.getByType(activePrisms, initialPrismType);
+    console.log('initial prism to highlight', prismToHighlight);
 
     this.text = null;
     this.state = {
       prisms: prisms,
       activePrisms: activePrisms,
-      prismToHighlight: initialPrism,
+      prismToHighlight: prismToHighlight,
       tokens: Object.keys(this.tokenManager.tokens),
       selection: null,
       constraints: [],
@@ -77,12 +67,22 @@ class App extends Component {
 
     function handleDictResponse(msg) {
       let doc = this._currentDocument();
-      let constraints = Constraint.subsetByFeatures(this.state.constraints, this.state.prisms.dictionary.features);
-      prisms.dictionary.onSearchResults(msg, doc, constraints);
+      let dictPrism = Prism.getByID(this.state.prisms, msg.prism);
+      let constraints = Constraint.subsetByFeatures(this.state.constraints, dictPrism.features);
+      dictPrism.onSearchResults({message: msg}, doc, constraints);
+    }
+
+    function handleReaderResponse(msg) {
+      let doc = this._currentDocument();
+      let reader = Prism.getByID(this.state.prisms, msg.prism);
+      console.log('reader prism', reader, this.state.prisms, msg);
+      let constraints = Constraint.subsetByFeatures(this.state.constraints, reader.features);
+      reader.onSearchResults({message: msg}, doc, constraints);
     }
 
     let handlers = {
-      "dictionaryResponse": handleDictResponse.bind(this),
+      "thesaurusResponse": handleDictResponse.bind(this),
+      "readerResponse": handleReaderResponse.bind(this),
     }
     assignSocket(socketProtocol, loc.host+'/'+loc.hash.replace('#', '?'), handlers)
   }
@@ -91,6 +91,7 @@ class App extends Component {
    * Called when the user selects new text.
   */
   setSelection(selection) {
+    console.log('app selection', selection)
     this.setState({ selection: selection });
   }
 
@@ -118,21 +119,24 @@ class App extends Component {
    * Finally, attempt to tokenize by the selected lense in order to highlight based on its probabilities.
   */
   handleAddPrism() {
-    const selectedLense = document.getElementById('add-lense').value;
+    const selectedPrismType = document.getElementById('add-lense').value;
+    const prism = makePrism(selectedPrismType, this.prismCallbacks);
+    console.log("making prism", prism);
 
-    // set the prism to active
-    let prisms = this.state.prisms;
-    prisms[selectedLense].setActive(true);
-
-    // set the prism highlight to on
-    prisms[selectedLense].setDoHighlight(true);
-    this.onHighlightChange(selectedLense, true);
+    // tell the editor it is active and should be the current highlighted prism
+    prism.setActive(true);
+    prism.setDoHighlight(true);
+    this.onHighlightPrismChange(prism.id, true);
     
     // update the state
-    this.setState({ activePrisms: Prism.getActive(prisms) });
+    let prisms = this.state.prisms;
+    this.setState({ 
+      prisms: {...prisms, [prism.id]: prism},
+      activePrisms: Prism.getActive(prisms)
+    });
 
     // update the tokenManager
-    this.tokenManager.setActiveLense(selectedLense, true);
+    this.tokenManager.setActivePrism(prism, true);
 
     // tokenize the text with the new lense
     this.attemptInitialTokenization();
@@ -141,12 +145,11 @@ class App extends Component {
   // Initialize the uninitialized
   componentDidMount() {
     // Figure out which lense to initially higihlight
-    let highlightPrism =  Object.keys(this.state.prisms).filter((key) => {
+    let highlightPrismID =  Object.keys(this.state.prisms).filter((key) => {
       return this.state.prisms[key].shouldHighlight;
     });
-    highlightPrism = highlightPrism.length > 0 ? highlightPrism[0] : null;
-    if (highlightPrism)
-      this.onHighlightChange(highlightPrism, true);
+    highlightPrismID = highlightPrismID.length > 0 ? highlightPrismID[0] : null;
+    if (highlightPrismID) { this.onHighlightPrismChange(highlightPrismID, true); }
 
     // Add top level keystroke listeners
     document.addEventListener('keydown', this.onKeyDown.bind(this));
@@ -156,24 +159,29 @@ class App extends Component {
     document.removeEventListener('keydown', this.onKeyDown);
   }
 
-  onHighlightChange(prismName, shouldHighlight) {
+  onHighlightPrismChange(prismID, shouldHighlight) {
     // for now, we only allow one highlighted lense, so we need to uncheck all the other ones
     let prisms = Prism.getActive(this.state.prisms);
+    let toHighlight = null;
     for (let prism of prisms) {
-      if (prism.name === prismName) {
+      if (prism.id === prismID) {
         prism.setDoHighlight(shouldHighlight)
+        toHighlight = prism;
       } else {
         prism.setDoHighlight(false);
       }
     }
 
-    // after the update print out the new state
-    this.setState({ lenseToHighlight: prismName});
+    // console.log('on highlight change', prismID, shouldHighlight, prisms, toHighlight);
+
+    
+    this.setState({ prismToHighlight: prismID});
   }
+
   /* 
    * Saearch for alternate words using each prism.
   */
-  async doSearch(doc) {
+  async searchPrisms(doc) {
     this.setSearchingState(true); // UI update
 
     let constraints = this.state.constraints;
@@ -181,6 +189,7 @@ class App extends Component {
 
     for (let prism of prisms) {
       prism.search(doc, constraints)
+      // prism.search(doc, [])
     }
   }
   
@@ -190,7 +199,7 @@ class App extends Component {
   async onSearchComplete() {
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
-    let predictions = prisms.map(p => p.results).filter(r => r && r.length > 0).flat()
+    let predictions = prisms.map(p => p?.insights?.results).filter(r => r && r.length > 0).flat()
     let filteredPredictions = await resolveConstraints(predictions, constraints);
     this.setState({ searchResults: filteredPredictions});
     this.setSearchingState(false);  // UI update
@@ -200,9 +209,11 @@ class App extends Component {
     this.setState({
       constraints: this.state.constraints.concat([constraint])
     });
+    console.log('adding constraint', constraint)
   }
 
   removeConstraint(constraint) {
+    console.log('removing constraint', constraint);
     this.setState({
       constraints: this.state.constraints.filter((c) => { return c !== constraint; })
     });
@@ -219,6 +230,27 @@ class App extends Component {
     this.editorRef.current.swapText(originalToken.start, originalToken.end, newToken.text);
   }
 
+  swapSequence(oldTokens, newSequence) {
+    // Calculate the start and end positions
+    if(oldTokens.length === 0 || !newSequence) {
+      console.error('swapSequence called with', oldTokens, newSequence);
+      return;
+    }
+
+    const start = oldTokens[0].start;
+    const end = oldTokens[oldTokens.length - 1].end;
+    console.log('app swapSequence for', newSequence, 'from', oldTokens, start, end);
+    
+    // Get the new text from the sequence
+    const newText = newSequence.textContent;
+    
+    // Update the tokenManager
+    this.tokenManager.swapSequence(oldTokens, newSequence.span);
+    
+    // Update the editor text
+    this.editorRef.current.swapText(start, end, newText);
+  }
+
   onKeyDown(event) {
     if (event.metaKey && event.key === 'k') {
       return this.editorRef.current?.manualRetokenizeAction();
@@ -227,6 +259,15 @@ class App extends Component {
     if (event.metaKey && event.key === '\'') {
       return this.editorRef.current?.manualSearchAction();
     }
+  }
+
+  onConstraintUpdate(prism) {
+    let predictions = prism?.insights?.results || [];
+    let document = this._currentDocument(); // still don't love this
+    let constraints = Constraint.subsetByFeatures(this.state.constraints, prism.features);
+    console.log("updating constraints in app", predictions, document, constraints);
+    prism.onSearchResults({ predictions: predictions}, document, constraints );
+
   }
 
   render() {
@@ -239,7 +280,8 @@ class App extends Component {
     let activePrisms = Prism.getActive(this.state.prisms);
     window.activePrisms = activePrisms; // for debugging
     
-    let wordsPrism = this.state.prisms[this.tokenManager.wordsLense]; // which prism represents word breaks
+    // get the prism that represents word breaks
+    let wordsPrism = Prism.firstByType(this.state.prisms, this.tokenManager.wordsPrism);
     let searchResults = this.state.searchResults ? this.state.searchResults : [];
     
     return (
@@ -249,9 +291,9 @@ class App extends Component {
             <PrismEditor tokenManager={this.tokenManager}
               setSelection={this.setSelection.bind(this)}
               setText={this.setText.bind(this)}
-              lenseToHighlight={this.state.prismToHighlight}
+              prismToHighlight={this.state.prismToHighlight}
               ref={this.editorRef}
-              doSearch={this.doSearch.bind(this)}
+              doSearch={this.searchPrisms.bind(this)}
               />
           </div>
           
@@ -270,49 +312,55 @@ class App extends Component {
                 debugMode={debugMode}
               />
 
+               {/* Constrained search results */}
+               <SearchResults 
+              results={searchResults} 
+              isSearching={this.state.isSearching}
+              wrap={false} 
+              showLength={true}
+              onClickSequence={(oldS, newS) => { this.swapSequence(oldS, newS)}}
+              />   {/* onClickSequence={this.onClickSequence.bind(this)} /> */}
+
               {/* Display the active prisms */}
               {activePrisms.map((prism) => {
+                console.log('rendering', prism.id);
                 return (
                   <PrismView
-                    key={prism.name}
+                    key={prism.id}
                     tokenManager={this.tokenManager} 
                     prism={prism}
                     isSearching={prism.isSearching} 
                     startIndex={startIndex} endIndex={endIndex} 
-                    onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
+                    onSwapSequence={this.swapSequence.bind(this)}
                     debugMode={debugMode}
                     constraints={Constraint.subsetByFeatures(this.state.constraints, prism.features)}
                     addConstraint={this.addConstraint.bind(this)}
-                    getDocument={() => { return this._currentDocument(); }} // TODO I don't like that onConstraintUpdate needs this, will prob be slow
                     removeConstraint={this.removeConstraint.bind(this)}
+                    onConstraintUpdate={this.onConstraintUpdate.bind(this)}
                   />
                 );
               })}
 
-              {/* Constrained search results */}
-              <SearchResults results={searchResults} isSearching={this.state.isSearching} wrap={false}/>   {/* onTokenClick={this.onTokenClick.bind(this)} /> */}
+             
             </div>
 
             <div className="lenses"> { /* A list of each active lense and a checkbox to activate/deactivate them */}
               <select title="add a lense" id="add-lense">
-                {Object.entries(this.state.prisms).map(([name, lense]) => {
-                  return <option key={lense.name} value={lense.name}>{lense.name}</option>;
+                {Object.values(Prism.TYPES).map((prismType) => {
+                  return <option key={prismType} value={prismType}>{prismType}</option>;
                 })}
               </select>
               {/* button that sets the selected lense to active */}
               <button className="selectButoon" onClick={this.handleAddPrism.bind(this)}>add</button>
-              {/* <span id="selected" className="info">
-                <span id="active" >active: </span>
-                {activePrisms.map((prism) => {
-                  let shouldHighlight = prism.shouldHighlight;
-                  let onHighlightChange = this.onHighlightChange.bind(this)
-                  return <ActivePrismIndicator 
-                            key={prism.name} 
-                            prism={prism} 
-                            shouldHighlight={shouldHighlight}
-                            onHighlightChange={onHighlightChange}>{prism.name}</ActivePrismIndicator>
-                })}
-              </span> */}
+              {/* 
+                let shouldHighlight = prism.shouldHighlight;
+                let onHighlightPrismChange = this.onHighlightPrismChange.bind(this)
+                return <ActivePrismIndicator 
+                          key={prism.id} 
+                          prism={prism} 
+                          shouldHighlight={shouldHighlight}
+                          onHighlightPrismChange={onHighlightPrismChange}>{prism.id}</ActivePrismIndicator> */}
+
             </div>
           </div>
         </div>

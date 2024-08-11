@@ -1,6 +1,6 @@
 import React, { Component } from "react";
-// import { Constraint, CategoricalConstraint, POSConstraint, 
-//   RhymeConstraint, AlliterationConstraint} from "../document/Constraint";
+import { Constraint, CategoricalConstraint, POSConstraint, 
+  RhymeConstraint, AlliterationConstraint} from "../base/Constraint";
 import { scientific } from "../scripts/utils";
 
 class NumericalRangeConstraint extends Component {
@@ -16,12 +16,14 @@ class NumericalRangeConstraint extends Component {
     const newValue = parseFloat(event.target.value);
     this.setState({ targetMin: newValue });
     this.props.constraint.updateTargetMin(newValue);
+    this.props.onConstraintUpdate();
   };
 
   changeMax = (event) => {
     const newValue = parseFloat(event.target.value);
     this.setState({ targetMax: newValue });
     this.props.constraint.updateTargetMax(newValue);
+    this.props.onConstraintUpdate();
   };
 
   render() {
@@ -29,7 +31,7 @@ class NumericalRangeConstraint extends Component {
     const { targetMin, targetMax } = this.state;
 
     return (
-      <ConstraintWrapper constraint={constraint}>
+      <ConstraintWrapper {...this.props} >
         <div className="text"> 
           Min: {scientific(constraint.targetMin)} Max: {scientific(constraint.targetMax)}
         </div>
@@ -60,17 +62,20 @@ class CategoricalConstraintView extends Component {
     let constraint = this.props.constraint;
     this.state = {
       target: constraint.targetSequence,
+      mode:   constraint.mode,
     }
   }
   
   addTarget = () => {
     let newTarget = this.props.constraint.addTarget();
     this.setState({ target: newTarget });
+    this.props.onConstraintUpdate();
   }
 
   deleteTarget = () => {
     let newTarget = this.props.constraint.deleteTarget();
     this.setState({ target: newTarget });
+    this.props.onConstraintUpdate();
   }
 
   handleChange = (event) => {
@@ -78,36 +83,58 @@ class CategoricalConstraintView extends Component {
     const index = event.target.id.split('-').pop();
     let newTarget = this.props.constraint.updateTarget(index, newValue);
     this.setState({ target: newTarget });
+    this.props.onConstraintUpdate();
   };
+
+  handleChangeMode = (event) => {
+    const newMode = event.target.value;
+    this.props.constraint.changeMode(newMode);
+    this.setState({ mode: newMode })
+    this.props.onConstraintUpdate();
+  }
 
   render() {
     let constraint = this.props.constraint;
     let featureName = constraint.feature.name;
-
     let possibleConstraintValues = constraint.range;
+    let constraintModes = CategoricalConstraint.modes;
     let target = this.state.target;
 
-    return  <ConstraintWrapper constraint={constraint}>
-      {target.map(tokenTarget => {
-        return <select className="constraint-select" id={`constraint-select-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[featureName]} onChange={this.handleChange}>
-          {possibleConstraintValues.map(value => {
-            return <option key={value} value={value}>{value}</option>
+    return  <ConstraintWrapper {...this.props} >
+      <select className="constraint-mode" key={constraint.id} value={constraint.mode} onChange={this.handleChangeMode}>
+          {constraintModes.map(mode => {
+            return <option key={mode} value={mode}>{mode}</option>
           })}
-        </select>
-      })}
-      <button onClick={this.addTarget}>+</button>
-      <button onClick={this.deleteTarget}>-</button>
+      </select>
+      <div className="constraint-target">
+        {target.map(tokenTarget => {
+          return <select className="constraint-select" id={`constraint-select-${constraint.id}-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[featureName]} onChange={this.handleChange}>
+            {possibleConstraintValues.map(value => {
+              return <option key={value} value={value}>{value}</option>
+            })}
+          </select>
+        })}
+      </div>
+      <button onClick={this.addTarget}>＋</button>
+      <button onClick={this.deleteTarget}>−</button>
     </ConstraintWrapper>;
   }
 }
 
 class ConstraintWrapper extends Component {
+  
+  onDelete() {
+    this.props.onDelete(this.props.constraint);
+    this.props.onConstraintUpdate();
+  }
+
   render() {
     const { constraint, children } = this.props;
     const id = `${constraint.id}-constraint`;
     return (
       <div id={id} className="constraint">
         {children}
+        {!this.props.isTemp && <button onClick={() => this.onDelete()}>×</button>}
       </div>
     );
   }

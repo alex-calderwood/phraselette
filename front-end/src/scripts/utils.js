@@ -1,5 +1,5 @@
 export function getUniqueUUID() {
-  var id = 'id' + Math.random().toString(16).slice(2);
+  var id = 'id-' + Math.random().toString(16).slice(2);
   return id; // TODO small chance of collision, 
 }
 
@@ -24,3 +24,14 @@ export function scientific(num) {
   return num;
 }
 
+export function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
