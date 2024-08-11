@@ -234,7 +234,7 @@ async function* callSearch(prefix, top_k, depth) {
 }
 
 export async function getPhones(words) {
-  let tokenGenerator = callPhones(words);
+  let tokenGenerator = streamFromWebSocket('phones', {text: words})
 
   let tokens = [];
   let rawTokenPromise = await tokenGenerator.next();
@@ -253,14 +253,6 @@ export async function getPhones(words) {
   }
 
   return tokens;
-}
-
-async function* callPhones(text) {
-  const data = {
-    text: text
-  };
-
-  await (yield* streamFromWebSocket('phones', data));
 }
 
 /*

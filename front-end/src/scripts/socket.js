@@ -39,14 +39,14 @@ export async function* streamFromWebSocket(streamType, data) {
       const message = JSON.parse(event.data);
       if (message.id === requestId) {
         if (message.type === 'stream') {
-          console.log(`Received stream data for ${streamType}`);
+          // console.log(`Received stream data for ${streamType}`);
           messageQueue.push(message.data);
           if (resolveNext) {
             resolveNext();
             resolveNext = null;
           }
         } else if (message.type === 'stream_end') {
-          console.log(`Stream ended for ${streamType}`);
+          // console.log(`Stream ended for ${streamType}`);
           streamEnded = true;
           socket.removeEventListener('message', messageHandler);
           if (resolveNext) {
@@ -85,7 +85,7 @@ function assignSocket(socketProtocol, host, extraHandlers){
   });
   socket.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
-    console.log("ws:got", msg);
+    if(msg.type != "stream") { console.log("ws:got", msg); }
     const handlers = {
       // "stream": msg => streamFromWebSocket(msg.subtype, msg.data),
       "stream": () => {},

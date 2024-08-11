@@ -33,7 +33,7 @@ class PrismEditableTextFeature extends Component {
 /**
  * @typedef {Object} PrismViewProps
  * @property {TokenManager} tokenManager - The global token manager used by the App
- * @property {Prism} prism - the prism instance
+ * @property {Prism} prism - the prism instance 
  */
 
 
@@ -137,7 +137,6 @@ export class PrismView extends Component {
       <span className="subtitle"> ({prism.title})</span> : ""
 
     let textContent = showtext ? this.bulletedText(text) : "";
-    console.log('text', text, textContent)
 
     return <div className={`prism`}>
         <div className={`title ${rotated}`} onClick={this.toggleHidden.bind(this)}>

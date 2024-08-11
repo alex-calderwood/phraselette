@@ -28,7 +28,7 @@ export class PrismEditor extends Component {
     this.state = { content: ''};
     this.contentRef = React.createRef();
     this.tokenManager = this.props.tokenManager;
-    this.tokenManager.setOnToken(this.updateUITokens.bind(this));
+    this.tokenManager.setOnToken(this.updateUITokens.bind(this)); // Claude says this causes many unnecessary re-renders and updates could be batched 
   }
 
   componentDidMount() {

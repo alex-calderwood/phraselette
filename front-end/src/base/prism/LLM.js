@@ -3,16 +3,17 @@ import { Feature } from '../Feature.js';
 import { Constraint } from '../Constraint.js';
 import { Prism, setSequenceProb } from './Prism.js';
 
+
 export class ContextPrism extends Prism {
   static STOPLIST = ["_", "~", "-"];            // tokens that should not be the entire prediction
   static HALTLIST = ["�", "」", "<|endoftext"]; // tokens that should not appear anywhere in the prediction
 
+  static MIN_TOKENS = 1;
+  static MAX_TOKENS = 25;
+
   constructor() {
     super('context', [Feature.Prob], 'words');
    
-    this.minTokens = 1;  // search settings
-    this.maxTokens = 25;
-
     this.sortBy = 'probGeometricMean'; // default sorting
   }
 
@@ -28,7 +29,7 @@ export class ContextPrism extends Prism {
     let numTokens = numWords;
     let longestExpeectedWordInTokens = 1;
     numTokens = Math.floor(numWords * 4/3 + longestExpeectedWordInTokens);                            // enough tokens to approximate the correct word count
-    numTokens = Math.max(this.minTokens, Math.min(this.maxTokens, numTokens)); // clamp it
+    numTokens = Math.max(ContextPrism.MIN_TOKENS, Math.min(ContextPrism.MAX_TOKENS, numTokens)); // clamp it
 
     constraints = Constraint.subsetByFeatures(constraints, this.features)
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
