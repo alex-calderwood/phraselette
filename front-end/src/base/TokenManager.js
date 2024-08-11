@@ -3,7 +3,7 @@ import { splitWordTokenize, gpt2Tokenize, spacyTokenize, getPhones} from '../scr
 export class TokenManager {
   constructor(activePrisms) {
     this.tokens = {
-      'probability-base': [],
+      'probs': [],
       'words': [],
       'basic': [],
     };
@@ -329,7 +329,7 @@ export class TokenManager {
           tokens = splitWordTokenize(text, data);
           this.tokens.words = tokens; 
           break;
-        case 'probability-base':
+        case 'probs':
           tokens = gpt2Tokenize(text, data);
           break;
         case 'words':

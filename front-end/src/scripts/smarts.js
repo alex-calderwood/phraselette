@@ -81,7 +81,7 @@ export function makeProbToken(rawToken, rawIsInclusive=false) {
     'start': rawToken.span[0],
     'end': rawToken.span[1] - (rawIsInclusive ? 0 : 1),
     "text": rawToken.token,
-    "type": 'probability-base',
+    "type": 'probs',
     "prob": rawToken.prob,
     "logProb": rawToken.log_prob,
     "alternates": rawToken.alternates ? rawToken.alternates.map((alt) => { return new Token({

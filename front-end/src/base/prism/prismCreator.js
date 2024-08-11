@@ -43,25 +43,31 @@ export function makePrism(type, callbacks) {
   switch(type) {
     case 'words':
       prism = new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true);
+      prism.description="Allows you to view and constraint words based on their part of speech.";
       break;
     case 'context':
       prism = new ContextPrism().setActive(false);
+      prism.description="Let's you view and constraint words based on their statistical probability of following their context.";
       break;
     case 'reader':
       prism = new ReaderPrism(randomRole('reader')).setActive(true);
+      prism.description="A computational reader model that will provide feedback and alternatives of your text based on their understanding of the text.";
       break;
     case 'thesaurus':
       prism = new ThesaurusPrism(randomRole('thesaurus')).setActive(false);
-      break;
+      prism.description="A stylized thesaurus that allows you to specify";
       break;
     case 'sound':
       prism = new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words').setActive(false);
-      break;
+      prism.description="A phonetic analyzer that allows you to view and constraint words based on their sound, rhyme scheme, and meter.";
+      break
     case 'basic':
       prism = new Prism('basic');
+      prism.description="deprecated";
       break;
-    case 'probability-base':
-      prism = new Prism('probability-base');
+    case 'probs':
+      prism = new Prism('probs');
+      prism.description="deprecated";
       break;
   }
 

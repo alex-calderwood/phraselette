@@ -185,10 +185,6 @@ we will need to select the text children of the editor */
   margin: 0;
 }
 
-.bullet {
-
-}
-
 .search-results {
   width: 100%;
 }
@@ -475,6 +471,58 @@ div.searching {
   75% {
     background-position: 0% 70%;
   }
+}
+
+.prism-selector {
+  display: flex;
+  overflow-x: auto;
+  padding: 10px;
+  background-color: var(--accent-color);
+  scroll-behavior: smooth;
+}
+
+.prism-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%; 
+  margin-right: 10px;
+  min-width: 65px;
+  padding: 10px;
+  background-color: white;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.prism-icon {
+  font-size: 24px;
+  color: var(--darker-text-color);
+  margin-bottom: 10px;
+}
+
+.prism-info h3 {
+  font-size: 16px;
+  /* don't bold it */
+  margin-bottom: 5px;
+
+}
+
+.prism-tooltip {
+  position: fixed;
+  background-color: var(--accent-color);
+  color: var(--darker-text-color);
+  padding: 5px 10px;
+  border-radius: var(--radius);
+  font-size: 0.8em;
+  max-width: 200px;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.prism-item button {
+  width: 100%;
+  height: auto;
 }
 
 

@@ -13,6 +13,7 @@ import { PrismView } from "./components/PrismView";
 import { SearchResults } from "./components/SearchResults";
 import ControlButtons from "./components/ControlButtons";
 import InstructionsView from "./components/InstructionsView";
+import PrismSelector from "./components/PrismSelector";
 
 import { resolveConstraints } from "./scripts/resolution";
 import { assignSocket } from "./scripts/socket";
@@ -130,9 +131,8 @@ class App extends Component {
    * Also make it currently highlighted lense.
    * Finally, attempt to tokenize by the selected lense in order to highlight based on its probabilities.
    */
-  handleAddPrism() {
-    const selectedPrismType = document.getElementById("add-lense").value;
-    const prism = makePrism(selectedPrismType, this.prismCallbacks);
+  handleAddPrism(prismType) {
+    const prism = makePrism(prismType, this.prismCallbacks);
     console.log("making prism", prism);
 
     // tell the editor it is active and should be the current highlighted prism
@@ -358,10 +358,6 @@ class App extends Component {
             {/* Everything on the right hand side of the screen */}
             {!hasSelection && (
               <div className={`inspector`}>
-                <ControlButtons
-                  onRetokenize={this.handleRetokenize}
-                  onSearch={this.handleSearch}
-                />
                 <InstructionsView />
               </div>
             )}
@@ -430,32 +426,12 @@ class App extends Component {
             )}
             {/* End inspector */}
 
+
             <div className="lenses">
-              {/* A list of each active lense and a checkbox to activate/deactivate them */}
-              <select title="add a lense" id="add-lense">
-                {Object.values(Prism.TYPES).map((prismType) => {
-                  return (
-                    <option key={prismType} value={prismType}>
-                      {prismType}
-                    </option>
-                  );
-                })}
-              </select>
-              {/* button that sets the selected lense to active */}
-              <button
-                className="selectButoon"
-                onClick={this.handleAddPrism.bind(this)}
-              >
-                add
-              </button>
-              {/* 
-                let shouldHighlight = prism.shouldHighlight;
-                let onHighlightPrismChange = this.onHighlightPrismChange.bind(this)
-                return <ActivePrismIndicator 
-                          key={prism.id} 
-                          prism={prism} 
-                          shouldHighlight={shouldHighlight}
-                          onHighlightPrismChange={onHighlightPrismChange}>{prism.id}</ActivePrismIndicator> */}
+              <PrismSelector 
+                prisms={this.state.prisms} 
+                onAddPrism={this.handleAddPrism.bind(this)} 
+              />
             </div>
           </div>
         </div>

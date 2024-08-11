@@ -3,7 +3,7 @@ import { Constraint } from '../Constraint.js';
 import { getUniqueUUID } from '../../scripts/utils.js';
 
 export class Prism {
-  static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'basic', 'probability-base'];
+  static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'basic', 'probs'];
   /**
    * Create a Prism.
    * @param {string} type - The category of the prism
@@ -11,11 +11,12 @@ export class Prism {
    * @param {Object|null} [tokenType=null] - The name of the token that this Prism uses as its tokenization (in TokenManager).
    *                                           Defaults to {name}.
    */
-  constructor(type, features=[], tokenType=null) {
+  constructor(type, features=[], tokenType=null, description='') {
     this.id = `${type}-${getUniqueUUID()}`;
     this.type = type;
     this.title = type;
     this.active = false;
+    this.description = description
 
     // which tokens to look up in the tokenManager
     this.tokenType = tokenType ? tokenType : this.type;  

@@ -5,7 +5,7 @@ import { getUniqueUUID, scientific, debounce } from "../scripts/utils";
 function tokenItemsToShow(tokenType) {
   let show = {
     'context': ['prob'],
-    'probability-base': ['prob'],
+    'probs': ['prob'],
     'alternate': ['prob'],
     'sound': ['sound'],
     'words': ['pos'],
