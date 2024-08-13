@@ -477,7 +477,7 @@ div.searching {
   display: flex;
   overflow-x: auto;
   padding: 10px;
-  scroll-behavior: smooth;
+  /* scroll-behavior: smooth; */
 }
 
 .prism-item {
