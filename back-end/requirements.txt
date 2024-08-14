@@ -1,8 +1,9 @@
 transformers
 flask
-tensorflow
+torch
 tqdm
-tf-keras
+# transformers
+# tf-keras
 
 spacy
 pronouncing
