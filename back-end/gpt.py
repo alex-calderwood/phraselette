@@ -6,8 +6,10 @@ import traceback
 from tqdm import tqdm
 from pprint import pprint
 import os
+import numpy as np
 
 gpu = True
+ZERO_PROB = -3.4028235931503486e+35 # threshold at which we consider something infinitely unlikely
 
 # Set the environment variable to use GPU 5
 # os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -92,7 +94,6 @@ with tf.device('/GPU:1'):
                 original_prob = token_probs[original_word_id].numpy()
                 original_log_prob = token_logits[original_word_id].numpy()
 
-
                 # calculate the character offset from the start of the phrase (not counting the extra context)
                 offset = calculate_offset(offsets[:, i - context_len, :], extra_context, start_token_offset)
 
@@ -131,6 +132,37 @@ with tf.device('/GPU:1'):
         offset[0] = len(extra_context) + offset[0] - start_token_offset
         offset[1] = len(extra_context) + offset[1] - start_token_offset
         return offset
+    
+    def estimate_histogram(beam_output):
+        scores = beam_output.scores
+        
+        # Flatten all log probabilities
+        all_log_probs = []
+        for score in scores:
+            all_log_probs.extend(score.numpy().flatten())
+        
+        all_log_probs = np.array(all_log_probs)
+        
+        # Remove values below some threshold
+        all_log_probs = all_log_probs[all_log_probs > ZERO_PROB]
+        
+        # Remove extreme outliers
+        low = np.percentile(all_log_probs, 0.05)
+        all_log_probs = all_log_probs[all_log_probs >= low]
+        
+        # Create linear bin edges in log space
+        num_bins = 100
+        min_log_prob = np.min(all_log_probs)
+        max_log_prob = 0  # The maximum log probability is 0
+        bin_edges = np.linspace(min_log_prob, max_log_prob, num_bins + 1)
+        counts, _ = np.histogram(all_log_probs, bins=bin_edges)
+        
+        summary = {
+            'counts': counts.tolist(),
+            'bin_edges': bin_edges.tolist(),
+        }
+        print("summary", summary)
+        return summary
 
     def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos_token, logits_processor=logits_processor):
         text = text.replace('\xa0', ' ') # get rid of non-breaking space characters which seem to mess things up
@@ -210,6 +242,7 @@ with tf.device('/GPU:1'):
                 log_prob = float(token_logits[token_id])
 
                 token = {
+                    'thing': 'token',
                     'token': token_text,
                     'prob': token_prob,
                     'log_prob': log_prob,
@@ -217,16 +250,28 @@ with tf.device('/GPU:1'):
                 }
                 sequence.append(token)
 
-            print('---span', sequence)
+            # print('---seq', sequence)
             yield sequence
 
+        # Finally, compute a rough histogram of the results
+        # beam_scores = [score.numpy().tolist() for score in beam_output.scores]
+        summary = estimate_histogram(beam_output) # , num_beams, depth)
+        
+        yield {
+            'thing': 'summary',
+            'summary': summary
+        }
 
     def print_output(input, output):
-        for span in output:
-            # pprint(span)
-            print(input + ''.join([s['token'] for s in span]))
-            print('------')
+        for seq in output:
+            if isinstance(seq, list):
+                print(type(seq))
+                print(input + ''.join([s['token'] for s in seq]))
+                print('------')
+            else:
+                print(seq)
             # pprint(json.dumps(span))
+        
 
 
 if __name__ == "__main__":
@@ -234,7 +279,6 @@ if __name__ == "__main__":
     # for token in pluck_probs("This is a test.", top_k=3):
     #     print(token)
     #     print(json.dumps(token))
-
 
     input = "I like mountains "
     output = forward_search(input, top_k=10, depth=18, logits_processor=logits_processor)

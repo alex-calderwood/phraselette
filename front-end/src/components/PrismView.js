@@ -155,7 +155,8 @@ export class PrismView extends Component {
           {showTokenContent ? this.props.constraints.map((constraint) => {
             return <ConstraintRender 
               key={constraint.id} 
-              constraint={constraint} 
+              constraint={constraint}
+              prism={prism}
               onDelete={this.props.removeConstraint}
               onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)}/>}) : ""
           }

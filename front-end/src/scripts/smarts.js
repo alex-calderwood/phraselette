@@ -203,24 +203,31 @@ export async function searchForward(document, constraints, depth, top_k=150) {
     console.error("searchForward called with invalid depth", depth);
     return [];
   }
-  let tokenGenerator = callSearch(document.prefixText, top_k, depth);
+  let sequenceGenerator = callSearch(document.prefixText, top_k, depth);
 
-  let promise = await tokenGenerator.next();
-  let predictedSequence = [];
+  let promise = await sequenceGenerator.next();
+  let summary = null;
+  let predictedSequences = [];
   while (!promise.done) {
     let rawSequence = promise.value;
 
-    let sequence = rawSequence.map((alt) => { 
-      let token = makeProbToken(alt, true); 
-      token.type = "alternate";
-      return token;
-    });
+    console.log(rawSequence)
+    if (rawSequence.thing != null && rawSequence.thing == 'summary') {
+      console.warn(rawSequence);
+      summary = rawSequence.summary;
+    } else {
+      let sequence = rawSequence.map((alt) => { 
+        let token = makeProbToken(alt, true); 
+        token.type = "alternate";
+        return token;
+      });
+      predictedSequences.push(new Sequence(sequence));
+    }
 
-    predictedSequence.push(new Sequence(sequence));
-    promise = await tokenGenerator.next();
+    promise = await sequenceGenerator.next();
   }
 
-  return predictedSequence;
+  return [predictedSequences, summary];
 }
 
 async function* callSearch(prefix, top_k, depth) {
@@ -230,7 +237,7 @@ async function* callSearch(prefix, top_k, depth) {
     depth: depth,
   };
 
-  await (yield* streamFromWebSocket('search', data)); // TODO I'm not sure if this await is going to batch everything?
+  await (yield* streamFromWebSocket('search', data));
 }
 
 export async function getPhones(words) {

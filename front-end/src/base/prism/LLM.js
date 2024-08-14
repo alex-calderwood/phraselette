@@ -35,12 +35,11 @@ export class ContextPrism extends Prism {
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
 
     console.log('searching LLM', {preConstraints, selectionWords, numWords, numTokens})
+
+    // TODO document that constraints might have been altererd in the meantime...
+    // should copy them if necessary - at least document?
     await searchForward(document, preConstraints, numTokens).then(
-      (predictions) => {
-        // TODO document that constraints might have been altererd in the meantime
-        // should copy them if necessary - at least document?
-        this.onSearchResults({predictions: predictions}, document, constraints, numWords)
-      }
+      ([predictions, summary]) => {return this.onSearchResults({predictions, summary}, document, constraints, numWords)}
     )
   }
 
@@ -53,12 +52,11 @@ export class ContextPrism extends Prism {
       setSequenceProb(prediction)
     }
             
-    // deduplicate based on strippedTextContent
-    predictions = this.deduplicate(predictions);
-    // remove bad predicitons
-    predictions = predictions.filter((prediction) => { return !this.badPrediction(prediction) });
+    // remove bad predictions, duplicate predictions ('the' , 'the') -> ''the'
+    predictions = this.deduplicate(predictions);  
+    predictions = predictions.filter((prediction) => { return !this.badPrediction(prediction) }); 
 
-    super.onSearchResults({predictions: predictions}, document, constraints);
+    super.onSearchResults({...insights, predictions: predictions}, document, constraints);
   }
 
   badPrediction(prediction) {

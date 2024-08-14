@@ -120,7 +120,7 @@ async function handleStream(message, clientSocket) {
         data: chunk
       }));
     }
-    clientSocket.send(JSON.stringify({ 
+    clientSocket.send(JSON.stringify({
       id: message.id, 
       type: 'stream_end',
       subtype: message.subtype,

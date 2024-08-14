@@ -46,7 +46,7 @@ export class ConstraintCreator extends Component {
 
       {this.state.showFullCreator && this.state.tempConstraints.map((constraint) => {
         return <div className="temp-constraint-container" key={constraint.id}> 
-          <ConstraintRender key={constraint.id} constraint={constraint} onConstraintUpdate={this.props.onConstraintUpdate} isTemp={true}/>
+          <ConstraintRender key={constraint.id} constraint={constraint} onConstraintUpdate={this.props.onConstraintUpdate} isTemp={true} prism={prism}/>
           <button onClick={() => this.addConstraint(constraint)}> constrain </button>
         </div>
       })}

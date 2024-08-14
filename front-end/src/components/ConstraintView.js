@@ -1,6 +1,6 @@
 import React, { Component } from "react";
-import { Constraint, CategoricalConstraint, POSConstraint, 
-  RhymeConstraint, AlliterationConstraint} from "../base/Constraint";
+import { Constraint, CategoricalConstraint} from "../base/Constraint";
+import { LogHistogram } from "./Histogram"
 import { scientific } from "../scripts/utils";
 
 class NumericalRangeConstraint extends Component {
@@ -51,6 +51,31 @@ class NumericalRangeConstraint extends Component {
             value={targetMax}
             onChange={this.changeMax}
           />
+      </ConstraintWrapper>
+    );
+  }
+}
+
+class HistogramRangeConstraintView extends Component {
+  constructor(props) {
+    super(props);
+  }
+
+  update = (newMin, newMax) => {
+    this.props.constraint.updateTargetMin(newMin);
+    this.props.constraint.updateTargetMax(newMax);
+    this.props.onConstraintUpdate();
+  }
+
+  render() {
+    const { constraint, prism } = this.props;
+    const data = prism?.insights?.summary || [];
+
+    console.log("data for histogram", data, prism)
+
+    return (
+      <ConstraintWrapper {...this.props} >
+        <LogHistogram data={data} onUpdate={this.update} />
       </ConstraintWrapper>
     );
   }
@@ -145,7 +170,8 @@ const constraintViews = {
   POSConstraint: CategoricalConstraintView,
   SoundConstraint: CategoricalConstraintView,
   RhymeConsntraint: CategoricalConstraintView,
-  NumericalRangeConstraint: NumericalRangeConstraint,
+  // NumericalRangeConstraint: NumericalRangeConstraint,
+  NumericalRangeConstraint: HistogramRangeConstraintView,
   AlliterationConstraint: null,
 };
 

@@ -7,7 +7,7 @@ export class Prism {
   /**
    * Create a Prism.
    * @param {string} type - The category of the prism
-   * @param {Array} [features=[]] - An array of features that this prism makes available to view or constrain. See Feature.js
+   * @param {Array} [features=[]]          - An array of features that this prism makes available to view or constrain. See Feature.js
    * @param {Object|null} [tokenType=null] - The name of the token that this Prism uses as its tokenization (in TokenManager).
    *                                           Defaults to {name}.
    */
@@ -68,8 +68,8 @@ export class Prism {
     let results = await resolveConstraints(predictions, constraints, false);
     results = sortPredictions(results, this.sortBy, true);
 
-    console.log(`search results for ${this.type}:`, results);
     this.insights = {results: results, ...insights};
+    console.log(`insightsfor ${this.type}:`, this.insights);
 
     this.isSearching = false;
     this.onSearchComplete(this);

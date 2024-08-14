@@ -27,7 +27,7 @@ export function makeConstraint(feature, target) {
   
   switch(dataType) {
     case 'number':
-      return new NumericalRangeConstraint(name, feature); // name, feature, targetMin=null, targetMax=null
+      return new NumericalRangeConstraint(name, feature);
     case 'category':
       return new CategoricalConstraint(name, feature);
   }
@@ -40,12 +40,12 @@ export class Constraint {
   constructor(name, feature) {
     this.name = name;
     this.feature = feature;
-    this.dataType = feature.dataType; // depracate this
+    this.dataType = feature.dataType;
     this.id = getUniqueUUID();
     this.span = null;
     this.isPre = false;         // can the constraint be computed quickly?
     this.range = null;          // what are the possible values of the constraint
-    this.filterThreshold = 0;  // what is the minimum score to consider the constraint satisfied
+    this.filterThreshold = 0;   // what is the minimum score to consider the constraint satisfied
   }
 
   /*
@@ -380,12 +380,12 @@ class SoundConstraint extends CategoricalConstraint {
 export class NumericalRangeConstraint extends Constraint {
   defaultRange = [0, 1];
 
-  constructor(name, feature, targetMin=0, targetMax=1) {
+  constructor(name, feature) {
     super(name, "number");
     this.feature = feature
     this.range = this.defaultRange;
-    this.targetMin = targetMin;
-    this.targetMax = targetMax;
+    this.targetMin = this.defaultRange[0];
+    this.targetMax = this.defaultRange[1];
   }
 
   async getScore(sequence, document) {

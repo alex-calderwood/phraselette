@@ -90,6 +90,7 @@ function assignSocket(socketProtocol, host, extraHandlers){
       // "stream": msg => streamFromWebSocket(msg.subtype, msg.data),
       "stream": () => {},
       "stream_end": () => {},
+      "error": (msg) => {console.error("ws: server error:", event.data)},
       ...extraHandlers
     };
 

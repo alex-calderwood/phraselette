@@ -46,11 +46,11 @@ export function makePrism(type, callbacks) {
       prism.description="View and constrain words based on their part of speech.";
       break;
     case 'context':
-      prism = new ContextPrism().setActive(false);
+      prism = new ContextPrism().setActive(true);
       prism.description="View and constraint words based on the statistical probability they follow their context.";
       break;
     case 'reader':
-      prism = new ReaderPrism(randomRole('reader')).setActive(true);
+      prism = new ReaderPrism(randomRole('reader')).setActive(false);
       prism.description="A computational reader model that will provide feedback and alternatives of your text based on their understanding of the text.";
       prism.editable = true;
       break;
