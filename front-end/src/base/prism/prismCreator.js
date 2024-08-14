@@ -47,7 +47,7 @@ export function makePrism(type, callbacks) {
       break;
     case 'context':
       prism = new ContextPrism().setActive(false);
-      prism.description="View and constraint words based on their statistical probability of following their context.";
+      prism.description="View and constraint words based on the statistical probability they follow their context.";
       break;
     case 'reader':
       prism = new ReaderPrism(randomRole('reader')).setActive(true);

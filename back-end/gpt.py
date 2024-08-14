@@ -7,14 +7,16 @@ from tqdm import tqdm
 from pprint import pprint
 import os
 
+gpu = True
 
 # Set the environment variable to use GPU 5
 # os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 # Verify that TensorFlow is using the GPU
-print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-print("Is GPU available: ", tf.test.is_gpu_available())
-print("GPU Device Name: ", tf.test.gpu_device_name())
+if gpu: 
+    print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+    print("Is GPU available: ", tf.test.is_gpu_available())
+    print("GPU Device Name: ", tf.test.gpu_device_name())
 
 tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
 
