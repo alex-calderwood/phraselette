@@ -9,7 +9,8 @@ import os
 import numpy as np
 
 gpu = True
-ZERO_PROB = -3.4028235931503486e+35 # threshold at which we consider something infinitely unlikely
+# ZERO_PROB = -3.4028235931503486e+35 # threshold at which we consider something infinitely unlikely
+ZERO_LOG_PROB = np.log(1e-12)
 
 # Set the environment variable to use GPU 5
 # os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -89,10 +90,14 @@ with tf.device('/GPU:1'):
                 greedy_output_dict = model.generate(
                     all_ids[:, :i], max_length=max_length, output_scores=True, return_dict_in_generate=True
                 )
-                token_probs = tf.nn.softmax(greedy_output_dict.scores[0])[0]
-                token_logits = greedy_output_dict.scores[0][0]
-                original_prob = token_probs[original_word_id].numpy()
-                original_log_prob = token_logits[original_word_id].numpy()
+                # token_probs = tf.nn.softmax(greedy_output_dict.scores[0])[0]
+                # original_prob = token_probs[original_word_id].numpy()
+
+                log_probs = tf.nn.log_softmax(greedy_output_dict.scores[0])[0]
+                original_log_prob = log_probs[original_word_id].numpy()
+                original_prob = np.exp(original_log_prob)
+                # token_logits = greedy_output_dict.scores[0][0]
+                # original_log_prob = token_logits[original_word_id].numpy()
 
                 # calculate the character offset from the start of the phrase (not counting the extra context)
                 offset = calculate_offset(offsets[:, i - context_len, :], extra_context, start_token_offset)
@@ -100,13 +105,13 @@ with tf.device('/GPU:1'):
                 # Determine the top k alternate words for each token
                 alternates = []
                 if top_k > 0:
-                    top_k_values, top_k_indices = tf.math.top_k(token_probs, k=top_k)
-                    for index, prob in zip(top_k_indices, top_k_values):
+                    top_k_log_values, top_k_indices = tf.math.top_k(log_probs, k=top_k)
+                    for index, log_prob in zip(top_k_indices, top_k_log_values):
                         token = tokenizer.decode(index)
-                        log_prob = token_logits[index]
+                        # log_prob = token_logits[index]
                         alternates.append({
                             'token': token,
-                            'prob': float(prob),
+                            'prob': float(np.exp(log_prob)),
                             'log_prob': float(log_prob),
                             'span': [offset[0], offset[0] + len(token)],
                         })
@@ -114,7 +119,7 @@ with tf.device('/GPU:1'):
                 result = {
                     'token': tokenizer.decode(original_word_id),
                     'span': offset,
-                    'prob': float(original_prob), # needs to be a float to serialize to JSON|
+                    'prob':     float(original_prob), # needs to be a float to serialize to JSON
                     'log_prob': float(original_log_prob),
                     'alternates': alternates,     # top k alternates
                 }
@@ -139,12 +144,13 @@ with tf.device('/GPU:1'):
         # Flatten all log probabilities
         all_log_probs = []
         for score in scores:
-            all_log_probs.extend(score.numpy().flatten())
+            log_probs = tf.nn.log_softmax(score).numpy()
+            all_log_probs.extend(log_probs.flatten())
         
         all_log_probs = np.array(all_log_probs)
         
         # Remove values below some threshold
-        all_log_probs = all_log_probs[all_log_probs > ZERO_PROB]
+        all_log_probs = all_log_probs[all_log_probs > ZERO_LOG_PROB]
         
         # Remove extreme outliers
         low = np.percentile(all_log_probs, 0.05)
@@ -217,6 +223,8 @@ with tf.device('/GPU:1'):
         
             beam_tokens = beam_output.sequences[beam_idx, len(input_ids[0]):]
             beam_token_scores = beam_output.scores
+            # log_probs = tf.nn.log_softmax(beam_token_scores[token_idx])
+
             for token_idx, token_id in enumerate(beam_tokens):
                 # token_text = tokenizer.decode(token_id, skip_special_tokens=True) # eventually it would be nice to use this but we would have to deal with "" tokens
                 token_text= tokenizer.decode(token_id)
@@ -237,9 +245,11 @@ with tf.device('/GPU:1'):
 
                 # Calculate token probability
                 token_logits = beam_token_scores[token_idx][beam_idx]
-                token_probs = tf.nn.softmax(token_logits)
-                token_prob = float(token_probs[token_id])
-                log_prob = float(token_logits[token_id])
+                # token_probs = tf.nn.softmax(token_logits)
+                # token_prob = float(token_probs[token_id])
+                # log_prob = float(token_logits[token_id])
+                log_prob = float(token_logits[token_id] - tf.reduce_logsumexp(token_logits)) # same as log_softmax but more efficient
+                token_prob = float(tf.exp(log_prob))
 
                 token = {
                     'thing': 'token',

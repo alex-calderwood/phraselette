@@ -1,5 +1,5 @@
 import React, { Component, createRef } from "react";
-import { getColor, zeroToOneColor, categoryToColor } from "../color";
+import { getColor, zeroToOneColor, categoryToColor } from "../scripts/color";
 import { getUniqueUUID, scientific, debounce } from "../scripts/utils";
 
 function tokenItemsToShow(tokenType) {
@@ -94,7 +94,7 @@ export class TokenRange extends Component {
 
 
   renderSequence(sequence, tokenType, expanded) {
-    let prob = sequence.getAttribute('probGeometricMean', null);
+    let prob = sequence.getAttribute('prob', null);
     let probColor = zeroToOneColor(prob);
     let id = `${this.id}-sequence-${sequence.id}`;
     // let score = sequence?.scores[scoreLookup]?.value;
@@ -132,7 +132,7 @@ export class TokenRange extends Component {
     let space = token.getAttribute('isSpacySpace') === true ? 'space' : '';
     let fields = tokenItemsToShow(tokenType);
 
-    let prob = fields.includes('prob') ? token.getAttribute('probGeometricMean') : null;
+    let prob = fields.includes('prob') ? token.getAttribute('prob') : null;
     if (prob != null) {
         prob = scientific(prob);
     }

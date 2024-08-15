@@ -5,7 +5,7 @@ from network import BREAK_TOKEN
 # TODO get spacy on GPU
 # spacy.require_gpu(1) # https://spacy.io/api/top-level#spacy.require_gpu
 
-nlp = spacy.load("en_core_web_sm")
+nlp = spacy.load("en_core_web_sm", disable=["tok2vec",  "parser", "attribute_ruler", "lemmatizer", "ner"]) # "tagger",
 
 # something unlikely to be seen, must match the client (in smarts.js)
 BREAK_TOKEN = "&&VE*A=]"

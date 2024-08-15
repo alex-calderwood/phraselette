@@ -68,14 +68,14 @@ class HistogramRangeConstraintView extends Component {
   }
 
   render() {
-    const { constraint, prism } = this.props;
+    const { constraint, prism, hasHistogramData } = this.props;
     const data = prism?.insights?.summary || null;
 
     console.log("data for histogram", data, prism)
 
     return (
       <ConstraintWrapper {...this.props} >
-        <LogHistogram data={data} onUpdate={this.update} />
+        <LogHistogram data={data} onUpdate={this.update} hasData={hasHistogramData}/>
       </ConstraintWrapper>
     );
   }

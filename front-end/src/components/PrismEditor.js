@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import rangy from 'rangy';
 import { getUniqueUUID, insertAfter } from "../scripts/utils";
 import { TokenManager } from "../base/TokenManager";
-import { getColor } from "../color";
+import { getColor } from "../scripts/color";
 import { Document } from "../base/Document";
 
 /* 

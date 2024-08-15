@@ -52,6 +52,7 @@ export class PrismView extends Component {
     this.prism = this.props.prism;
     this.state = {
       constraints: [],
+      hasHistogramData: false,
     };
   }
 
@@ -78,6 +79,7 @@ export class PrismView extends Component {
   prismHandleOnConstraintUpdate() {
     console.log('updating ui on constraint' , this.prism);
     this.props.onConstraintUpdate(this.prism);
+    this.setState({ hasHistogramData: !!this.prism?.insights?.summary });
     this.forceUpdate();
   }
 
@@ -157,7 +159,8 @@ export class PrismView extends Component {
               key={constraint.id} 
               constraint={constraint}
               prism={prism}
-              onDelete={this.props.removeConstraint}
+              onDelete={this.props.removeConstraint} 
+              hasHistogramData={this.state.hasHistogramData}
               onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)}/>}) : ""
           }
 

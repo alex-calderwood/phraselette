@@ -59,12 +59,15 @@ const probColor = (token) => {
 };
 
 export function lengthNormedLogProbToColor(token) {
-  let prob = Math.log10(token.getAttribute('prob', 0) + 1e-15); // avoid log(0)
-  let normalized = (prob + 6) / 6; // normalize to [0, 1] weird
-  // normalized /= token.text.length || 1; // normalize by length
-  let alpha = 0.5;
-  let hex = colorScale(normalized).brighten(brightenFactor).css();
-  return hex;
+  let prob = token.getAttribute('prob', 0);
+  return getLengthNormedLogProbToColor(prob).css();
+}
+
+export function getLengthNormedLogProbToColor(inProb) {
+  // let normalized = (inProb + 6) / 6;     // normalize to [0, 1] weird
+  let color = colorScale(inProb).brighten(brightenFactor);
+  console.log('colors', {inProb, color})
+  return color;
 }
 
 

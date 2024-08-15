@@ -15,7 +15,6 @@ function sendMessage(message) {
 }
 
 export async function* streamFromWebSocket(streamType, data) {
-  console.log(`Starting stream: ${streamType}`);
   const requestId = getUniqueUUID();
   const request = { 
     id: requestId, 
@@ -26,7 +25,7 @@ export async function* streamFromWebSocket(streamType, data) {
 
   while (true) {
     if (checkAndRefreshSocket()) {
-      console.log("Socket refreshed, waiting before trying again");
+      console.log("ws: refresh, waiting 1s");
       await new Promise(resolve => setTimeout(resolve, 1000));
       continue;
     }
@@ -58,9 +57,7 @@ export async function* streamFromWebSocket(streamType, data) {
     };
 
     socket.addEventListener('message', messageHandler);
-
     socket.send(JSON.stringify(request));
-    console.log(`Request sent for ${streamType}`);
 
     try {
       while (!streamEnded) {
@@ -80,14 +77,10 @@ export async function* streamFromWebSocket(streamType, data) {
 
 function assignSocket(socketProtocol, host, extraHandlers){
   socket = new WebSocket(`${socketProtocol}://${host}`);
-  socket.addEventListener("open", (event) => {
-    // sendMessage({type: "chat", text: "meowdy server"});
-  });
   socket.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
     if(msg.type != "stream") { console.log("ws:got", msg); }
     const handlers = {
-      // "stream": msg => streamFromWebSocket(msg.subtype, msg.data),
       "stream": () => {},
       "stream_end": () => {},
       "error": (msg) => {console.error("ws: server error:", event.data)},

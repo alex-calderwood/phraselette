@@ -137,6 +137,6 @@ export function setSequenceProb(sequence) {
 
   sequence.setAttribute('logProb', logProb);
   sequence.setAttribute('probGeometricMean', probGeometricMean);
-  sequence.setAttribute('prob', probGeometricMean); // used for scoring
+  sequence.setAttribute('prob', logProbMean); // used for scoring
   return sequence;
 }

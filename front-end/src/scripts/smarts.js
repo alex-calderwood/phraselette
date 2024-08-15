@@ -211,9 +211,7 @@ export async function searchForward(document, constraints, depth, top_k=150) {
   while (!promise.done) {
     let rawSequence = promise.value;
 
-    console.log(rawSequence)
     if (rawSequence.thing != null && rawSequence.thing == 'summary') {
-      console.warn(rawSequence);
       summary = rawSequence.summary;
     } else {
       let sequence = rawSequence.map((alt) => { 
@@ -349,9 +347,10 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
       // Store the arithmetic mean of the log probabilities
       let logProbMean = logProb / tokenCount;
       wordToken.setAttribute('logProbMean', logProbMean);
+      wordToken.setAttribute('prob', logProbMean);
+
       
       // If you need the actual probabilities, exponentiate:
-      wordToken.setAttribute('prob', Math.exp(logProb));
       wordToken.setAttribute('probGeometricMean', Math.exp(logProbMean));
     }
   }

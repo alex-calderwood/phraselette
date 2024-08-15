@@ -395,7 +395,7 @@ export class NumericalRangeConstraint extends Constraint {
     }
 
     let value = sequence.getAttribute(this.feature.name, 0);
-    console.log('numerical score', value, this.feature.name)
+    console.log('numerical score',this.feature.name, 'val', value, 'target', this.targetMin, this.targetMax)
     if (value < this.targetMin || value > this.targetMax) {
       return 0;
     }

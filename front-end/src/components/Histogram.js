@@ -1,14 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
+import {getLengthNormedLogProbToColor} from '../scripts/color'
 
-const defaultRange = [-35e10, 0]
+const defaultRange = [Math.log(1e-12), 0]
+const gray = '#2f2f2f';
 
-export const LogHistogram = ({ data, onUpdate }) => {
-  const [minValue, setMinValue] = useState( data ? data.bin_edges?.[0] : defaultRange[0] );
-  const [maxValue, setMaxValue] = useState( data ? data?.bin_edges?.[data.bin_edges?.length - 1] : defaultRange[1] );
+export const LogHistogram = ({ data, onUpdate, hasData }) => {
+  const [minValue, setMinValue] = useState(defaultRange[0]);
+  const [maxValue, setMaxValue] = useState(defaultRange[1]);
   const canvasRef = useRef(null);
   const parentRef = useRef(null);
   const isDraggingRef = useRef(null);
   
+  // Effect for canvas resizing
   useEffect(() => {
     const resizeCanvas = () => {
       const parent = parentRef.current;
@@ -18,13 +21,43 @@ export const LogHistogram = ({ data, onUpdate }) => {
         drawHistogram();
       }
     };
-      window.addEventListener('resize', resizeCanvas);
-      resizeCanvas();
-      
-      return () => window.removeEventListener('resize', resizeCanvas);
-    }, [data, minValue, maxValue]);
 
-    const linearScale = (value, minDomain, maxDomain, minRange, maxRange) => {
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    
+    return () => window.removeEventListener('resize', resizeCanvas);
+  }, []);
+
+  // Effect for handling data changes
+  useEffect(() => {
+    if (hasData && data?.bin_edges) {
+      const newMinEdge = data.bin_edges[0];
+      const newMaxEdge = data.bin_edges[data.bin_edges.length - 1];
+
+      setMinValue(prevMin => {
+        if (prevMin < newMinEdge) return newMinEdge;
+        if (prevMin > newMaxEdge) return newMaxEdge;
+        return prevMin;
+      });
+
+      setMaxValue(prevMax => {
+        if (prevMax > newMaxEdge) return newMaxEdge;
+        if (prevMax < newMinEdge) return newMinEdge;
+        return prevMax;
+      });
+    } else {
+      // If we no longer have data, reset to default range
+      setMinValue(defaultRange[0]);
+      setMaxValue(defaultRange[1]);
+    }
+  }, [hasData, data]);
+
+  // Effect for redrawing histogram
+  useEffect(() => {
+    drawHistogram();
+  }, [minValue, maxValue, data, hasData]);
+
+  const linearScale = (value, minDomain, maxDomain, minRange, maxRange) => {
     return (value - minDomain) / (maxDomain - minDomain) * (maxRange - minRange) + minRange;
   };
 
@@ -34,33 +67,32 @@ export const LogHistogram = ({ data, onUpdate }) => {
 
   const drawHistogram = () => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const width = canvas.width;
     const height = canvas.height;
 
     ctx.clearRect(0, 0, width, height);
 
-    if (data?.bin_edges && data?.counts) {
+    if (hasData && data?.bin_edges && data?.counts) {
       const maxCount = Math.max(...data.counts);
       const dataMin = data.bin_edges[0];
       const dataMax = data.bin_edges[data.bin_edges.length - 1];
-    
+  
       data.counts.forEach((count, index) => {
         const binEdge = data.bin_edges[index];
-        const x = linearScale(binEdge, dataMin, dataMax, 0, width);
-        const barHeight = (count / maxCount) * height;
+        const x = Math.floor(linearScale(binEdge, dataMin, dataMax, 0, width));
+        const barWidth = Math.ceil(width / data.counts.length);
+        const barHeight = Math.ceil((count / maxCount) * height);
         const y = height - barHeight;
-    
-        const scaledMinValue = linearScale(minValue, defaultRange[0], defaultRange[1], dataMin, dataMax);
-        const scaledMaxValue = linearScale(maxValue, defaultRange[0], defaultRange[1], dataMin, dataMax);
-    
-        if (binEdge >= scaledMinValue && binEdge <= scaledMaxValue) {
-          ctx.fillStyle = 'blue';
+  
+        if (binEdge >= minValue && binEdge <= maxValue) {
+          ctx.fillStyle = getLengthNormedLogProbToColor(binEdge).hex();
         } else {
-          ctx.fillStyle = 'gray';
+          ctx.fillStyle = gray;
         }
-    
-        ctx.fillRect(x, y, width / data.counts.length, barHeight);
+  
+        ctx.fillRect(x, y, barWidth, barHeight);
       });
     }
 
@@ -68,8 +100,8 @@ export const LogHistogram = ({ data, onUpdate }) => {
     ctx.strokeStyle = 'red';
     ctx.lineWidth = 2;
 
-    const minX = linearScale(minValue, defaultRange[0], defaultRange[1], 0, width);
-    const maxX = linearScale(maxValue, defaultRange[0], defaultRange[1], 0, width);
+    const minX = linearScale(minValue, hasData ? data.bin_edges[0] : defaultRange[0], hasData ? data.bin_edges[data.bin_edges.length - 1] : defaultRange[1], 0, width);
+    const maxX = linearScale(maxValue, hasData ? data.bin_edges[0] : defaultRange[0], hasData ? data.bin_edges[data.bin_edges.length - 1] : defaultRange[1], 0, width);
 
     ctx.beginPath();
     ctx.moveTo(minX, 0);
@@ -80,6 +112,10 @@ export const LogHistogram = ({ data, onUpdate }) => {
     ctx.moveTo(maxX, 0);
     ctx.lineTo(maxX, height);
     ctx.stroke();
+
+    ctx.fillStyle = gray;
+    ctx.fillText(maxValue.toFixed(2), maxX - 22, height - 5);
+    ctx.fillText(minValue.toFixed(2), minX + 5, height - 5);
   };
 
   const handleMouseDown = (e) => {
@@ -87,8 +123,8 @@ export const LogHistogram = ({ data, onUpdate }) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
 
-    const minX = linearScale(minValue, defaultRange[0], defaultRange[1], 0, canvas.width);
-    const maxX = linearScale(maxValue, defaultRange[0], defaultRange[1], 0, canvas.width);
+    const minX = linearScale(minValue, hasData ? data.bin_edges[0] : defaultRange[0], hasData ? data.bin_edges[data.bin_edges.length - 1] : defaultRange[1], 0, canvas.width);
+    const maxX = linearScale(maxValue, hasData ? data.bin_edges[0] : defaultRange[0], hasData ? data.bin_edges[data.bin_edges.length - 1] : defaultRange[1], 0, canvas.width);
 
     const minDistance = Math.abs(x - minX);
     const maxDistance = Math.abs(x - maxX);
@@ -106,13 +142,14 @@ export const LogHistogram = ({ data, onUpdate }) => {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
 
-      const newValue = inverseLinearScale(x, defaultRange[0], defaultRange[1], 0, canvas.width);
+      const range = hasData ? [data.bin_edges[0], data.bin_edges[data.bin_edges.length - 1]] : defaultRange;
+      const newValue = inverseLinearScale(x, range[0], range[1], 0, canvas.width);
 
       if (isDraggingRef.current === 'min') {
-        const updatedMin = Math.min(Math.max(defaultRange[0], newValue), maxValue);
+        const updatedMin = Math.min(Math.max(range[0], newValue), maxValue);
         setMinValue(updatedMin);
       } else {
-        const updatedMax = Math.max(Math.min(defaultRange[1], newValue), minValue);
+        const updatedMax = Math.max(Math.min(range[1], newValue), minValue);
         setMaxValue(updatedMax);
       }
     }
@@ -124,20 +161,22 @@ export const LogHistogram = ({ data, onUpdate }) => {
   };
 
   return (
-    <div className="histogram" ref={parentRef}>
-      <canvas 
-        ref={canvasRef} 
-        width={200} 
-        height={200}
-        className="cursor-pointer"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-      />
-      <div className="mt-4">
-        <span className="mr-4">Min: {minValue.toFixed(2)}</span>
-        <span>Max: {maxValue.toFixed(2)}</span>
+    <div className="histogram-container">
+      <div className="histogram" ref={parentRef}>
+        <canvas 
+          ref={canvasRef}
+          width={500} height={200}
+          style={{ width: '100%', height: '100%' }}
+          className="cursor-pointer"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        />
+        {/* <div>
+          <span>Min: {minValue.toFixed(2)}</span>
+          <span>Max: {maxValue.toFixed(2)}</span>
+      </div> */}
       </div>
     </div>
   );
