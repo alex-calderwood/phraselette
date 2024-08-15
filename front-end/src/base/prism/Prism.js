@@ -54,22 +54,23 @@ export class Prism {
    * 
    * Insights might be in the form of token predictions or any other data that can be given to the user to comment 
    * on their text. 
-   * @param {object} insights - The things that the prism has learned about the text.
+   * @param {object} newInsights - The things that the prism has learned about the text.
    *                            Each search should return an insights thesaurus. 
    *                            Will contain a 'predictions' key when it is making alternate word predictions.
    * @param {Document} document - the working document in the editor. Should be taken with a small grain of salt as I haven't tested that it is up to date.
    * @param {Constraint[]} constraints - the constraints applicable to the current prism
   */
-  async onSearchResults(insights, document, constraints) {
-    let predictions = insights?.predictions || [];
+  async onSearchResults(newInsights, document, constraints) {
+    let predictions = newInsights?.predictions || [];
+    let summary     = newInsights?.summary || this.insights?.summary;
 
     constraints = Constraint.subsetByFeatures(constraints, this.features)
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
     let results = await resolveConstraints(predictions, constraints, false);
     results = sortPredictions(results, this.sortBy, true);
 
-    this.insights = {results: results, ...insights};
-    console.log(`insightsfor ${this.type}:`, this.insights);
+    this.insights = {...newInsights, results: results, summary: summary}
+    console.log(`insights for ${this.type}:`, this.insights);
 
     this.isSearching = false;
     this.onSearchComplete(this);
