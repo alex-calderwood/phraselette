@@ -121,7 +121,6 @@ export class PrismEditor extends Component {
 
     // update the state text
     let newText = getTextWithWhitespace(this.contentRef.current);
-    console.log('editor: on input', newText, newText.length);
 
     // Ensure there's always at least one empty span
     // if (newText.length === 0) {

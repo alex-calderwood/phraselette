@@ -187,6 +187,8 @@ we will need to select the text children of the editor */
 
 .search-results {
   width: 100%;
+  max-height: 250px;
+  overflow-y: auto;
 }
 
 
@@ -215,9 +217,8 @@ we will need to select the text children of the editor */
 
 .token-range-parent {
   position: relative;
-  max-height: 400px; /* Adjust this value as needed */
-  /* overflow-y: auto; */
 }
+
 
 .token-range {
   position: relative;

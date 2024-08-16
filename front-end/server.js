@@ -7,6 +7,7 @@ const path = require("path");
 const http = require("http");
 const ws = require("ws");
 const axios = require("axios");
+const { makeID } = require("./src/server/utils.js");
 
 const { handleThesaurus, queryReader } = require("./src/server/queries.js");
 
@@ -68,11 +69,13 @@ app.get("*", (req, res) => {
 
 // WebSocket connection handling
 wss.on("connection", (clientSocket, req) => {
-  console.log("New WebSocket connection");
+  const clientID = makeID("user");
+
+  console.log("server: connect", clientID);
 
   clientSocket.on("message", async (data) => {
     const message = JSON.parse(data.toString());
-    console.log("on-msg:", message);
+    console.log("server: on-msg:", message);
 
     const handlers = {
       thesaurus: (message) => handleThesaurus(message, clientSocket),
@@ -82,20 +85,21 @@ wss.on("connection", (clientSocket, req) => {
 
     const handler = handlers[message.type];
     if (!handler) {
-      console.error("No handler for message type:", message.type);
+      console.error("server: No handler for message type:", message.type);
       return;
     }
 
     try {
       await handler(message);
     } catch (err) {
-      console.error("Handler error:", err);
+      console.error("server: Handler error:", err);
       clientSocket.send(JSON.stringify({ type: "error", error: err.message }));
     }
   });
 
   clientSocket.on("close", () => {
-    console.log("WebSocket connection closed");
+    console.log("server: ws:close", clientID);
+    // broadcast({type: "leave", clientID: clientID});
   });
 });
 
