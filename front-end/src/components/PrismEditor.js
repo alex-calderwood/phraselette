@@ -42,41 +42,41 @@ export class PrismEditor extends Component {
 
     // this.editorNode.addEventListener('focus', this.handleFocus);
 
-    let initializationText = "E";
+    let initializationText = "";
     // let testingText = `I arrived without a ladder, deciding it was better to be on time than prepared.`
   let testingText = `how well I would write if I were not here! If between the white page and the writing of words and stories that take shape and disappear without anyone's ever writing them there were not interposed that uncomfortable partition which is my person! Style, taste, individual philosophy, subjectivity, cultural background, real experience, psychology, talent, tricks of the trade: all the elements that make what I write recognizable as mine seem to me a cage that restricts my possibilities.`;
-// shackled gravitywell
+  // shackled gravitywell
 
-// tickticking pendulum
-// my parabolic mind swing swung swooning
-// passing yo's
-// to yesterday's mind farts
-// like a yo yo
-// yearning for the slow mo light show
-// of the Wizard's laser harmonograph
-// set to Meyer's ever so slowed concertos
+  // tickticking pendulum
+  // my parabolic mind swing swung swooning
+  // passing yo's
+  // to yesterday's mind farts
+  // like a yo yo
+  // yearning for the slow mo light show
+  // of the Wizard's laser harmonograph
+  // set to Meyer's ever so slowed concertos
 
-// the yo of a slowly slung
-// back sack on a stick
-// stacked as high as a homesick friend's
-// ransacked slapstick back whack
+  // the yo of a slowly slung
+  // back sack on a stick
+  // stacked as high as a homesick friend's
+  // ransacked slapstick back whack
 
-// which stings 
-// as a shot on the neck
-// flings the stupor at your breakneck fact check`
+  // which stings 
+  // as a shot on the neck
+  // flings the stupor at your breakneck fact check`
 
-    initializationText = testingText; // comment this out to be normal
+    // initializationText = testingText; // comment this out to be normal
     let content = [];
-    let initialId = getUniqueUUID();
-    for (let i = 0; i < initializationText.length; i++) {
-      let c = initializationText[i];
-      let id = getUniqueUUID();
-      if (i === 0) { initialId = id; }
-      content.push(`<span id=${id} c=${i}>${c}</span>`);
-    }
-    if (content.length === 0) {
-      content.push(`<span id=${initialId} c="0"></span>`);
-    }
+    // let initialId = getUniqueUUID();
+    // for (let i = 0; i < initializationText.length; i++) {
+    //   let c = initializationText[i];
+    //   let id = getUniqueUUID();
+    //   if (i === 0) { initialId = id; }
+    //   content.push(`<span id=${id} c=${i}>${c}</span>`);
+    // }
+    // if (content.length === 0) {
+    //   content.push(`<span id=${initialId} c="0"></span>`);
+    // }
 
     // this.state = { content: content.join("") };
     this.setState({content: content.join("")}, () => {
@@ -88,7 +88,7 @@ export class PrismEditor extends Component {
         this.props.setText(initializationText); // give the new text to the parent
       }
   
-      setTimeout(() => this.moveSelectionToEndOfEditor(), 0);
+      if (initializationText?.length > 0) setTimeout(() => this.moveSelectionToEndOfEditor(), 0);
     });
 
     window.editorNode = this.editorNode;
@@ -121,6 +121,14 @@ export class PrismEditor extends Component {
 
     // update the state text
     let newText = getTextWithWhitespace(this.contentRef.current);
+    console.log('editor: on input', newText, newText.length);
+
+    // Ensure there's always at least one empty span
+    // if (newText.length === 0) {
+    //   this.contentRef.current.innerHTML = `<span id="$abcde" c="0"></span>`;
+    // } else {
+    //   this.splitIntoCharactersAndStyle(this.contentRef.current);
+    // }
 
     // // update each modified token (currently broken)
     // this.tokenManager.synchronizeTokens(this.keyDownSelection, this.keyDownSelection, event);
@@ -130,6 +138,12 @@ export class PrismEditor extends Component {
 
     // give the new text to the parent component
     if (this.props.setText) { this.props.setText(newText); }
+
+      // // If the editor is empty after input, ensure there's an empty span and move the cursor
+      // if (newText.length === 0) {
+      //   this.contentRef.current.innerHTML = `<span id="${getUniqueUUID()}" c="0"></span>`;
+      //   setTimeout(() => this.moveSelectionToEndOfEditor(), 0);
+      // }
 
     // Use a timeout to delay execution of restoring the selection
     // This ensures that the DOM updates have completed before the selection is restored
@@ -595,14 +609,24 @@ export class PrismEditor extends Component {
     let newSpans = [];
 
     if (!child) {
+      console.log('editor: no children');
       let text = content.textContent;
       content.innerHTML = '';
       for (let i = 0; i < text.length; i++) {
-        const [span, newID] = this.createCharacterSpan(text, i);
+        const [span, newID] = this.createCharacterSpan(text[i], i);
+        content.appendChild(span);
+        newSpans.push(span);
+      }
+      // If there's still no content, create an empty span
+      if (newSpans.length === 0) {
+        console.log('editor: no content, creating character span');
+        const [span, newID] = this.createCharacterSpan('', 0);
         content.appendChild(span);
         newSpans.push(span);
       }
     }
+  
+  
 
     while (child) {
       if (child.tagName == "BR") {

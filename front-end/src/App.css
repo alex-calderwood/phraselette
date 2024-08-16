@@ -215,11 +215,8 @@ we will need to select the text children of the editor */
 
 .token-range-parent {
   position: relative;
-}
-
-.token-range-parent {
   max-height: 400px; /* Adjust this value as needed */
-  overflow-y: auto;
+  /* overflow-y: auto; */
 }
 
 .token-range {
