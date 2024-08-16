@@ -119,8 +119,11 @@ export class TokenRange extends Component {
         onMouseLeave={() => this.debouncedSetHoveredSequenceId(null)}
         style={style}
         onClick={() => { 
-          this.props.onClickSequence(sequence); 
+          if (this.props.onClickSequence) {
+            this.props.onClickSequence(sequence); 
+          }
         }}
+  
       >
         {/* Render tokens */}
         {sequence.span.map((token) => { return this.renderToken(tokenType, token, expanded); })}

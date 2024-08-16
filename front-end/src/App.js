@@ -283,6 +283,24 @@ class App extends Component {
     this.editorRef.current.swapText(start, end, newText);
   }
 
+  // Wrapper that is used to swap only while in App.js
+  handleTopLevelSequenceClick = (newSequence) => {
+    // Determine which prism type to use (e.g., 'words' or the first active prism)
+    const prismType = this.state.activePrisms[0]?.type || 'words';
+    
+    // Get the current selection range
+    const startChar = this.state.selection ? this.state.selection.startIndex : null;
+    const endChar = this.state.selection ? this.state.selection.endIndex - 1 : null;
+  
+    // Retrieve the relevant tokens
+    const oldTokens = startChar !== null ? this.tokenManager.tokensAt(prismType, startChar, endChar) : [];
+  
+    console.log('Handling top-level click on sequence:', oldTokens, newSequence);
+    
+    // Call swapSequence with the retrieved tokens and the clicked sequence
+    this.swapSequence(oldTokens, newSequence);
+  }
+
   onKeyDown(event) {
     if (event.metaKey && event.key === "k") {
       return this.handleRetokenize();
@@ -395,9 +413,7 @@ class App extends Component {
                   wrap={false}
                   verticalLayout={true}
                   showLength={true}
-                  onClickSequence={(oldS, newS) => {
-                    this.swapSequence(oldS, newS);
-                  }}
+                  onClickSequence={this.handleTopLevelSequenceClick}
                 />
                 {/* onClickSequence={this.onClickSequence.bind(this)} /> */}
                 {/* Display the active prisms */}

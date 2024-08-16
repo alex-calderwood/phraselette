@@ -10,7 +10,7 @@ const MIN_LOGPROB = -15; // 1e-1000
 const MID_LOGPROB = -5;   // 1e-10
 const MAX_LOGPROB = 0;
 
-const BRIGHTEN = 2;
+const BRIGHTEN = 2.5;
 
 export function getColor(tokenType, token) {
   let prob = token.getAttribute('prob', 0);
