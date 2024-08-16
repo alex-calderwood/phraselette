@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {getLengthNormedLogProbToColor} from '../scripts/color'
+import { getLogProbToColor } from '../scripts/color'
+import { humanLog } from '../scripts/utils'
 
-const defaultRange = [Math.log(1e-12), 0]
+const defaultRange = [Math.log(1e-12), 0];
+const DEFAULT_HEIGHT = 4;
+const GAP_HEIGHT = 4;
 const gray = '#2f2f2f';
 
 export const LogHistogram = ({ data, onUpdate, hasData }) => {
@@ -83,16 +86,24 @@ export const LogHistogram = ({ data, onUpdate, hasData }) => {
         const binEdge = data.bin_edges[index];
         const x = Math.floor(linearScale(binEdge, dataMin, dataMax, 0, width));
         const barWidth = Math.ceil(width / data.counts.length);
-        const barHeight = Math.ceil((count / maxCount) * height);
-        const y = height - barHeight;
-  
+        const scaledBarHeight = Math.ceil((count / maxCount) * (height - DEFAULT_HEIGHT - GAP_HEIGHT));
+        const y = height - scaledBarHeight - DEFAULT_HEIGHT - GAP_HEIGHT;
+
+        let colorColor = getLogProbToColor(binEdge).hex();
+        let barColor;
         if (binEdge >= minValue && binEdge <= maxValue) {
-          ctx.fillStyle = getLengthNormedLogProbToColor(binEdge).hex();
+          barColor = colorColor;
         } else {
-          ctx.fillStyle = gray;
+          barColor = gray;
         }
-  
-        ctx.fillRect(x, y, barWidth, barHeight);
+
+        // Draw the main histogram bar
+        ctx.fillStyle = barColor;
+        ctx.fillRect(x, y, barWidth, scaledBarHeight);
+
+        // Draw the color bar at the bottom
+        ctx.fillStyle = colorColor;
+        ctx.fillRect(x, height - DEFAULT_HEIGHT, barWidth, DEFAULT_HEIGHT);
       });
     }
 
@@ -114,8 +125,10 @@ export const LogHistogram = ({ data, onUpdate, hasData }) => {
     ctx.stroke();
 
     ctx.fillStyle = gray;
-    ctx.fillText(maxValue.toFixed(2), maxX - 22, height - 5);
-    ctx.fillText(minValue.toFixed(2), minX + 5, height - 5);
+    let min = humanLog(minValue);
+    let max = humanLog(maxValue);
+    ctx.fillText(min, minX + 5, height - 5);
+    ctx.fillText(max, maxX - 22, height - 5);
   };
 
   const handleMouseDown = (e) => {

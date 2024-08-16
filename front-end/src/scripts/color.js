@@ -2,7 +2,16 @@ import chroma from "chroma-js";
 const colorScale = chroma.scale(['red', 'white', 'green', 'green']).mode('lab');
 const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple', 'cyan', 'coral', 'teal', 'orange', 'skyblue', 'burlywood']).mode('lab');
 
-const brightenFactor = 3;
+
+// Define the color scale
+const logScale = chroma.scale(['red', 'yellow', 'green']).mode('lab');
+
+// Define the logprob thresholds
+const MIN_LOGPROB = -15; // 1e-1000
+const MID_LOGPROB = -5;   // 1e-10
+const MAX_LOGPROB = 0;
+
+const BRIGHTEN = 2;
 
 export function getColor(tokenType, token) {
   let prob = token.getAttribute('prob', 0);
@@ -45,7 +54,7 @@ export const categoryToColor = (word) => {
 
   // rainbow scale
   const alpha = 0.3;
-  let hex = rainbowScale(prob).brighten(brightenFactor).hex();
+  let hex = rainbowScale(prob).brighten(BRIGHTEN).hex();
   return hex;
 };
 
@@ -60,20 +69,31 @@ const probColor = (token) => {
 
 export function lengthNormedLogProbToColor(token) {
   let prob = token.getAttribute('prob', 0);
-  return getLengthNormedLogProbToColor(prob).css();
+  return getLogProbToColor(prob).css();
 }
 
-export function getLengthNormedLogProbToColor(inProb) {
-  // let normalized = (inProb + 6) / 6;     // normalize to [0, 1] weird
-  let color = colorScale(inProb).brighten(brightenFactor);
-  console.log('colors', {inProb, color})
+
+export function getLogProbToColor(logProb) {
+  // Clamp the logProb to our defined range
+  const clampedLogProb = Math.max(MIN_LOGPROB, Math.min(MAX_LOGPROB, logProb));
+  
+  // Normalize the logProb to a 0-1 range
+  let normalizedValue;
+  if (clampedLogProb <= MID_LOGPROB) {
+    normalizedValue = (clampedLogProb - MIN_LOGPROB) / (MID_LOGPROB - MIN_LOGPROB) * 0.5;
+  } else {
+    normalizedValue = 0.5 + (clampedLogProb - MID_LOGPROB) / (MAX_LOGPROB - MID_LOGPROB) * 0.5;
+  }
+  
+  // Get the color and apply brightening
+  let color = logScale(normalizedValue).brighten(BRIGHTEN);
   return color;
 }
 
 
 export function zeroToOneColor(val) {
   let alpha = 0.5;
-  let hex = colorScale(val).brighten(brightenFactor).css();
+  let hex = colorScale(val).brighten(BRIGHTEN).css();
   return hex;
 }
 

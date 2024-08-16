@@ -194,14 +194,14 @@ async function* callSpacy(context, tokenizeRange, additionalRequests) {
 
   returns: [Token] - a list of tokens spans that satisfy the constraints (each token span is a list of tokens)
 */
-export async function searchForward(document, constraints, depth, top_k=150) {
+export async function searchForward(document, constraints, depth, top_k=50) {
   if (document.prefixText.length === 0) {
-    return [];
+    return [[], null];
   }
 
   if (!depth || depth < 1) {
     console.error("searchForward called with invalid depth", depth);
-    return [];
+    return [[], null];
   }
   let sequenceGenerator = callSearch(document.prefixText, top_k, depth);
 

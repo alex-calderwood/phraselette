@@ -35,3 +35,23 @@ export function debounce(func, wait) {
     timeout = setTimeout(later, wait);
   };
 }
+
+export function humanLog(logProb) {
+  if (logProb === 0) return "0";
+
+  const absLogProb = Math.abs(logProb);
+  
+  if (absLogProb >= 100) {
+    // For very large absolute values
+    return logProb.toFixed(0);
+  } else if (absLogProb >= 10) {
+    // For moderately large absolute values
+    return logProb.toFixed(0);
+  } else if (absLogProb >= 1) {
+    // For absolute values between 1 and 10
+    return logProb.toFixed(0);
+  } else {
+    // For small absolute values (< 1)
+    return logProb.toFixed(1);
+  }
+}

@@ -1,6 +1,7 @@
 import React, { Component, createRef } from "react";
 import { getColor, zeroToOneColor, categoryToColor } from "../scripts/color";
 import { getUniqueUUID, scientific, debounce } from "../scripts/utils";
+import { humanLog } from "../scripts/utils";
 
 function tokenItemsToShow(tokenType) {
   let show = {
@@ -95,6 +96,7 @@ export class TokenRange extends Component {
 
   renderSequence(sequence, tokenType, expanded) {
     let prob = sequence.getAttribute('prob', null);
+
     let probColor = zeroToOneColor(prob);
     let id = `${this.id}-sequence-${sequence.id}`;
     // let score = sequence?.scores[scoreLookup]?.value;
@@ -122,7 +124,7 @@ export class TokenRange extends Component {
             {scientific(score)}
           </div> */}
         {expanded && prob ? <div className="item" style={{ backgroundColor: probColor }}>
-          {scientific(prob)}
+          {humanLog(prob)}
         </div> : ""}
     </div>;
   }
@@ -134,7 +136,7 @@ export class TokenRange extends Component {
 
     let prob = fields.includes('prob') ? token.getAttribute('prob') : null;
     if (prob != null) {
-        prob = scientific(prob);
+        prob = humanLog(prob);
     }
 
     let sound = fields.includes('sound') ? token.getAttribute('phonemes', null)?.join(' ') : null;
@@ -143,7 +145,6 @@ export class TokenRange extends Component {
     let posColor = color;
     if (pos != null) { posColor = categoryToColor(pos); }
 
-    // let onClick = this.props.onTokenClick ? this.props.onTokenClick : () => { };
     let showCharRange = this.props.debugMode && token.start !== undefined && token.end !== undefined;
 
     const simple = expanded ? '' : 'simple';

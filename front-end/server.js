@@ -144,7 +144,6 @@ async function* makeRequest(message) {
     });
 
     let buffer = '';
-
     for await (const chunk of response.data) {
       buffer += chunk.toString();
       const lines = buffer.split(breakToken);

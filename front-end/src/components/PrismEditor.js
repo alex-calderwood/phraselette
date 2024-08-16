@@ -43,7 +43,8 @@ export class PrismEditor extends Component {
     // this.editorNode.addEventListener('focus', this.handleFocus);
 
     let initializationText = "E";
-    let testingText = `I arrived without a ladder, deciding it was better to be on time than prepared.`
+    // let testingText = `I arrived without a ladder, deciding it was better to be on time than prepared.`
+  let testingText = `how well I would write if I were not here! If between the white page and the writing of words and stories that take shape and disappear without anyone's ever writing them there were not interposed that uncomfortable partition which is my person! Style, taste, individual philosophy, subjectivity, cultural background, real experience, psychology, talent, tricks of the trade: all the elements that make what I write recognizable as mine seem to me a cage that restricts my possibilities.`;
 // shackled gravitywell
 
 // tickticking pendulum
@@ -284,7 +285,7 @@ export class PrismEditor extends Component {
     if (this.tokenManager) {
       let curTokens = this.tokenManager.tokens[tokenType];
       if (!curTokens) {
-        console.error('on text update tokenType not found', tokenType);
+        console.error('editor: on text update tokenType not found', tokenType);
         return;
       }
 
@@ -316,7 +317,7 @@ export class PrismEditor extends Component {
   }
 
   forceTokenize(prisms=this.tokenManager.activePrisms) {
-    console.log("force tokenizing prisms", prisms)
+    console.log("editor: force tokenizing prisms", prisms)
     if (prisms.length < 1) { return; }
 
     let document = new Document(
@@ -338,7 +339,7 @@ export class PrismEditor extends Component {
   }
 
   manualRetokenizeAction() {
-    console.log('manually tokenizing');
+    console.log('editor: manually tokenizing');
     this.forceTokenize();
     this.splitIntoCharactersAndStyle(this.contentRef.current);
     setTimeout(() => {
@@ -356,7 +357,7 @@ export class PrismEditor extends Component {
       this.tokenManager
     );
 
-    console.log('manually searching', document.selectionText);
+    console.log('editor: manually searching', document.selectionText);
     this.props.doSearch(document);
   }
 
@@ -417,7 +418,7 @@ export class PrismEditor extends Component {
     newSpan.textContent = newText;
 
     let oldText = range.toString();
-    console.log('swap text', start, end, 'for', newText, 'from', oldText);
+    console.log('editor: swap text', start, end, 'for', newText, 'from', oldText);
 
     // Get the parent node before deleting contents
     // let startParent = startSpan.parentNode;
@@ -445,7 +446,7 @@ export class PrismEditor extends Component {
     selection.removeAllRanges();
     selection.addRange(newRange);
 
-    console.log('selection', selection, selection.anchorOffset, selection.focusOffset, 'range', newRange, newRange.startOffset, newRange.endOffset);
+    // console.log('editor: selection', selection, selection.anchorOffset, selection.focusOffset, 'range', newRange, newRange.startOffset, newRange.endOffset);
     this.updateSelection();
   }
 
@@ -515,7 +516,7 @@ export class PrismEditor extends Component {
   */
   setSpanAttributes(element, c) {
     if (typeof c !== 'number') {
-      console.error('styleChild called with', typeof c);
+      console.error('editor: styleChild called with', typeof c);
     } 
 
     element.setAttribute('c', c);
@@ -554,13 +555,13 @@ export class PrismEditor extends Component {
         // nothing needs to be done to color a new line character
         continue;
       }
-      console.error("coloring-> no span for", token)
+      console.error("editor: coloring-> no span for", token)
     }
   }
 
   colorCharacterByProb(child, c) {
     if (typeof c !== 'number') {
-      console.error('colorCharacterByProb called with', typeof c);
+      console.error('editor: colorCharacterByProb called with', typeof c);
     }
 
     let tokenType = this.props.prismToHighlight.tokenType;
@@ -577,7 +578,7 @@ export class PrismEditor extends Component {
       child.style.backgroundColor = color;
 
     } else {
-      console.error('No token manager to color');
+      console.error('editor: No token manager to color');
     }
   }
 

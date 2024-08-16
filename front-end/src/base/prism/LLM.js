@@ -44,7 +44,7 @@ export class ContextPrism extends Prism {
   }
 
   async onSearchResults(insights, document, constraints, numWords) {
-    let predictions = insights.predictions
+    let predictions = insights.predictions;
 
     for (let prediction of predictions) {
       let wordTokens = await miscTokensToWordTokens(prediction.span, document, numWords);

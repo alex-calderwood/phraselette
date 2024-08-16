@@ -1,4 +1,3 @@
-
 import tensorflow as tf
 from transformers import TFGPT2LMHeadModel, GPT2TokenizerFast, TFLogitsProcessorList
 from logits import SpaceAwareLogitsProcessor, EndlessLogitsProcessor
@@ -11,6 +10,8 @@ import numpy as np
 gpu = True
 # ZERO_PROB = -3.4028235931503486e+35 # threshold at which we consider something infinitely unlikely
 ZERO_LOG_PROB = np.log(1e-12)
+NEG_INF = -1e300
+
 
 # Set the environment variable to use GPU 5
 # os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -27,6 +28,23 @@ tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
 model = TFGPT2LMHeadModel.from_pretrained("gpt2", pad_token_id=tokenizer.eos_token_id)
 
 print('loaded', model)
+
+# JSON can't handle -Infinity
+# Turn any -inf in the result into a very small number
+def fix_infinity(d): 
+    if isinstance(d, list):
+        for i in range(len(d)):
+            if isinstance(d[i], dict):
+                fix_infinity(d[i])
+    elif isinstance(d, dict):
+        for key in d:
+            # check for -Infinity
+            if d[key] == float('-inf'):
+                d[key] = NEG_INF
+            if isinstance(d[key], dict):
+                fix_infinity(d[key])
+
+    return d
 
 with tf.device('/GPU:1'):
     # Create the LogitsProcessors
@@ -97,7 +115,6 @@ with tf.device('/GPU:1'):
                 original_log_prob = log_probs[original_word_id].numpy()
                 original_prob = np.exp(original_log_prob)
                 # token_logits = greedy_output_dict.scores[0][0]
-                # original_log_prob = token_logits[original_word_id].numpy()
 
                 # calculate the character offset from the start of the phrase (not counting the extra context)
                 offset = calculate_offset(offsets[:, i - context_len, :], extra_context, start_token_offset)
@@ -124,7 +141,7 @@ with tf.device('/GPU:1'):
                     'alternates': alternates,     # top k alternates
                 }
 
-                yield result
+                yield fix_infinity(result)
 
         except Exception as e:
             print('Error:', e)
@@ -188,17 +205,18 @@ with tf.device('/GPU:1'):
             return_tensors='tf'
         )
 
-        print(encoding)
-
         input_ids = encoding['input_ids']
         offsets = encoding['offset_mapping']
         input_len = len(input_ids[0])
         max_length = input_len + depth
 
+        print('input_ids', input_ids.shape)
+
         print('ends with space', ends_with_space, 'input_len', input_len, 'max_length', max_length)
         space_aware_processor.set_ends_with_space(ends_with_space)
         space_aware_processor.set_input_len(input_len)
 
+        print('searching')
         beam_output = model.generate(
             input_ids,
             max_length=max_length,
@@ -216,6 +234,7 @@ with tf.device('/GPU:1'):
 
         # Add these lines to check the overall shape of beam_token_scores
         print("Shape of beam_token_scores:", [s.shape for s in beam_output.scores])
+        print("keys in output", beam_output.keys())
 
         for beam_idx in range(num_beams):
             sequence = []
@@ -224,6 +243,9 @@ with tf.device('/GPU:1'):
             beam_tokens = beam_output.sequences[beam_idx, len(input_ids[0]):]
             beam_token_scores = beam_output.scores
             # log_probs = tf.nn.log_softmax(beam_token_scores[token_idx])
+            print('sequences', beam_output.sequences.shape, beam_output.sequences)
+            print('beam_sequence scores', beam_output.sequences_scores.shape, beam_output.sequences_scores)
+            print('scores', len(beam_token_scores))
 
             for token_idx, token_id in enumerate(beam_tokens):
                 # token_text = tokenizer.decode(token_id, skip_special_tokens=True) # eventually it would be nice to use this but we would have to deal with "" tokens
@@ -245,22 +267,30 @@ with tf.device('/GPU:1'):
 
                 # Calculate token probability
                 token_logits = beam_token_scores[token_idx][beam_idx]
+                inf_count, non_inf_count = tf.math.count_nonzero(tf.math.is_inf(token_logits)), tf.math.count_nonzero(tf.math.is_finite(token_logits))
+                print(f"Inf logits: {inf_count.numpy()}, Non-inf logits: {non_inf_count.numpy()}")
                 # token_probs = tf.nn.softmax(token_logits)
                 # token_prob = float(token_probs[token_id])
                 # log_prob = float(token_logits[token_id])
-                log_prob = float(token_logits[token_id] - tf.reduce_logsumexp(token_logits)) # same as log_softmax but more efficient
+                print('min logit:', tf.reduce_min(token_logits), 'max logit:', tf.reduce_max(token_logits))
+                log_probs =  tf.nn.log_softmax(token_logits) # float(token_logits[token_id] - tf.reduce_logsumexp(token_logits)) # same as log_softmax but more efficient
+                print('min log_prob:', tf.reduce_min(log_probs), 'max log_prob:', tf.reduce_max(log_probs))
+                print('token_id:', token_id, 'vocab_size:', log_probs.shape[-1])
+                log_prob = log_probs[token_id] # could be interesting to return a branching structure using the full log_probs
+                print('log_prob', log_prob, 'logits', token_logits[token_id])
                 token_prob = float(tf.exp(log_prob))
 
                 token = {
                     'thing': 'token',
                     'token': token_text,
-                    'prob': token_prob,
-                    'log_prob': log_prob,
+                    'prob': float(token_prob),
+                    'log_prob': float(log_prob),
                     'span': offset,
                 }
                 sequence.append(token)
 
-            # print('---seq', sequence)
+            sequence = fix_infinity(sequence)
+            print('---seq', sequence)
             yield sequence
 
         # Finally, compute a rough histogram of the results
@@ -269,7 +299,7 @@ with tf.device('/GPU:1'):
         
         yield {
             'thing': 'summary',
-            'summary': summary
+            'summary': fix_infinity(summary)
         }
 
     def print_output(input, output):
