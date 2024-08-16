@@ -39,6 +39,8 @@ export class PrismEditor extends Component {
     this.editorNode.addEventListener('keydown', this.onKeyDown.bind(this));
     this.editorNode.addEventListener('keyup', this.onKeyUp.bind(this));
     this.editorNode.addEventListener('paste', this.handlePaste);
+    this.editorNode.addEventListener('blur', this.handleBlur);
+    this.editorNode.addEventListener('focus', this.handleFocus);
 
     // this.editorNode.addEventListener('focus', this.handleFocus);
 
@@ -101,6 +103,8 @@ export class PrismEditor extends Component {
     this.editorNode.removeEventListener('keydown', this.onKeyDown);
     this.editorNode.removeEventListener('keyup', this.onKeyUp);
     this.editorNode.removeEventListener('paste', this.handlePaste);
+    this.editorNode.removeEventListener('blur', this.handleBlur);
+    this.editorNode.removeEventListener('focus', this.handleFocus);
     // this.editorNode.removeEventListener('focus', this.handleFocus);
   }
 
@@ -108,6 +112,15 @@ export class PrismEditor extends Component {
     if (this.state.content !== prevState.content) {
       // console.log('content updated', this.state.content);
     }
+  }
+
+  handleBlur = () => {
+    this.onKeyDown();
+    this.onKeyUp();
+  }
+
+  handleFocus = () => {
+    this.restoreSelection();
   }
 
   /*
@@ -214,6 +227,7 @@ export class PrismEditor extends Component {
         // the text that is selected
         text: windowSelection.toString(),
       };
+      console.log('editor: saving selection', { ...selection });
       return selection;
     }
     else {
@@ -223,7 +237,10 @@ export class PrismEditor extends Component {
 
   restoreSelection(event) { // TODO this should use the event data again
     if (this.keyUpSelection) {
-      setCursorAtOffset(this.editorNode, this.keyUpSelection.prefixOffset);
+      const startOffset = this.keyUpSelection.prefixOffset;
+      const endOffset = startOffset + (this.keyUpSelection.text ? this.keyUpSelection.text.length : 0);
+      console.log('editor: restoring selection', startOffset, endOffset);
+      setSelection(this.editorNode, startOffset, endOffset);
     }
   }
 
@@ -355,9 +372,9 @@ export class PrismEditor extends Component {
     console.log('editor: manually tokenizing');
     this.forceTokenize();
     this.splitIntoCharactersAndStyle(this.contentRef.current);
-    setTimeout(() => {
-      this.restoreSelection();
-    }, 0);
+    // setTimeout(() => {
+    //   this.restoreSelection();
+    // }, 0);
   }
 
   manualSearchAction() {
@@ -370,8 +387,12 @@ export class PrismEditor extends Component {
       this.tokenManager
     );
 
-    console.log('editor: manually searching', document.selectionText);
+    console.log('editor: manually searching text', document.selectionText);
     this.props.doSearch(document);
+    console.log('editor: keydown',  { ...this.keyDownSelection });
+    // setTimeout(() => {
+    //   this.restoreSelection();
+    // }, 0);
   }
 
   /*
@@ -744,46 +765,112 @@ function getCursorOffsetInDiv(editor) {
   return 0; // No range found, or no selection
 }
 
-function setCursorAtOffset(editor, offset) {
+// function setCursorAtOffset(editor, offset) {
+//   try {
+//     var currentOffset = 0;
+//     var found = false;
+
+//     // Helper function to traverse the nodes
+//     function traverseNodes(node) {
+//       if (node.nodeType === 3) { // Text node
+//         var nextOffset = currentOffset + node.length;
+//         if (offset <= nextOffset) {
+//           rangy.getSelection().collapse(node, offset - currentOffset);
+//           found = true;
+//           return; // Found the position, exit the traversal
+//         }
+//         currentOffset = nextOffset;
+//       } else if (node.nodeType === 1) { // Element node (e.g., <div>, <br>, etc.)
+//         // Count a newline if it's a block element or a break
+//         if (node.tagName === 'BR' || window.getComputedStyle(node).display === 'block') {
+//           currentOffset++;
+//           if (offset === currentOffset) {
+//             rangy.getSelection().collapse(node, 0);
+//             found = true;
+//             return; // Found the position, exit the traversal
+//           }
+//         }
+//         // Recurse through child nodes
+//         Array.from(node.childNodes).forEach(traverseNodes);
+//         if (found) return;
+//       }
+//     }
+
+//     // Start traversal from the editor's child nodes
+//     Array.from(editor.childNodes).forEach(traverseNodes);
+
+//     // If the specified offset is beyond the last character, collapse at the end
+//     if (!found) {
+//       rangy.getSelection().collapse(editor, editor.childNodes.length);
+//     }
+//   } catch (e) {
+//     console.error('Error setting cursor position:', e);
+//   }
+// }
+
+function setSelection(editor, startOffset, endOffset = startOffset) {
   try {
     var currentOffset = 0;
-    var found = false;
+    var startNode = null;
+    var endNode = null;
+    var startNodeOffset = 0;
+    var endNodeOffset = 0;
 
-    // Helper function to traverse the nodes
     function traverseNodes(node) {
       if (node.nodeType === 3) { // Text node
         var nextOffset = currentOffset + node.length;
-        if (offset <= nextOffset) {
-          rangy.getSelection().collapse(node, offset - currentOffset);
-          found = true;
-          return; // Found the position, exit the traversal
+        if (!startNode && startOffset <= nextOffset) {
+          startNode = node;
+          startNodeOffset = startOffset - currentOffset;
+        }
+        if (!endNode && endOffset <= nextOffset) {
+          endNode = node;
+          endNodeOffset = endOffset - currentOffset;
+          return true; // Stop traversal
         }
         currentOffset = nextOffset;
       } else if (node.nodeType === 1) { // Element node (e.g., <div>, <br>, etc.)
-        // Count a newline if it's a block element or a break
         if (node.tagName === 'BR' || window.getComputedStyle(node).display === 'block') {
           currentOffset++;
-          if (offset === currentOffset) {
-            rangy.getSelection().collapse(node, 0);
-            found = true;
-            return; // Found the position, exit the traversal
+          if (!startNode && startOffset === currentOffset) {
+            startNode = node;
+            startNodeOffset = 0;
+          }
+          if (!endNode && endOffset === currentOffset) {
+            endNode = node;
+            endNodeOffset = 0;
+            return true; // Stop traversal
           }
         }
         // Recurse through child nodes
-        Array.from(node.childNodes).forEach(traverseNodes);
-        if (found) return;
+        for (let child of node.childNodes) {
+          if (traverseNodes(child)) return true;
+        }
       }
+      return false;
     }
 
     // Start traversal from the editor's child nodes
-    Array.from(editor.childNodes).forEach(traverseNodes);
+    Array.from(editor.childNodes).some(traverseNodes);
 
-    // If the specified offset is beyond the last character, collapse at the end
-    if (!found) {
-      rangy.getSelection().collapse(editor, editor.childNodes.length);
+    // Set the selection
+    const range = rangy.createRange();
+    if (startNode) {
+      range.setStart(startNode, startNodeOffset);
+    } else {
+      range.setStart(editor, editor.childNodes.length);
     }
+    if (endNode) {
+      range.setEnd(endNode, endNodeOffset);
+    } else {
+      range.setEnd(editor, editor.childNodes.length);
+    }
+
+    const selection = rangy.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
   } catch (e) {
-    console.error('Error setting cursor position:', e);
+    console.error('Error setting selection:', e);
   }
 }
 
