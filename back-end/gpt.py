@@ -18,16 +18,16 @@ NEG_INF = -1e300
 
 # Verify that TensorFlow is using the GPU
 if gpu: 
-    print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-    print("Is GPU available: ", tf.test.is_gpu_available())
-    print("GPU Device Name: ", tf.test.gpu_device_name())
+    print("gpt: Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+    print("gpt: Is GPU available: ", tf.test.is_gpu_available())
+    print("gpt: GPU Device Name: ", tf.test.gpu_device_name())
 
 tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
 
 # add the EOS token as PAD token to avoid warnings
 model = TFGPT2LMHeadModel.from_pretrained("gpt2", pad_token_id=tokenizer.eos_token_id)
 
-print('loaded', model)
+print('gpt: loaded', model)
 
 # JSON can't handle -Infinity
 # Turn any -inf in the result into a very small number
@@ -103,18 +103,13 @@ with tf.device('/GPU:1'):
             for i in tqdm(range(context_len, total_len)):
                 original_word_id = all_ids[0][i]
                 max_length = len(all_ids[0][:i]) + 1
-                # print('i', i, 'original_word', original_word, 'max_length', max_length, 'input', input_ids[:, :i])
 
                 greedy_output_dict = model.generate(
                     all_ids[:, :i], max_length=max_length, output_scores=True, return_dict_in_generate=True
                 )
-                # token_probs = tf.nn.softmax(greedy_output_dict.scores[0])[0]
-                # original_prob = token_probs[original_word_id].numpy()
-
                 log_probs = tf.nn.log_softmax(greedy_output_dict.scores[0])[0]
                 original_log_prob = log_probs[original_word_id].numpy()
                 original_prob = np.exp(original_log_prob)
-                # token_logits = greedy_output_dict.scores[0][0]
 
                 # calculate the character offset from the start of the phrase (not counting the extra context)
                 offset = calculate_offset(offsets[:, i - context_len, :], extra_context, start_token_offset)
@@ -186,18 +181,25 @@ with tf.device('/GPU:1'):
         }
         print("summary", summary)
         return summary
+    
+    def remove_prefix_space(token_text):
+        if token_text.startswith(' '):
+            token_text = token_text[1:]
+        else:
+            print('WARNING, token does not start with space despite our forced logits manipulation', token_text)
+        return token_text
 
     def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos_token, logits_processor=logits_processor):
         text = text.replace('\xa0', ' ') # get rid of non-breaking space characters which seem to mess things up
-        ends_with_space = text.endswith(' ')
-        if ends_with_space:
+        input_ends_with_space = text.endswith(' ')
+        if input_ends_with_space:
             text = text[:-1]
 
         num_beams = top_k
         num_beams = (num_beams // num_beam_groups) * num_beam_groups # Ensure num_beams is divisible by num_beam_groups
         num_beam_groups = min(num_beam_groups, num_beams)
 
-        print(f'forward |{text}|', 'k', top_k, 'depth', depth,'beams', num_beams, 'beam groups', num_beam_groups, 'ends space', ends_with_space)
+        print(f'search: forward |{text}|', 'k', top_k, 'depth', depth,'beams', num_beams, 'beam groups', num_beam_groups, 'ends space', input_ends_with_space)
 
         encoding = tokenizer.encode_plus(
             text,
@@ -210,10 +212,11 @@ with tf.device('/GPU:1'):
         input_len = len(input_ids[0])
         max_length = input_len + depth
 
-        print('input_ids', input_ids.shape)
-
-        print('ends with space', ends_with_space, 'input_len', input_len, 'max_length', max_length)
-        space_aware_processor.set_ends_with_space(ends_with_space)
+        # we are using a special processor that, if the input text ends with a space,
+        # will only allow words that START with a space, which is where GPT-2 expects the space to be (rather than at the end)
+        # we then remove this extra space from the result
+        print('search: input_ids', input_ids.shape, 'ends with space', input_ends_with_space, 'input_len', input_len, 'max_length', max_length)
+        space_aware_processor.set_ends_with_space(input_ends_with_space)
         space_aware_processor.set_input_len(input_len)
 
         print('searching')
@@ -232,31 +235,18 @@ with tf.device('/GPU:1'):
             logits_processor=logits_processor
         )
 
-        # Add these lines to check the overall shape of beam_token_scores
-        print("Shape of beam_token_scores:", [s.shape for s in beam_output.scores])
-        print("keys in output", beam_output.keys())
-
         for beam_idx in range(num_beams):
             sequence = []
-            current_end = offsets[-1, -1, 1].numpy().item() + (1 if ends_with_space else 0)
+            current_end = offsets[-1, -1, 1].numpy().item() + (1 if input_ends_with_space else 0)
         
             beam_tokens = beam_output.sequences[beam_idx, len(input_ids[0]):]
             beam_token_scores = beam_output.scores
-            # log_probs = tf.nn.log_softmax(beam_token_scores[token_idx])
-            print('sequences', beam_output.sequences.shape, beam_output.sequences)
-            print('beam_sequence scores', beam_output.sequences_scores.shape, beam_output.sequences_scores)
-            print('scores', len(beam_token_scores))
-
             for token_idx, token_id in enumerate(beam_tokens):
-                # token_text = tokenizer.decode(token_id, skip_special_tokens=True) # eventually it would be nice to use this but we would have to deal with "" tokens
                 token_text= tokenizer.decode(token_id)
 
                 # If it is the first token we generate, remove the prefix space
-                if token_idx == 0:
-                    if token_text.startswith(' '):
-                        token_text = token_text[1:]
-                    else:   
-                        print('WARNING, token does not start with space:', token_text)
+                if input_ends_with_space and token_idx == 0:
+                    token_text = remove_prefix_space(token_text)
                         
                 # Calculate offset
                 token_length = len(token_text)
@@ -267,17 +257,9 @@ with tf.device('/GPU:1'):
 
                 # Calculate token probability
                 token_logits = beam_token_scores[token_idx][beam_idx]
-                inf_count, non_inf_count = tf.math.count_nonzero(tf.math.is_inf(token_logits)), tf.math.count_nonzero(tf.math.is_finite(token_logits))
-                print(f"Inf logits: {inf_count.numpy()}, Non-inf logits: {non_inf_count.numpy()}")
-                # token_probs = tf.nn.softmax(token_logits)
-                # token_prob = float(token_probs[token_id])
-                # log_prob = float(token_logits[token_id])
-                print('min logit:', tf.reduce_min(token_logits), 'max logit:', tf.reduce_max(token_logits))
+
                 log_probs =  tf.nn.log_softmax(token_logits) # float(token_logits[token_id] - tf.reduce_logsumexp(token_logits)) # same as log_softmax but more efficient
-                print('min log_prob:', tf.reduce_min(log_probs), 'max log_prob:', tf.reduce_max(log_probs))
-                print('token_id:', token_id, 'vocab_size:', log_probs.shape[-1])
                 log_prob = log_probs[token_id] # could be interesting to return a branching structure using the full log_probs
-                print('log_prob', log_prob, 'logits', token_logits[token_id])
                 token_prob = float(tf.exp(log_prob))
 
                 token = {
@@ -290,12 +272,11 @@ with tf.device('/GPU:1'):
                 sequence.append(token)
 
             sequence = fix_infinity(sequence)
-            print('---seq', sequence)
+            print('gpt: ---seq', sequence)
             yield sequence
 
-        # Finally, compute a rough histogram of the results
-        # beam_scores = [score.numpy().tolist() for score in beam_output.scores]
-        summary = estimate_histogram(beam_output) # , num_beams, depth)
+        # compute a rough histogram of the results
+        summary = estimate_histogram(beam_output)
         
         yield {
             'thing': 'summary',

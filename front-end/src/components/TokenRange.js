@@ -26,8 +26,8 @@ export class TokenRange extends Component {
       hoveredTokenId: null,
       hoverSequenceId: null,
     };
-    this.debouncedSetHoveredSequenceId = debounce(this.setHoveredSequenceId, 50);
-    this.debouncedSetHoveredTokenId = debounce(this.setHoveredTokenId, 50);
+    this.debouncedSetHoveredSequenceId = debounce(this.setHoveredSequenceId, 5);
+    this.debouncedSetHoveredTokenId = debounce(this.setHoveredTokenId, 5);
   }
 
   setHoveredSequenceId = (id) => {
@@ -60,6 +60,7 @@ export class TokenRange extends Component {
     let overflowing = this.state.overflowing ? "overflowing" : "";
     let filterSpaces = this.props.filterSpaces || false;
     let forceExpand = this.props.expanded || false;
+    let verticalLayout = this.props.verticalLayout || false;
 
     // filter out ' ' and &nbsp;
     let isSpace = (text) => { return text === ' ' || text === '\u00A0' };
@@ -70,13 +71,18 @@ export class TokenRange extends Component {
     tokens = tokens.sort((a, b) => { return a.start - b.start });
 
     let wrap = this.props.wrap ? ' wrap' : ' nowrap';
+    let vertical = verticalLayout ? '  vertical' : '';
     let scoreLookup = tokenType === 'search' ? 'total' : tokenType;
 
     console.log('TokenRange', tokenType, tokens);
 
     return (
       <div className={"token-range-parent " + overflowing} >
-          <div id={`tokenbar-${tokenType}-${this.id}`} className={`token-range` + wrap}>
+          <div  
+              id={`tokenbar-${tokenType}-${this.id}`}
+              className={`token-range${wrap}${vertical}`}
+            >
+
               {tokens && tokens.map((tokenOrSeq) => {
                 if (tokenOrSeq.span) {
                   let sequence = tokenOrSeq;

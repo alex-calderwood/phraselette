@@ -47,7 +47,7 @@ export class ContextPrism extends Prism {
     let predictions = insights.predictions;
 
     for (let prediction of predictions) {
-      let wordTokens = await miscTokensToWordTokens(prediction.span, document, numWords);
+      let wordTokens = await miscTokensToWordTokens(prediction, document, numWords);
       prediction.span = wordTokens;
       setSequenceProb(prediction)
     }

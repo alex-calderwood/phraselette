@@ -268,8 +268,14 @@ export async function getPhones(words) {
  * but for now let's just retokenize
  * 
 */
-export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null) {
+export async function miscTokensToWordTokens(sequence, document, maxWords=null) {
+  let tokenSpan = sequence.span;
+
   if (tokenSpan.length === 0 || maxWords === 0) { return []; }
+
+  let sequenceCopy = JSON.parse(JSON.stringify(sequence));
+  console.log('smarts: miscTokensToWordTokens', tokenSpan, document, sequenceCopy, document.prefixText, sequenceCopy.textContent);
+
 
   // compute the text that results from adding the span we are evaluating to the rest of the prefix
   let newText = document.prefixText + tokenSpan.reduce(

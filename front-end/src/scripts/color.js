@@ -2,7 +2,6 @@ import chroma from "chroma-js";
 const colorScale = chroma.scale(['red', 'white', 'green', 'green']).mode('lab');
 const rainbowScale = chroma.scale(['red', 'yellow', 'green', 'blue', 'purple', 'cyan', 'coral', 'teal', 'orange', 'skyblue', 'burlywood']).mode('lab');
 
-
 // Define the color scale
 const logScale = chroma.scale(['red', 'yellow', 'green']).mode('lab');
 
@@ -97,4 +96,22 @@ export function zeroToOneColor(val) {
   return hex;
 }
 
-
+// Blur idea
+{/* <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <filter id="blur1"><feGaussianBlur stdDeviation="10"/></filter>
+    <filter id="blur2"><feGaussianBlur stdDeviation="8"/></filter>
+    <filter id="blur3"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="blur4"><feGaussianBlur stdDeviation="4"/></filter>
+    <filter id="blur5"><feGaussianBlur stdDeviation="2"/></filter>
+    <filter id="blur6"><feGaussianBlur stdDeviation="1"/></filter>
+    <filter id="blur7"><feGaussianBlur stdDeviation="0.5"/></filter>
+  </defs>
+  
+  <circle cx="50" cy="50" r="40" fill="black" filter="url(#blur1)"/>
+  
+  <!-- Repeat for each blur level, changing the filter -->
+  <!-- <circle cx="50" cy="50" r="40" fill="black" filter="url(#blur2)"/> -->
+  <!-- ... -->
+  <!-- <circle cx="50" cy="50" r="40" fill="black"/> -->
+</svg> */}

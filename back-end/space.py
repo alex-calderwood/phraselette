@@ -27,7 +27,6 @@ def stream_parse(text, extra_context, requests):
             'start': token.idx,
             'end': token.idx + len(token.text) - 1,  # exclusive -> inclusive
         }
-        # print("token", token, token_data)
 
         add_extra_request_data(requests, token_data)
 

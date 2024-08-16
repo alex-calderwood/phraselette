@@ -53,7 +53,7 @@ export class ThesaurusPrism extends Prism {
 
     // get spacy scores
     for (let prediction of predictions) {
-      let words = await miscTokensToWordTokens(prediction.span, document);
+      let words = await miscTokensToWordTokens(prediction, document);
       prediction.span = words;
     }
     return predictions;

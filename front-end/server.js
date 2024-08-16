@@ -151,7 +151,6 @@ async function* makeRequest(message) {
 
       for (const line of lines) {
         if (line.trim()) {
-          console.log('json', line)
           const token = JSON.parse(line);
           yield token;
         }

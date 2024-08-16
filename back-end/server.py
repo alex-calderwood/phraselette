@@ -37,7 +37,7 @@ def probs():
     extra_context = data.get("context", tokenizer.eos_token)
     top_k = data.get("top_k", 0)
 
-    print('PROBS request', data, 'text', text, 'top_k', top_k)
+    print('probs: request', data, 'text', text, 'top_k', top_k)
 
     def stream_probs(text, extra_context, mock=False, top_k=0):
         if mock: 
@@ -60,8 +60,6 @@ def search():
     text = data["text"]
     top_k = int(data.get("top_k", 0) or 0)
     depth = int(data.get("depth", 1) or 1)
-
-    print('SEARCH request', data, 'text', text, 'depth', depth)
 
     def stream_search(text, top_k, depth):
         for span in forward_search(text, top_k, depth):

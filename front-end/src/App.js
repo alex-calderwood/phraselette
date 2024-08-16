@@ -393,6 +393,7 @@ class App extends Component {
                   results={searchResults}
                   isSearching={this.state.isSearching}
                   wrap={false}
+                  verticalLayout={true}
                   showLength={true}
                   onClickSequence={(oldS, newS) => {
                     this.swapSequence(oldS, newS);

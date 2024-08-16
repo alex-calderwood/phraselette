@@ -217,6 +217,10 @@ we will need to select the text children of the editor */
   position: relative;
 }
 
+.token-range-parent {
+  max-height: 400px; /* Adjust this value as needed */
+  overflow-y: auto;
+}
 
 .token-range {
   position: relative;
@@ -231,6 +235,21 @@ we will need to select the text children of the editor */
   justify-content: center; This will center the content only when it doesn't overflow */
 }
 
+
+.token-range.vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* This will align items to the start of the cross axis */
+}
+
+.token-range.vertical .token,
+.token-range.vertical .sequence {
+  margin-bottom: 5px; /* Adjust as needed for spacing between tokens */
+  align-self: flex-start; /* This ensures each item aligns itself to the start */
+}
+
+
+
 .wrap {
   overflow-x: scroll;
   overflow-y: hidden;
@@ -239,7 +258,6 @@ we will need to select the text children of the editor */
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-
 
 .sequence {
   display: inline-block;

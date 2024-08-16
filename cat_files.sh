@@ -25,6 +25,8 @@ find . -type f \
     -not -name ".DS_Store" \
     -not -path "*/frontend/*" \
     -not -name "project.txt" \
+    -not -name ".gitignore" \
+    -not -name "cat_files.sh" \
     -print0 | while IFS= read -r -d '' file; do
         echo "======== FILE: $file ========"
         cat "$file"
