@@ -1,5 +1,6 @@
 import { getUniqueUUID } from '../scripts/utils.js';
 import { Feature } from './Feature.js';
+import { POS } from '../../data/pos.js';
 
 // feature -> constraint mapping
 export function makeConstraint(feature, target) {
@@ -277,54 +278,7 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
     ).map(
       (pos, i) => { return { pos: pos, index: i }; }
     );
-    this.range = Object.keys({// https://github.com/explosion/spaCy/blob/master/spacy/glossary.py
-      "AFX": "affix",
-      "CC": "conjunction, coordinating",
-      "CD": "cardinal number",
-      "DT": "determiner",
-      "EX": "existential there",
-      "FW": "foreign word",
-      "HYPH": "punctuation mark, hyphen",
-      "IN": "conjunction, subordinating or preposition",
-      "JJ": "adjective (English), other noun-modifier (Chinese)",
-      "JJR": "adjective, comparative",
-      "JJS": "adjective, superlative",
-      "LS": "list item marker",
-      "MD": "verb, modal auxiliary",
-      "NIL": "missing tag",
-      "NN": "noun, singular or mass",
-      "NNP": "noun, proper singular",
-      "NNPS": "noun, proper plural",
-      "NNS": "noun, plural",
-      "PDT": "predeterminer",
-      "POS": "possessive ending",
-      "PRP": "pronoun, personal",
-      "PRP$": "pronoun, possessive",
-      "RB": "adverb",
-      "RBR": "adverb, comparative",
-      "RBS": "adverb, superlative",
-      "RP": "adverb, particle",
-      "TO": 'infinitival "to"',
-      "UH": "interjection",
-      "VB": "verb, base form",
-      "VBD": "verb, past tense",
-      "VBG": "verb, gerund or present participle",
-      "VBN": "verb, past participle",
-      "VBP": "verb, non-3rd person singular present",
-      "VBZ": "verb, 3rd person singular present",
-      "WDT": "wh-determiner",
-      "WP": "wh-pronoun, personal",
-      "WP$": "wh-pronoun, possessive",
-      "WRB": "wh-adverb",
-      "SP": "space (English), sentence-final particle (Chinese)",
-      "ADD": "email",
-      "NFP": "superfluous punctuation",
-      "GW": "additional word in multi-word expression",
-      "XX": "unknown",
-      "BES": 'auxiliary "be"',
-      "HVS": 'forms of "have"',
-      "_SP": "whitespace",
-    })
+    this.range = Object.keys(POS);
   }
 }
 

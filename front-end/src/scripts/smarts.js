@@ -59,19 +59,20 @@ export async function spacyTokenize(text, data = {}) {
 }
 
 function makeWordToken(rawToken) {
+  console.log("smarts: raw", rawToken);
   let tokenData = {
-    'start':        rawToken.start,     // inclusive
-    'end':          rawToken.end,       // inclusive
-    "text":         rawToken.text,
-    "pos":          rawToken.tag,
-    "isSpacySpace": rawToken.is_space,
     "type":         "words",
+    'start':        rawToken.start, // inclusive
+    'end':          rawToken.end,   // inclusive
+    "text":         rawToken.text,
+    "pos":          rawToken.pos,
+    "isSpacySpace": rawToken.is_space,
     "isWord":       true,
     "extra":        rawToken.extra,
+    "generic":      rawToken.generic,
   }
 
   let token = new Token(tokenData);
-
   return token;
 }
 
@@ -236,28 +237,6 @@ async function* callSearch(prefix, top_k, depth) {
   };
 
   await (yield* streamFromWebSocket('search', data));
-}
-
-export async function getPhones(words) {
-  let tokenGenerator = streamFromWebSocket('phones', {text: words})
-
-  let tokens = [];
-  let rawTokenPromise = await tokenGenerator.next();
-  while (!rawTokenPromise.done) {
-    let rawToken = rawTokenPromise.value;
-    let token = new Token({
-      'start': rawToken.start,     // inclusive
-      'end':   rawToken.end,       // inclusive from server
-      "text":  rawToken.text,
-      "pos":   rawToken.tag,       // Todo looks like there is also a '.pos'
-      "raw":   rawToken,
-      "type":  "phone",
-    });
-    tokens.push(token);
-    rawTokenPromise = await tokenGenerator.next();
-  }
-
-  return tokens;
 }
 
 /*

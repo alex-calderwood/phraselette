@@ -1,4 +1,4 @@
-import { splitWordTokenize, gpt2Tokenize, spacyTokenize, getPhones} from '../scripts/smarts.js';
+import { splitWordTokenize, gpt2Tokenize, spacyTokenize} from '../scripts/smarts.js';
 
 export class TokenManager {
   constructor(activePrisms) {

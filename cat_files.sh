@@ -7,6 +7,7 @@ find . -type f \
     -not -path "*/node_modules/*" \
     -not -path "*/logs/*" \
     -not -path "*/.git/*" \
+    -not -path "*/dist/*" \
     -not -name "*.png" \
     -not -name "package.json" \
     -not -name "package-lock.json" \
