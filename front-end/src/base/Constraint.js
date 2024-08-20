@@ -4,33 +4,35 @@ import { POS } from '../../data/pos.js';
 
 // feature -> constraint mapping
 export function makeConstraint(feature, target) {
-  let name = feature.name;
+  let plainName = feature.plain;
   let dataType = feature.dataType;
-  switch (name) {
+  switch (plainName) {
     case 'pos':
       target = target.map(token => token.getAttribute('pos'));
       return new POSConstraint(target);
-    case 'rhyme':
-      target = target.map(token => token.getAttribute('rhyming_part', [])[0] || RhymeConstraint.defaultTarget);
-      return new RhymeConstraint(target);
-    case 'sound':
-      let firstPhonemesPerToken = target.map((token) => {
+    case 'sound': case 'rhyme':
+      let firstPronunciationPerToken = target.map((token) => {
         let phonemes = token.getAttribute('phonemes', []); 
-        if (phonemes && phonemes.length > 0) { return phonemes[0]; }
-        return SoundConstraint.defaultTarget;
+        if (phonemes && phonemes.length > 0) { 
+          return phonemes[0]; 
+        } else {
+          if (plainName === 'rhyme') { return BetterRhymeConstraint.defaultTarget; }
+          return SoundConstraint.defaultTarget;
+        }
       });
-      let finalTarget = firstPhonemesPerToken.map((tokenPhonemes) => {
+      let finalTarget = firstPronunciationPerToken.map((tokenPhonemes) => {
         return tokenPhonemes.split(' ');
       }).flat().filter(phoneme => phoneme && phoneme.length > 0);
 
+      if (plainName === 'rhyme') { return new BetterRhymeConstraint(finalTarget); }
       return new SoundConstraint(finalTarget);
   }
   
   switch(dataType) {
     case 'number':
-      return new NumericalRangeConstraint(name, feature);
+      return new NumericalRangeConstraint(plainName, feature);
     case 'category':
-      return new CategoricalConstraint(name, feature);
+      return new CategoricalConstraint(plainName, feature);
   }
 
   console.error('Could not make constraint for feature:', feature);
@@ -108,59 +110,63 @@ export class AlliterationConstraint extends Constraint {
  * such as part of speech or rhyme scheme
 */
 export class CategoricalConstraint extends Constraint {
-  static modes = ['contains', 'exactly', 'starts with', 'ends with', 'in order'];
-  
-  constructor(name, feature, defaultTarget=null) {
-    super(name, feature);
-    this.defaultTarget = defaultTarget;
-    this.targetSequence = null; // what is the goal of the constraint 
-    this.range = null;
-    this.mode = CategoricalConstraint.modes[0];
-    this.flatten = false;
-    this.ignore = []; // features to disregard
-}
+    constructor(name, feature, defaultTarget=null) {
+      super(name, feature);
+      this.defaultTarget = defaultTarget;
+      this.targetSequence = null; // what is the constraint's goal sequence
+      this.range = null;
+      this.modes = {
+        'contains': this.contains.bind(this),
+        'exactly': this.exactly.bind(this),
+        'starts with': this.startsWith.bind(this),
+        'ends with': this.endsWith.bind(this),
+        'in order': this.inOrder.bind(this)
+      };
+      this.mode = Object.keys(this.modes)[0];
+      this.flatten = false;
+      this.ignore = []; // features to disregard
+  }
+
+  addMode(modeName, modeFunction) {
+    this.modes[modeName] = modeFunction.bind(this);
+  }
+
+  changeMode(newMode) {
+    if (this.modes.hasOwnProperty(newMode)) {
+      this.mode = newMode;
+    } else {
+      console.error("constraint:", newMode, 'is not a valid mode for this constraint')
+    }
+  }
 
   async getScore(sequence, document) {
-    console.log('score mode', this.mode, sequence.textContent);
+    console.log('constraint: score mode', this.mode, sequence.textContent);
 
     if (sequence === null || sequence.span.length === 0 || this.targetSequence === null || this.targetSequence.length === 0) {
       return 0;
     }
-  
+
     let tokens = sequence.span;
     let tokenFeatures = this.flatten
-      ? tokens.flatMap(t => this._getAttribute(t, this.feature.name))
-      : tokens.map(t => this._getAttribute(t, this.feature.name));
-    tokenFeatures = tokenFeatures.filter(pos => !this.ignore.includes(pos))
+      ? tokens.flatMap(t => this._getAttribute(t, this.feature.attribute))
+      : tokens.map(t => this._getAttribute(t, this.feature.attribute));
+    tokenFeatures = tokenFeatures.filter(val => !this.ignore.includes(val))
 
-    let targetFeatures = this.targetSequence.map(t => this._getAttribute(t, this.feature.name));
+    let targetFeatures = this.targetSequence.map(t => this._getAttribute(t, this.feature.attribute));
     let flattenedTargetFeatures = this.flatten ? targetFeatures.flat() : targetFeatures;
-    flattenedTargetFeatures = flattenedTargetFeatures.filter(pos => !this.ignore.includes(pos))
+    flattenedTargetFeatures = flattenedTargetFeatures.filter(val => !this.ignore.includes(val))
 
-    console.log('token', tokenFeatures, 'target', flattenedTargetFeatures)
-  
+    console.log('constraint: scoring token', tokenFeatures, 'target', flattenedTargetFeatures)
+
     let score = 0;
-  
-    switch (this.mode) {
-      case 'contains':
-        score = this.contains(tokenFeatures, flattenedTargetFeatures); 
-        break;
-      case 'exactly':
-        score = this.arraysEqual(tokenFeatures, flattenedTargetFeatures);
-        break;
-      case 'starts with':
-        score = this.startsWith(tokenFeatures, flattenedTargetFeatures);
-        break;
-      case 'ends with':
-        score = this.endsWith(tokenFeatures, flattenedTargetFeatures);
-        break;
-      case 'in order':
-        score = this.includesInOrder(tokenFeatures, flattenedTargetFeatures);
-        break;
+    if (this.modes[this.mode]) {
+      score = this.modes[this.mode](tokenFeatures, flattenedTargetFeatures);
+    } else {
+      console.error('constraint: invalid mode:', this.mode);
     }
     
     score = score ? 1 : 0;
-    console.log('score', score)
+    console.log('constraint: score', score)
     return score;
   }
 
@@ -174,7 +180,7 @@ export class CategoricalConstraint extends Constraint {
   contains(arr, target) {
     if (target.length === 0) return true;
     for (let i = 0; i <= arr.length - target.length; i++) {
-      if (this.arraysEqual(arr.slice(i, i + target.length), target)) {
+      if (this.exactly(arr.slice(i, i + target.length), target)) {
         return true;
       }
     }
@@ -185,12 +191,12 @@ export class CategoricalConstraint extends Constraint {
     return target.every(subarray => this.containsAll(arr, subarray));
   }
 
-  arraysEqual(a, b) {
+  exactly(a, b) {
     return a.length === b.length && a.every((v, i) => v === b[i]);
   }
 
   startsWith(arr, target) {
-    return this.arraysEqual(arr.slice(0, target.length), target);
+    return this.exactly(arr.slice(0, target.length), target);
   }
 
   startsWithSubtokens(arr, target) {
@@ -199,7 +205,7 @@ export class CategoricalConstraint extends Constraint {
   }
 
   endsWith(arr, target) {
-    return this.arraysEqual(arr.slice(-target.length), target);
+    return this.exactly(arr.slice(-target.length), target);
   }
 
   endsWithSubtokens(arr, target) {
@@ -207,7 +213,7 @@ export class CategoricalConstraint extends Constraint {
     return this.endsWith(arr, flattened);
   }
 
-  includesInOrder(arr, target) {
+  inOrder(arr, target) {
     let targetIndex = 0;
     for (let i = 0; i < arr.length; i++) {
       if (arr[i] === target[targetIndex]) {
@@ -222,16 +228,16 @@ export class CategoricalConstraint extends Constraint {
 
   updateTarget(index, newValue) {
     if (this.targetSequence == null || this.targetSequence.length === 0) {
-      console.log('no target span to update for constraint', this);
+      console.log('constraint: no target span to update for constraint', this);
       return;
     }
-    this.targetSequence[index][this.feature.name] = newValue;
+    this.targetSequence[index][this.feature.attribute] = newValue;
     return this.targetSequence;
   }
 
   addTarget(newTarget=null) {
     if (this.defaultTarget === null) {
-      console.error('no default target for constraint', this);
+      console.error('constraint: no default target for constraint', this);
       return this.targetSequence;
     }
 
@@ -244,7 +250,7 @@ export class CategoricalConstraint extends Constraint {
     }
 
     let newIndex = this.targetSequence.length;
-    this.targetSequence.push({ [this.feature.name]: newTarget, index: newIndex });
+    this.targetSequence.push({ [this.feature.attribute]: newTarget, index: newIndex });
 
     return this.targetSequence;
   }
@@ -257,18 +263,10 @@ export class CategoricalConstraint extends Constraint {
     }
     return this.targetSequence;
   }
-
-  changeMode(newMode) {
-    if (CategoricalConstraint.modes.includes(newMode)) {
-      this.mode = newMode;
-    } else {
-      console.error(newMode, 'is not a valid CategoricalConstraintMode')
-    }
-  }
 }
 
 export class POSConstraint extends CategoricalConstraint { // may want to make a 'categorical constraint'
-  static defaultTarget = 'NN';
+  static defaultTarget = 'noun';
   
   constructor(targetPOSPhrase) {
     super('pos', Feature.POS, POSConstraint.defaultTarget);
@@ -282,21 +280,82 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
   }
 }
 
-/* 
- * Should this be responsible for both meter and rhyme?
-*/
-export class RhymeConstraint extends CategoricalConstraint {
+export class BetterRhymeConstraint extends CategoricalConstraint {
   static defaultTarget = '';
-
   constructor(targetPhones) {
-    super('rhyme', Feature.Rhyme, RhymeConstraint.defaultTarget);
-    this.targetSequence = targetPhones.map((rhyme, i) => { return { rhyme: rhyme, index: i }; });
-    this.range = [
-      "AA", "AE", "AH", "AO", "AW", "AY", "B", "CH", "D", "DH",
-      "EH", "ER", "EY", "F", "G", "HH", "IH", "IY", "JH", "K",
-      "L", "M", "N", "NG", "OW", "OY", "P", "R", "S", "SH",
-      "T", "TH", "UH", "UW", "V", "W", "Y", "Z", "ZH"
-    ];
+    super('rhyme', Feature.Rhyme, BetterRhymeConstraint.defaultTarget);
+    this.targetSequence = targetPhones.map((sound, i) => ({ sound, index: i }));
+    this.vowelSounds = ["AA", "AE", "AH", "AO", "AW", "AY", "EH", "ER", "EY", "IH", "IY", "OW", "OY", "UH", "UW"];
+    this.consonantSounds = ["B", "CH", "D", "DH", "F", "G", "HH", "JH", "K", "L", "M", "N", "NG", "P", "R", "S", "SH", "T", "TH", "V", "W", "Y", "Z", "ZH"];
+    this.range = [...this.vowelSounds, ...this.consonantSounds];
+    this.flatten = true;
+
+    this.setupModes();
+    this.mode = 'rhymes';
+  }
+
+  setupModes() {
+    this.modes = {};
+    this.addMode('rhymes', this.rhymes);
+    // this.addMode('consonance', this.consonance);
+    // this.addMode('alliteration', this.alliteration);
+  }
+
+  rhymes(tokenFeatures, targetFeatures) {
+    const getRhymingPart = (phones) => {
+      const lastVowelIndex = phones.findLastIndex((p) => {
+        let pDeepCopy = JSON.parse(JSON.stringify(p));
+        console.log('constraint: last vowel index', pDeepCopy, this.vowelSounds.includes(pDeepCopy));
+        return this.vowelSounds.includes(p)
+      });
+      console.log('constraint: last vowel index', lastVowelIndex, phones);
+      if (lastVowelIndex === -1) {
+        return phones.slice(1);
+      }
+      return phones.slice(lastVowelIndex);
+    };
+    const tokenRhymes  = getRhymingPart(tokenFeatures);
+    const targetRhymes = getRhymingPart(targetFeatures);
+    console.log("constraint: rhyming parts", tokenRhymes, targetRhymes, "full", tokenFeatures, targetFeatures);
+    return this.endsWith(tokenRhymes, targetRhymes);
+  }
+
+  // consonance(tokenFeatures, targetFeatures) {
+  //   const getConsonants = phones => phones.filter(p => this.consonantSounds.includes(p));
+  //   const tokenConsonants = tokenFeatures.map(getConsonants);
+  //   const targetConsonants = targetFeatures.map(getConsonants);
+  //   return this.startsWith(tokenConsonants, targetConsonants);
+  // }
+
+  // alliteration(tokenFeatures, targetFeatures) {
+  //   const getFirstConsonant = phones => {
+  //     return phones.find(p => this.consonantSounds.includes(p)) || '';
+  //   };
+  //   const tokenFirstConsonants = tokenFeatures.map(getFirstConsonant);
+  //   const targetFirstConsonants = targetFeatures.map(getFirstConsonant);
+  //   return this.startsWith(tokenFirstConsonants, targetFirstConsonants);
+  // }
+
+  // _getAttribute(token, attribute) {
+  //   if (token.getAttribute) {
+  //     return token.getAttribute(attribute) || token.getAttribute('phonemes') || [];
+  //   }
+  //   return token[attribute] || token.phonemes || [];
+  // }
+
+  _getAttribute(token, attribute) {
+    if (token.sound !== undefined) {
+      // This handles the case where we're dealing with the targetSequence objects
+      return token[attribute];
+    }
+    
+    console.log('constraint: token', token)
+    // This handles the case where we're dealing with actual tokens
+    let phonemes = token.getAttribute('phonemes', []);
+    if (phonemes.length > 0) {
+      return phonemes[0].split(' ');
+    }
+    return [];
   }
 }
 
@@ -348,8 +407,8 @@ export class NumericalRangeConstraint extends Constraint {
       return 0;
     }
 
-    let value = sequence.getAttribute(this.feature.name, 0);
-    console.log('numerical score',this.feature.name, 'val', value, 'target', this.targetMin, this.targetMax)
+    let value = sequence.getAttribute(this.feature.attribute, 0);
+    console.log('numerical score', this.feature.attribute, 'val', value, 'target', this.targetMin, this.targetMax)
     if (value < this.targetMin || value > this.targetMax) {
       return 0;
     }

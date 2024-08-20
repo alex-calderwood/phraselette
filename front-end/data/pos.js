@@ -107,7 +107,7 @@ export const POS = {
         "Other": true
       }
     },
-    "SPACE": {
+    "_SP": {
       "name": "space",
       "pos": {
         "Space": true

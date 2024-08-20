@@ -227,7 +227,7 @@ export class PrismEditor extends Component {
         // the text that is selected
         text: windowSelection.toString(),
       };
-      console.log('editor: saving selection', { ...selection });
+      // console.log('editor: saving selection', { ...selection });
       return selection;
     }
     else {

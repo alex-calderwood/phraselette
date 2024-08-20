@@ -10,7 +10,7 @@ import { Prism } from "../base/prism/Prism";
 class PrismEditableTextFeature extends Component {
   constructor(props) {
     super(props)
-    this.id = `text-feature-${this.props.feature.name}-${this.props.prism.id}`;
+    this.id = `text-feature-${this.props.feature.plain}-${this.props.prism.id}`;
     this.state = {
       text: this.props.feature.text,
     };
@@ -19,7 +19,7 @@ class PrismEditableTextFeature extends Component {
   editTextFeature() {
     let value = document.getElementById(this.id).value || '';
     this.setState({ text: value });
-    let featureName = this.props.feature.name;
+    let featureName = this.props.feature.plain;
     this.props.prism.updateTextFeature(featureName, value);
   }
 
@@ -77,7 +77,7 @@ export class PrismView extends Component {
   }
 
   prismHandleOnConstraintUpdate() {
-    console.log('updating ui on constraint' , this.prism);
+    console.log('constraint: updating ui on constraint' , this.prism);
     this.props.onConstraintUpdate(this.prism);
     this.setState({ hasHistogramData: !!this.prism?.insights?.summary });
     this.forceUpdate();

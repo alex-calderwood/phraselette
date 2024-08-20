@@ -25,7 +25,7 @@ export class ConstraintCreator extends Component {
   render() {
     let prism = this.props.prism;
 
-    return <div 
+    return <div
         className="constraint-creator"
         onMouseEnter={this.handleMouseEnter}
         onMouseLeave={this.handleMouseLeave}
@@ -35,8 +35,8 @@ export class ConstraintCreator extends Component {
 
       {this.state.showFullCreator && <div className="constraint-buttons">
         {prism.features.map((feature) => {
-          return <div key={feature.name}>
-            <button key={feature.name} onClick={() => this.addConstraint(feature)}> add {feature.name} constraint </button>
+          return <div key={feature.plain}>
+            <button key={feature.plain} onClick={() => this.addConstraint(feature)}> add {feature.plain} constraint </button>
           </div> 
         })}
       </div>}

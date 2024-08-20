@@ -15,6 +15,7 @@ const roles = {
     "the thesaurus James Joyce used for Ulysses",
     "an everyday English thesaurus",
     "Alfred Jarry's inverted dictionary of pataphysics",
+    "William Carlos Williams' observations",
     "a Wizard's spellbook",
   ],
   'reader': [
@@ -24,6 +25,8 @@ const roles = {
     "a group of friends who are all writers and editors and know what it's like to dish some criticism out",
     "a surrealist in the mold of Max Ernst, Marcel Duchamp, and Andre Breton",
     "Tristan Tzara, the Dadaist poet",
+    "Trotsky, the Russian revolutionary",
+    "a group of people who are all experts in their fields, but not in mine",
     "William S. Burroughs, the beat writer",
     "Mark Leyner. Leyner employs an intense and unconventional style in his works of fiction. His stories are generally humorous and absurd: In The Tetherballs of Bougainville, Mark's father survives a lethal injection at the hands of the New Jersey penal system, and so is freed but must live the remainder of his life in fear of being executed, at New Jersey's discretion, in any situation and regardless of collateral damage. They frequently incorporate elements of meta-fiction: In the same novel, an adolescent Mark produces a film adaptation of the story of his father's failed execution, although he reads a newspaper review of the movie to the prison's warden, and then dies, before even leaving the prison. At the sentence level, Leyner uses sprawling imagery and an extravagant vocabulary, bordering on prose poetry.",
   ],

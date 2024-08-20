@@ -102,11 +102,8 @@ export class TokenRange extends Component {
 
   renderSequence(sequence, tokenType, expanded) {
     let prob = sequence.getAttribute('prob', null);
-
     let probColor = zeroToOneColor(prob);
     let id = `${this.id}-sequence-${sequence.id}`;
-    // let score = sequence?.scores[scoreLookup]?.value;
-    // let color = zeroToOneColor(score);
 
     let style = probColor ? { backgroundColor: probColor } : {};
     const simple = expanded ? '' : 'simple';
