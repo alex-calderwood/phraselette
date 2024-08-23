@@ -1,6 +1,7 @@
 :root {
   /* transparant selection color */
-  --selection-color: rgba(255, 255, 255, 0.00);
+  --selection-background: rgba(255, 255, 255, 0.00);
+  --selection-color: rgb(0, 113, 200);
   --accent-color: rgb(229, 229, 229);
   --primary-text-color: rgb(172, 172, 172);
   --darker-text-color: rgb(80, 80, 80);
@@ -9,6 +10,10 @@
   --radius:3px;
   --normal-font-size: 12px;
   --small-font-size: 10px;
+
+  /* disable mac's two finger swipe back */
+  overscroll-behavior-x: none;
+  overflow-x: auto;
 }
 
 .App {
@@ -62,11 +67,12 @@
 .selection-display {
   text-align: center;
   margin-bottom: 10px;
-  background-color: var(--accent-color);
-  color: var(--darker-text-color);
+  background-color:  rgb(246, 244, 244);
+  color:  var(--selection-color);
+  text-decoration: underline dotted;
   /* add a radius to the edges */
-  padding: 5x;
-  border-radius: 10px;
+  /* padding: 5x;
+  border-radius: 10px; */
 }
 
 .editor {
@@ -173,7 +179,7 @@ we will need to select the text children of the editor */
     display: block;
   }
 
-  .text-feature {
+  .text-field {
     width: 100%;
   }
 }
@@ -463,11 +469,6 @@ textarea {
   width: 2em;
 }
 
-/*** Works on common browsers ***/
-::selection {
-  background-color:  var(--selection-color);
-  color: rgb(0, 60, 200); /* Change to your preferred text color */
-}
 
 /* make the brackground gradient bounce left and right */
 /* Specific styles for the div when the searching class is added */
@@ -498,7 +499,6 @@ div.searching {
   display: flex;
   overflow-x: auto;
   padding: 10px;
-  /* scroll-behavior: smooth; */
 }
 
 .prism-item {
@@ -545,29 +545,32 @@ div.searching {
   height: auto;
 }
 
+/*** Works on common browsers ***/
+.editor::selection,
+.editor *::selection {
+  background-color:  var(--selection-background);
+  color:  var(--selection-color);
+  text-decoration: underline dotted;
+}
 
 /*** Mozilla based browsers ***/
-::-moz-selection {
-  background-color:  var(--selection-color);
+.editor::-moz-selection,
+.editor *::-moz-selection {
+  background-color:  var(--selection-background);
+  color:  var(--selection-color);
+  text-decoration: underline dotted;
 }
 
 /*** Webkit based browsers ***/
-::-webkit-selection {
-  background-color:  var(--selection-color);
+.editor::-webkit-selection,
+.editor *::-webkit-selection {
+  background-color:  var(--selection-background);
+  color:  var(--selection-color);
+  text-decoration: underline dotted;
 }
 
-/***For Other Browsers ***/
-::-o-selection {
-  background-color:  var(--selection-color);
-}
-
-::-ms-selection {
-  background-color:  var(--selection-color);
-}
-
-/*** For Webkit ***/
-::-webkit-selection {
-  background-color:  var(--selection-color);
+.editor {
+  cursor: text !important;
 }
 
 @keyframes fadeIn {

@@ -41,12 +41,22 @@ export class TokenRange extends Component {
   componentDidMount() {
     this.checkOverflow();
     window.addEventListener('resize', this.checkOverflow); // Optionally handle window resize
+
+    const tokenBar = this.tokenBarRef.current;
+    if (tokenBar) {
+      tokenBar.addEventListener('wheel', this.handleWheel, { passive: false });
+    }
   }
 
   componentWillUnmount() {
     window.removeEventListener('resize', this.checkOverflow);
-  }
 
+    const tokenBar = this.tokenBarRef.current;
+    if (tokenBar) {
+      tokenBar.removeEventListener('wheel', this.handleWheel);
+    }
+  }
+  
   checkOverflow = () => {
     const node = this.tokenBarRef.current;
     if (node) {
@@ -54,6 +64,16 @@ export class TokenRange extends Component {
       this.setState({ overflowing: isOverflowing });
     }
   }
+
+
+  handleWheel = (e) => {
+    e.preventDefault();
+    const tokenBar = this.tokenBarRef.current;
+    if (tokenBar) {
+      tokenBar.scrollLeft += e.deltaY + e.deltaX;
+    }
+  }
+
 
   render() {
     let tokenType = this.props.tokenType;
@@ -74,7 +94,7 @@ export class TokenRange extends Component {
     let vertical = verticalLayout ? '  vertical' : '';
     let scoreLookup = tokenType === 'search' ? 'total' : tokenType;
 
-    console.log('TokenRange', tokenType, tokens);
+    console.log('tokenrange:', tokenType, tokens);
 
     return (
       <div className={"token-range-parent " + overflowing} >

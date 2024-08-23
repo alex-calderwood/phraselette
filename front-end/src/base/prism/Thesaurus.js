@@ -6,22 +6,20 @@ import { Prism, setSequenceProb } from './Prism.js';
 export class ThesaurusPrism extends Prism {
   constructor(description) {
     super('thesaurus', []);
-    this.textFeatures = {
+    this.textFields = {
       'description': {text: description, name: 'description'}
     }
     this.title = description;
   }
 
-  updateTextFeature(featureName, value) {
-    this.textFeatures[featureName].text = value;
+  updateTextField(featureName, value) {
+    this.textFields.description.text = value;
     this.title = value;
   }
 
   async search(document, constraints) {
-
-    this.onSearchTriggered();
-    let description = this.textFeatures.description.text;
-    console.log('searching with description', description)
+    this.onSearchTriggered(); // UI update
+    let description = this.textFields.description.text;
     sendMessage({
       type: "thesaurus",
       word: document.selectionText,

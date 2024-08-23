@@ -19,13 +19,12 @@ const PrismSelector = ({ prisms, activePrisms, onAddPrism }) => {
     setTooltipPosition({ x: event.clientX, y: event.clientY });
   };
 
-
   useEffect(() => {
     const selector = selectorRef.current;
     if (selector) {
       const handleWheel = (e) => {
         e.preventDefault();
-        selector.scrollLeft += e.deltaY;
+        selector.scrollLeft += e.deltaY + e.deltaX;
       };
       selector.addEventListener('wheel', handleWheel, { passive: false });
       return () => selector.removeEventListener('wheel', handleWheel);

@@ -382,7 +382,7 @@ class App extends Component {
             {hasSelection && (
               <div className={`inspector`}>
                 {selectionText && selectionText.length > 0 ? (
-                  <div className="selection-display">"{selectionText}"</div>
+                  <div className="selection-display">{selectionText}</div>
                 ) : (
                   ""
                 )}
@@ -418,7 +418,7 @@ class App extends Component {
                 {/* onClickSequence={this.onClickSequence.bind(this)} /> */}
                 {/* Display the active prisms */}
                 {activePrisms.map((prism) => {
-                  console.log("rendering", prism.id);
+                  console.log("app: rendering prism", prism.id);
                   return (
                     <PrismView
                       key={prism.id}

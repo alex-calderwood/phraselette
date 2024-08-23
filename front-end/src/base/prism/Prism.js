@@ -23,7 +23,8 @@ export class Prism {
     this.tokenType = tokenType ? tokenType : this.type;  
     
     this.features = features || [];
-    this.textFeatures = [];
+
+    this.textFields = [];  // editable text properties used by some prisms; eg { 'description': {text: description, name: 'description'} }
     this.insights = null;
 
     this.sortBy = 'total'; // default sorting // TODO take a look at this

@@ -7,20 +7,20 @@ export class ReaderPrism extends Prism {
     // super('reader', ['prob']); // eventually... ahh ahh ahh ahhhhh
     super('reader', []);
 
-    this.textFeatures = {
+    this.textFields = {
       'description': {text: description, name: 'description'}
     }
     this.title = description;
   }
 
-  updateTextFeature(featureName, value) {
-    this.textFeatures[featureName].text = value;
+  updateTextField(featureName, value) {
+    this.textFields[featureName].text = value;
     this.title = value;
   }
 
   async search(document, constraints) {
     this.onSearchTriggered();
-    let description = this.textFeatures.description.text;
+    let description = this.textFields.description.text;
     sendMessage({
       type: "reader",
       context: document.prefixText,

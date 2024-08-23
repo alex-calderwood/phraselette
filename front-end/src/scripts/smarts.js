@@ -59,7 +59,6 @@ export async function spacyTokenize(text, data = {}) {
 }
 
 function makeWordToken(rawToken) {
-  console.log("smarts: raw", rawToken);
   let tokenData = {
     "type":         "words",
     'start':        rawToken.start, // inclusive
@@ -252,9 +251,8 @@ export async function miscTokensToWordTokens(sequence, document, maxWords=null) 
 
   if (tokenSpan.length === 0 || maxWords === 0) { return []; }
 
-  let sequenceCopy = JSON.parse(JSON.stringify(sequence));
-  console.log('smarts: miscTokensToWordTokens', tokenSpan, document, sequenceCopy, document.prefixText, sequenceCopy.textContent);
-
+  // let sequenceCopy = JSON.parse(JSON.stringify(sequence));
+  // console.log('smarts: miscTokensToWordTokens', tokenSpan, document, sequenceCopy, document.prefixText, sequenceCopy.textContent);
 
   // compute the text that results from adding the span we are evaluating to the rest of the prefix
   let newText = document.prefixText + tokenSpan.reduce(

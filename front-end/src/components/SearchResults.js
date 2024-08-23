@@ -21,7 +21,7 @@ export class SearchResults extends Component {
       return <div className='subtitle'>No results</div>
     }
     
-    console.log('SearchResults', results, this.tokenType)
+    console.log('search: results', results, this.tokenType)
     return <div className={"search-results"}>
       {this.props.showLength && <div className="subtitle">{`${results.length} combined results`}</div>}
       <TokenRange 

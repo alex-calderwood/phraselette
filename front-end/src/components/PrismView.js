@@ -7,25 +7,24 @@ import { SearchResults } from "./SearchResults";
 import { TokenManager } from "../base/TokenManager";
 import { Prism } from "../base/prism/Prism";
 
-class PrismEditableTextFeature extends Component {
+class PrismEditableTextField extends Component {
   constructor(props) {
     super(props)
-    this.id = `text-feature-${this.props.feature.plain}-${this.props.prism.id}`;
+    this.id = `text-field-${this.props.field.name}-${this.props.prism.id}`;
     this.state = {
-      text: this.props.feature.text,
+      text: this.props.field.text,
     };
   }
 
-  editTextFeature() {
+  editTextField() {
     let value = document.getElementById(this.id).value || '';
     this.setState({ text: value });
-    let featureName = this.props.feature.plain;
-    this.props.prism.updateTextFeature(featureName, value);
+    this.props.prism.updateTextField(this.props.field.name, value);
   }
 
   render() {
-    return <div className={`text-feature`}>
-      <textarea id={this.id} value={this.state.text} onChange={this.editTextFeature.bind(this)}></textarea>
+    return <div className={`text-field`}>
+      <textarea id={this.id} value={this.state.text} onChange={this.editTextField.bind(this)}></textarea>
     </div>
   }
 }
@@ -146,8 +145,8 @@ export class PrismView extends Component {
         </div>
 
         <div className={`prism-content ${border} ${searching}`}>
-          {activeNotHidden ? Object.values(prism.textFeatures).map((feature) => {
-            return <PrismEditableTextFeature key={feature.text} feature={feature} prism={prism} />
+          {activeNotHidden ? Object.values(prism.textFields).map((field) => {
+            return <PrismEditableTextField key={field.text} field={field} prism={prism} />
           }) : ""}
 
           {textContent}
