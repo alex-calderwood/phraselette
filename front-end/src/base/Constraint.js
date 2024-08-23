@@ -4,9 +4,9 @@ import { POS } from '../../data/pos.js';
 
 // feature -> constraint mapping
 export function makeConstraint(feature, target) {
-  let plainName = feature.plain;
+  let attribute = feature.attribute;
   let dataType = feature.dataType;
-  switch (plainName) {
+  switch (attribute) {
     case 'pos':
       target = target.map(token => token.getAttribute('pos'));
       return new POSConstraint(target);
@@ -16,7 +16,7 @@ export function makeConstraint(feature, target) {
         if (phonemes && phonemes.length > 0) { 
           return phonemes[0]; 
         } else {
-          if (plainName === 'rhyme') { return BetterRhymeConstraint.defaultTarget; }
+          if (attribute === 'rhyme') { return BetterRhymeConstraint.defaultTarget; }
           return SoundConstraint.defaultTarget;
         }
       });
@@ -24,15 +24,15 @@ export function makeConstraint(feature, target) {
         return tokenPhonemes.split(' ');
       }).flat().filter(phoneme => phoneme && phoneme.length > 0);
 
-      if (plainName === 'rhyme') { return new BetterRhymeConstraint(finalTarget); }
+      if (attribute === 'rhyme') { return new BetterRhymeConstraint(finalTarget); }
       return new SoundConstraint(finalTarget);
   }
   
   switch(dataType) {
     case 'number':
-      return new NumericalRangeConstraint(plainName, feature);
+      return new NumericalRangeConstraint(attribute, feature);
     case 'category':
-      return new CategoricalConstraint(plainName, feature);
+      return new CategoricalConstraint(attribute, feature);
   }
 
   console.error('Could not make constraint for feature:', feature);
