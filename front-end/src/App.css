@@ -1,13 +1,13 @@
 :root {
   /* transparant selection color */
   --selection-background: rgba(255, 255, 255, 0.00);
-  --selection-color: rgb(0, 113, 200);
-  --accent-color: rgb(229, 229, 229);
-  --primary-text-color: rgb(172, 172, 172);
-  --darker-text-color: rgb(80, 80, 80);
-  --hover-color: rgb(200, 200, 200);
+  --selection-color: rgb(15, 135, 127);
+  --accent-color: rgb(211, 182, 234);
+  --primary-text-color: rgb(60, 44, 72);
+  --darker-text-color: rgb(86, 63, 102);
+  --hover-color: rgb(183, 126, 229);
   --button-height: 1.5em;
-  --radius:3px;
+  --radius: 2px;
   --normal-font-size: 12px;
   --small-font-size: 10px;
 
@@ -51,10 +51,22 @@
 .editor-container {
   top: 0; left: 0; 
   width: 100%;
-  height: 100%;
+  height: 100vh;
   display: flex; /* Make children flex, which will make them stack */
   max-width: 100%;
 } 
+
+.rainbow {
+  background-size: 200% 200%;
+  background: linear-gradient(
+    14deg,
+    rgba(255, 255, 0, var(--rainbow-alpha)),
+    rgba(0, 255, 0, var(--rainbow-alpha)),
+    rgba(0, 0, 255, var(--rainbow-alpha)),
+    rgba(75, 0, 130, var(--rainbow-alpha)),
+    rgba(143, 0, 255, var(--rainbow-alpha))
+  );
+}
 
 .left, .right {
   flex: 0 0 50%; /* Make them take up 50% of the space */
@@ -69,16 +81,12 @@
 .selection-display {
   text-align: center;
   margin-bottom: 10px;
-  background-color:  rgb(246, 244, 244);
   color:  var(--selection-color);
   text-decoration: underline dotted;
-  /* add a radius to the edges */
-  /* padding: 5x;
-  border-radius: 10px; */
 }
 
 .editor {
-  height: 100%;
+  height: calc(100vh - 26px * 2);
   font-size: var(--normal-font-size);
   background-color: white;
   box-shadow: 0 10px 20px rgba(0,0,0,0.30), 0 10px 20px rgba(0,0,0,0.22);
@@ -133,10 +141,33 @@ we will need to select the text children of the editor */
 
 .inspector {
   justify-content: center;
-  background-color: white;
-  box-shadow: 0 3px 5px rgba(0,0,0,0.30), 0 3px 5px rgba(0,0,0,0.22);
+  /* background-color: white; */
+  /* box-shadow: 0 3px 5px rgba(0,0,0,0.30), 0 3px 5px rgba(0,0,0,0.22); */
   padding: 10px;
   margin: 10px;
+
+  /* From https://css.glass */
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10.6px);
+  -webkit-backdrop-filter: blur(10.6px);
+}
+
+.glass-pane {
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10.6px);
+  -webkit-backdrop-filter: blur(10.6px);
+}
+
+/* same thing without border-radius */
+.glass {
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10.6px);
+  -webkit-backdrop-filter: blur(10.6px);
 }
 
 .control-buttons {
@@ -165,16 +196,37 @@ we will need to select the text children of the editor */
   margin-bottom: 10px;
   display: flex;
 
-  .title.rotated {
+  background: rgba(255, 255, 255, 0.42);
+  border-radius: 2px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10.6px);
+  -webkit-backdrop-filter: blur(10.6px);
+
+
+  .prism-title {
+    color: var(--primary-text-color);
+    font-size: 14px;
+    padding: 2px;
+    cursor: pointer;
+  }
+
+  .prism-title.rotated {
     writing-mode: vertical-lr; /* Rotates the text 90 degrees */
     transform: rotate(180deg); /* Flips the text to the right orientation */
-    /* margin-right: 20px; Spacing between the title and the prism div */
+    display:flex;
+    justify-content: space-between;
+  }
+
+
+  .prism-title:not(.rotated) {
+    display:flex;
+    justify-content: space-between;
+    width: 100%
   }
 
   .prism-content.border {
     border: 1px solid #f1f1f1;
     flex: 1;
-    /* flex-grow: 1; */
     min-width: 0;
     overflow: hidden;
     width: 100%;
@@ -197,14 +249,6 @@ we will need to select the text children of the editor */
   width: 100%;
   max-height: 250px;
   overflow-y: auto;
-}
-
-
-.title {
-  color: var(--primary-text-color);
-  font-size: 14px;
-  padding-right: 2px;
-  cursor: pointer;
 }
 
 .subtitle {
@@ -463,11 +507,17 @@ button:hover {
 
 textarea {
   font-size: 10px;
-  background-color: var(--accent-color);
   border: none;
   outline: none;
   width: 100%;
-  /* height: 1.5em; */
+  max-height: 3em;
+
+  /* From https://css.glass */
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10.6px);
+  -webkit-backdrop-filter: blur(10.6px);
 }
 
 /* input of type checkbox */
@@ -479,7 +529,6 @@ textarea {
 
 /* make the brackground gradient bounce left and right */
 /* Specific styles for the div when the searching class is added */
-
 div.searching {
   background: linear-gradient(
     45deg,
@@ -523,9 +572,6 @@ div.searching {
   margin-right: 10px;
   min-width: 65px;
   padding: 10px;
-  background-color: white;
-  border-radius: var(--radius);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .prism-icon {

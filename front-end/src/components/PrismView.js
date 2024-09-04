@@ -142,7 +142,7 @@ export class PrismView extends Component {
 
 
     return <div className={`prism`}>
-        <div className={`title ${rotated}`} onClick={this.toggleHidden.bind(this)}>
+        <div className={`prism-title ${rotated}`} onClick={this.toggleHidden.bind(this)}>
           {prism.type} {title}
           <button className={`light-button`} onClick={() => onRemovePrism(prism)}>×</button>
         </div>

@@ -40,7 +40,7 @@ const PrismSelector = ({ prisms, activePrisms, onAddPrism }) => {
       {displayPrisms.map((prism) => (
         <div 
           key={prism.id} 
-          className="prism-item"
+          className="prism-item glass-pane"
           onMouseEnter={(e) => handleMouseEnter(prism.id, e)}
           onMouseLeave={handleMouseLeave}
           onMouseMove={handleMouseMove}

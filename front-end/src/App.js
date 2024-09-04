@@ -373,7 +373,7 @@ class App extends Component {
 
     return (
       <div className="context-container" ref={this.containerRef}>
-        <div className="editor-container">
+        <div className="editor-container rainbow">
           <div className="left">
             {/* The text editor */}
             <PrismEditor
@@ -396,7 +396,7 @@ class App extends Component {
             {hasSelection && (
               <div className={`inspector`}>
                 {selectionText && selectionText.length > 0 ? (
-                  <div className="selection-display">{selectionText}</div>
+                  <div className="selection-display glass-pane">{selectionText}</div>
                 ) : (
                   ""
                 )}
