@@ -11,6 +11,8 @@
   --normal-font-size: 12px;
   --small-font-size: 10px;
 
+  --rainbow-alpha: 0.2; /* Adjust this value between 0 (fully transparent) and 1 (fully opaque) */
+
   /* disable mac's two finger swipe back */
   overscroll-behavior-x: none;
   overflow-x: auto;
@@ -199,25 +201,25 @@ we will need to select the text children of the editor */
 
 
 .title {
-  color:rgb(172, 172, 172);
+  color: var(--primary-text-color);
   font-size: 14px;
   padding-right: 2px;
   cursor: pointer;
 }
 
 .subtitle {
-  color:rgb(172, 172, 172);
+  color:var(--primary-text-color);
   font-size: var(--small-font-size);
   padding-right: 2px;
 }
 
 .text {
-  color:rgb(172, 172, 172);
+  color:var(--primary-text-color);
   font-size: var(--small-font-size);
 }
 
 .major-text {
-  color:rgb(172, 172, 172);
+  color:var(--primary-text-color);
   font-size: 14px;
 }
 
@@ -477,26 +479,33 @@ textarea {
 
 /* make the brackground gradient bounce left and right */
 /* Specific styles for the div when the searching class is added */
+
 div.searching {
-  background: linear-gradient(45deg, #ffffff, #dfdfdf, #ffffff);
-  background-size: 200% 200%;
-  animation: slide 4s ease infinite;
+  background: linear-gradient(
+    45deg,
+    rgba(255, 0, 0, var(--rainbow-alpha)),
+    rgba(255, 127, 0, var(--rainbow-alpha)),
+    rgba(255, 255, 0, var(--rainbow-alpha)),
+    rgba(0, 255, 0, var(--rainbow-alpha)),
+    rgba(0, 0, 255, var(--rainbow-alpha)),
+    rgba(75, 0, 130, var(--rainbow-alpha)),
+    rgba(143, 0, 255, var(--rainbow-alpha))
+  );
+  background-size: 400% 400%;
+  animation: rainbow 8s ease infinite;
   width: 100%;
   min-height: 1.5em;
 }
 
-@keyframes slide {
-  0%, 100% {
+@keyframes rainbow {
+  0% {
     background-position: 0% 50%;
-  }
-  25% {
-    background-position: 100% 30%;
   }
   50% {
     background-position: 100% 50%;
   }
-  75% {
-    background-position: 0% 70%;
+  100% {
+    background-position: 0% 50%;
   }
 }
 
