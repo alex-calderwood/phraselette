@@ -118,6 +118,7 @@ export class PrismView extends Component {
     let prism = this.prism;
     let start = this.props.startIndex;
     let end = this.props.endIndex;
+    let onRemovePrism = this.props.onRemovePrism;
 
     let tokens = start !== null ? this.tokenManager.tokensAt(prism.tokenType, start, end) : [];
     let results = prism?.insights?.results || [];
@@ -139,9 +140,11 @@ export class PrismView extends Component {
 
     let textContent = showtext ? this.bulletedText(text) : "";
 
+
     return <div className={`prism`}>
         <div className={`title ${rotated}`} onClick={this.toggleHidden.bind(this)}>
           {prism.type} {title}
+          <button className={`light-button`} onClick={() => onRemovePrism(prism)}> x </button>
         </div>
 
         <div className={`prism-content ${border} ${searching}`}>

@@ -154,6 +154,20 @@ class App extends Component {
     this.attemptInitialTokenization();
   }
 
+  handleRemovePrism(prism) {
+    // update the tokenManager
+    this.tokenManager.setActivePrism(prism, false);
+
+    // update the state
+    let prisms = this.state.prisms;
+    delete prisms[prism.id]
+    this.setState({
+      prisms: { ...prisms, },
+      activePrisms: Prism.getActive({ ...prisms, }),
+    });
+
+  }
+
   // Initialize the uninitialized
   componentDidMount() {
     // Figure out which lense to initially higihlight
@@ -434,6 +448,7 @@ class App extends Component {
                         prism.features
                       )}
                       addConstraint={this.addConstraint.bind(this)}
+                      onRemovePrism={() => this.handleRemovePrism(prism)}
                       removeConstraint={this.removeConstraint.bind(this)}
                       onConstraintUpdate={this.onConstraintUpdate.bind(this)}
                     />
