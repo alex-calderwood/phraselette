@@ -612,14 +612,14 @@ export class PrismEditor extends Component {
       console.error('editor: No token manager to color');
     }
   }
-
+  
   colorRange(start, end) {
-    let color = 'blue';
-    let spans = document.querySelectorAll('span[c]');
+    const spans = document.querySelectorAll('span[c]');
+  
     spans.forEach(span => {
-      let c = getCharIndex(span);
+      const c = getCharIndex(span);
       if (c >= start && c <= end) {
-        span.style.backgroundColor = color;
+        span.classList.add('rainbow');
       }
     });
   }
