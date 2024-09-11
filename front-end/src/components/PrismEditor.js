@@ -614,7 +614,7 @@ export class PrismEditor extends Component {
   }
 
   colorRange(start, end) {
-    let color = 'red';
+    let color = 'blue';
     let spans = document.querySelectorAll('span[c]');
     spans.forEach(span => {
       let c = getCharIndex(span);

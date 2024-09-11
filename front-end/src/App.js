@@ -368,6 +368,16 @@ class App extends Component {
   };
 
   handleSearch = () => {
+    const selectionRange = [this.state.selection.startIndex, this.state.selection.endIndex];
+    this.setState(prevState => {
+      const newSearchResults = new RangeMap();
+      prevState.searchResults.keys().forEach(range => { // Copy existing entries
+        newSearchResults[range] = prevState.searchResults[range];
+      });
+      newSearchResults[selectionRange] = [];
+      return { searchResults: newSearchResults };
+    });
+
     return this.editorRef.current?.manualSearchAction();
   };
 
