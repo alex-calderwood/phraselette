@@ -55,3 +55,39 @@ export function humanLog(logProb) {
     return logProb.toFixed(1);
   }
 }
+
+export class RangeMap {
+  constructor() {
+    this.map = new Map();
+    
+    return new Proxy(this, {
+      get(target, prop) {
+        if (typeof prop === 'symbol' || prop === 'map' || prop === 'keys') {
+          return target[prop];
+        }
+        return target.map.get(prop);
+      },
+      set(target, prop, value) {
+        if (typeof prop === 'symbol' || prop === 'map' || prop === 'keys') {
+          target[prop] = value;
+        } else {
+          target.map.set(prop, value);
+        }
+        return true;
+      }
+    });
+  }
+
+  keys() {
+    return Array.from(this.map.keys()).map(key => {
+      const [start, end] = key.split(',');
+      return [RangeMap.parseValue(start), RangeMap.parseValue(end)];
+    });
+  }
+
+  static parseValue(value) {
+    if (value === 'null') return null;
+    if (value === 'NaN') return NaN;
+    return isNaN(Number(value)) ? value : Number(value);
+  }
+}

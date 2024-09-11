@@ -47,27 +47,8 @@ export class PrismEditor extends Component {
     let initializationText = "";
     // let testingText = `I arrived without a ladder, deciding it was better to be on time than prepared.`
   let testingText = `how well I would write if I were not here! If between the white page and the writing of words and stories that take shape and disappear without anyone's ever writing them there were not interposed that uncomfortable partition which is my person! Style, taste, individual philosophy, subjectivity, cultural background, real experience, psychology, talent, tricks of the trade: all the elements that make what I write recognizable as mine seem to me a cage that restricts my possibilities.`;
-  // shackled gravitywell
-
-  // tickticking pendulum
-  // my parabolic mind swing swung swooning
-  // passing yo's
-  // to yesterday's mind farts
-  // like a yo yo
-  // yearning for the slow mo light show
-  // of the Wizard's laser harmonograph
-  // set to Meyer's ever so slowed concertos
-
-  // the yo of a slowly slung
-  // back sack on a stick
-  // stacked as high as a homesick friend's
-  // ransacked slapstick back whack
-
-  // which stings 
-  // as a shot on the neck
-  // flings the stupor at your breakneck fact check`
-
-    // initializationText = testingText; // comment this out to be normal
+    // initializationText = testingText; // comment this out to have an empty editor
+ 
     let content = [];
     // let initialId = getUniqueID();
     // for (let i = 0; i < initializationText.length; i++) {
@@ -109,8 +90,24 @@ export class PrismEditor extends Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (this.state.content !== prevState.content) {
-      // console.log('content updated', this.state.content);
+    const hasArrayChanged = (prev, curr) => {
+      if (prev.length !== curr.length) {
+        return true;
+      }
+      
+      return prev.some((subArr, index) => {
+        const currSubArr = curr[index];
+        return !Array.isArray(subArr) || !Array.isArray(currSubArr) ||
+               subArr[0] !== currSubArr[0] || subArr[1] !== currSubArr[1];
+      });
+    }
+
+    if (hasArrayChanged(this.props.activeRanges, prevProps.activeRanges)) {
+      console.log("editor: active ranges changed from", prevProps.activeRanges, "to", this.props.activeRanges );
+
+      this.props.activeRanges.forEach(range => {
+        this.colorRange(range[0], range[1])
+      });
     }
   }
 
@@ -563,17 +560,6 @@ export class PrismEditor extends Component {
     return createdID;
   }
 
-  colorAllCharactersByProb() {
-    // get all spans with a c attribute
-    let spans = document.querySelectorAll('span[c]');
-    for (let i = 0; i < spans.length; i++) {
-      let span = spans[i];
-      let c = getCharIndex(span);
-      
-      this.colorCharacterByProb(span, c);
-    }
-  }
-
   colorCharSpanByToken(token) {
     let start = token.start;
     let end = token.end;
@@ -593,7 +579,18 @@ export class PrismEditor extends Component {
     }
   }
 
-  colorCharacterByProb(child, c) {
+  colorAllCharactersByProb() {
+    // get all spans with a c attribute
+    let spans = document.querySelectorAll('span[c]');
+    for (let i = 0; i < spans.length; i++) {
+      let span = spans[i];
+      let c = getCharIndex(span);
+      
+      this.colorCharacterByProb(span, c);
+    }
+  }
+
+  colorCharacterByProb(element, c) {
     if (typeof c !== 'number') {
       console.error('editor: colorCharacterByProb called with', typeof c);
     }
@@ -608,12 +605,23 @@ export class PrismEditor extends Component {
       } else {
         color = getColor('basic', {});
       }
-      console.log('coloring', tokenType, 'at', c, color);
-      child.style.backgroundColor = color;
+      console.log('editor: coloring', tokenType, 'at', c, color);
+      element.style.backgroundColor = color;
 
     } else {
       console.error('editor: No token manager to color');
     }
+  }
+
+  colorRange(start, end) {
+    let color = 'red';
+    let spans = document.querySelectorAll('span[c]');
+    spans.forEach(span => {
+      let c = getCharIndex(span);
+      if (c >= start && c <= end) {
+        span.style.backgroundColor = color;
+      }
+    });
   }
 
   /*
