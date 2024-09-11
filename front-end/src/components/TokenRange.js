@@ -1,6 +1,6 @@
 import React, { Component, createRef } from "react";
 import { getColor, zeroToOneColor, categoryToColor } from "../scripts/color";
-import { getUniqueUUID, scientific, debounce } from "../scripts/utils";
+import { getUniqueID, scientific, debounce } from "../scripts/utils";
 import { humanLog } from "../scripts/utils";
 
 function tokenItemsToShow(tokenType) {
@@ -20,7 +20,7 @@ export class TokenRange extends Component {
   constructor(props) {
     super(props);
     this.tokenBarRef = createRef(); // Create a reference to the token bar div
-    this.id = getUniqueUUID();
+    this.id = getUniqueID();
     this.state = {
       overflowing: false,
       hoveredTokenId: null,
@@ -28,6 +28,11 @@ export class TokenRange extends Component {
     };
     this.debouncedSetHoveredSequenceId = debounce(this.setHoveredSequenceId, 5);
     this.debouncedSetHoveredTokenId = debounce(this.setHoveredTokenId, 5);
+
+    let tokenType = this.props.tokenType;
+    let tokens = this.props.tokens;
+
+    console.log('tokenrange: constructor tokens for type', tokenType, tokens);
   }
 
   setHoveredSequenceId = (id) => {
@@ -94,15 +99,9 @@ export class TokenRange extends Component {
     let vertical = verticalLayout ? '  vertical' : '';
     let scoreLookup = tokenType === 'search' ? 'total' : tokenType;
 
-    console.log('tokenrange:', tokenType, tokens);
-
     return (
       <div className={"token-range-parent " + overflowing} >
-          <div  
-              id={`tokenbar-${tokenType}-${this.id}`}
-              className={`token-range${wrap}${vertical}`}
-            >
-
+          <div id={`tokenbar-${tokenType}-${this.id}`} className={`token-range${wrap}${vertical}`} >
               {tokens && tokens.map((tokenOrSeq) => {
                 if (tokenOrSeq.span) {
                   let sequence = tokenOrSeq;

@@ -1,11 +1,11 @@
-import { getUniqueUUID } from '../scripts/utils';
+import { getUniqueID } from '../scripts/utils';
 
 export class Sequence {
     constructor(tokens=[], scores={}) {
         this.span = tokens;
         this.scores = scores;
         this.attributes = {};
-        this.id = getUniqueUUID();
+        this.id = getUniqueID();
     }
 
     setScore(name, value, constraint) {

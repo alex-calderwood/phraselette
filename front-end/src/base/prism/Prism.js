@@ -1,6 +1,10 @@
 import { resolveConstraints, sortPredictions } from '../../scripts/resolution.js';
 import { Constraint } from '../Constraint.js';
-import { getUniqueUUID } from '../../scripts/utils.js';
+import { getUniqueID } from '../../scripts/utils.js';
+
+// insights = {
+//   [start, end]: {insights}
+// }
 
 export class Prism {
   static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'basic', 'probs'];
@@ -12,7 +16,7 @@ export class Prism {
    *                                           Defaults to {name}.
    */
   constructor(type, features=[], tokenType=null, description='') {
-    this.id = `${type}-${getUniqueUUID()}`;
+    this.id = `${type}-${getUniqueID()}`;
     this.type = type;
     this.title = type;
     this.active = false;
@@ -25,7 +29,7 @@ export class Prism {
     this.features = features || [];
 
     this.textFields = [];  // editable text properties used by some prisms; eg { 'description': {text: description, name: 'description'} }
-    this.insights = null;
+    this.insights = {};
 
     this.sortBy = 'total'; // default sorting // TODO take a look at this
 
@@ -62,19 +66,31 @@ export class Prism {
    * @param {Constraint[]} constraints - the constraints applicable to the current prism
   */
   async onSearchResults(newInsights, document, constraints) {
+
+    console.log("prism: new insights", newInsights);
+
+    // let oldInsights = TODO // Here now, need to index into the dict object
+    // something like
+    let oldInsights = this.insights[document.selectionRange];
+
+    console.log("prism: old insights", oldInsights)
+    // TODO but what about when this is null? maybe it's already handled
+
     let predictions = newInsights?.predictions || [];
-    let summary     = newInsights?.summary || this.insights?.summary;
+    let summary     = newInsights?.summary || oldInsights?.summary;
 
     constraints = Constraint.subsetByFeatures(constraints, this.features)
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
     let results = await resolveConstraints(predictions, constraints, false);
     results = sortPredictions(results, this.sortBy, true);
 
-    this.insights = {...newInsights, results: results, summary: summary}
-    console.log(`insights for ${this.type}:`, this.insights);
+    // TODO check this is working
+    let resolvedInsights = {...newInsights, results: results, summary: summary};
+    console.log("prism: resolved insights", resolvedInsights);
+    this.insights[document.selectionRange] = resolvedInsights;
 
     this.isSearching = false;
-    this.onSearchComplete(this);
+    this.onSearchComplete(document.selectionRange);
   }
 
   /* 

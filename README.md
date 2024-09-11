@@ -1,4 +1,4 @@
-# Prism Editor
+# Phrasematic
 
 A text editor for viewing your text in many different ways...
 

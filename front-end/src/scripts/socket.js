@@ -1,5 +1,5 @@
 // mostly ported from infinite-canvas
-import { getUniqueUUID } from "./utils";
+import { getUniqueID } from "./utils";
 
 // This will hold our websocket connection to the server;
 // it's null to begin with but initialized after connect
@@ -7,7 +7,7 @@ let socket = null;
 
 function sendMessage(message) {
   if(checkAndRefreshSocket()){return}
-  const requestId = getUniqueUUID();
+  const requestId = getUniqueID();
   message.requestId = requestId;
   console.log("req:" + message.type, message);
   socket.send(JSON.stringify(message));
@@ -15,7 +15,7 @@ function sendMessage(message) {
 }
 
 export async function* streamFromWebSocket(streamType, data) {
-  const requestId = getUniqueUUID();
+  const requestId = getUniqueID();
   const request = { 
     id: requestId, 
     type: 'stream',
@@ -87,6 +87,7 @@ function assignSocket(socketProtocol, host, extraHandlers){
       ...extraHandlers
     };
 
+    console.log("ws: handlers", handlers, "type", msg.type);
     const handler = handlers[msg.type];
     if (!handler) {
       console.error("ws:nohandler", event.data);

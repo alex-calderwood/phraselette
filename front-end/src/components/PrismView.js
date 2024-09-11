@@ -76,10 +76,13 @@ export class PrismView extends Component {
   }
 
   prismHandleOnConstraintUpdate() {
-    console.log('constraint: updating ui on constraint' , this.prism);
-    this.props.onConstraintUpdate(this.prism);
-    this.setState({ hasHistogramData: !!this.prism?.insights?.summary });
+    const selectionRange = [this.props.startIndex, this.props.endIndex];
+    this.props.onConstraintUpdate(this.prism, selectionRange);
+    const hasHistogramData = !!this.prism?.insights[selectionRange]?.summary;
+    this.setState({ hasHistogramData: hasHistogramData});
     this.forceUpdate();
+    console.log('check: constraint: updating ui on constraint' , this.prism, "selectionRange", this.selectionRange, "has histogram data", hasHistogramData);
+
   }
 
   tokenContent(prism, start, end, tokens) {
@@ -118,12 +121,14 @@ export class PrismView extends Component {
     let prism = this.prism;
     let start = this.props.startIndex;
     let end = this.props.endIndex;
+    let selectionRange = [this.props.startIndex, this.props.endIndex];
     let onRemovePrism = this.props.onRemovePrism;
 
     let tokens = start !== null ? this.tokenManager.tokensAt(prism.tokenType, start, end) : [];
-    let results = prism?.insights?.results || [];
+    let results = prism?.insights[selectionRange]?.results || [];
+    let text = prism?.insights[selectionRange]?.text || null;
 
-    let text = prism?.insights?.text || null;
+    console.log("check: prism results", results, "text", text);
 
     let activeNotHidden = prism.active && !prism.hidden;
     let showTokenContent       = activeNotHidden && tokens.length > 0;
@@ -161,6 +166,8 @@ export class PrismView extends Component {
               key={constraint.id} 
               constraint={constraint}
               prism={prism}
+              startIndex={start}
+              endIndex={end}
               onDelete={this.props.removeConstraint} 
               hasHistogramData={this.state.hasHistogramData}
               onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)}/>}) : ""

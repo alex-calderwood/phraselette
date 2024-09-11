@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import rangy from 'rangy';
-import { getUniqueUUID, insertAfter } from "../scripts/utils";
+import { getUniqueID, insertAfter } from "../scripts/utils";
 import { TokenManager } from "../base/TokenManager";
 import { getColor } from "../scripts/color";
 import { Document } from "../base/Document";
@@ -69,10 +69,10 @@ export class PrismEditor extends Component {
 
     // initializationText = testingText; // comment this out to be normal
     let content = [];
-    // let initialId = getUniqueUUID();
+    // let initialId = getUniqueID();
     // for (let i = 0; i < initializationText.length; i++) {
     //   let c = initializationText[i];
-    //   let id = getUniqueUUID();
+    //   let id = getUniqueID();
     //   if (i === 0) { initialId = id; }
     //   content.push(`<span id=${id} c=${i}>${c}</span>`);
     // }
@@ -153,7 +153,7 @@ export class PrismEditor extends Component {
 
       // // If the editor is empty after input, ensure there's an empty span and move the cursor
       // if (newText.length === 0) {
-      //   this.contentRef.current.innerHTML = `<span id="${getUniqueUUID()}" c="0"></span>`;
+      //   this.contentRef.current.innerHTML = `<span id="${getUniqueID()}" c="0"></span>`;
       //   setTimeout(() => this.moveSelectionToEndOfEditor(), 0);
       // }
 
@@ -356,7 +356,7 @@ export class PrismEditor extends Component {
       this.tokenManager
     );
     
-    let data = { tokenizeRange: document.range, document: document }; // old versions of tokenizers still use tokenizeRange, should be depracated
+    let data = { tokenizeRange: document.fullRange, document: document }; // old versions of tokenizers still use tokenizeRange, should be depracated
     let curPrism = prisms[0];
     let remaining = prisms.slice(1);
 
@@ -526,7 +526,7 @@ export class PrismEditor extends Component {
     }
 
     if (shouldSetId) {
-      node.id = getUniqueUUID();
+      node.id = getUniqueID();
       return node.id;
     }
     return null;

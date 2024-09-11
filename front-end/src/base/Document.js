@@ -30,9 +30,14 @@ export class Document {
     }
 
     // Character inclusive range indices
-    get range() {
+    get fullRange() {
         if (this._bounce()) return [0, 0];
         return [0, this.text.length - 1];
+    }
+
+    get selectionRange() {        
+        if (this._bounce()) return [0, 0];
+        return [this.selection.startIndex, this.selection.endIndex];
     }
 
     _bounce() {

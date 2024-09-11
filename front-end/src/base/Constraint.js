@@ -1,15 +1,16 @@
-import { getUniqueUUID } from '../scripts/utils.js';
+import { getUniqueID } from '../scripts/utils.js';
 import { Feature } from './Feature.js';
 import { POS } from '../../data/pos.js';
 
 // feature -> constraint mapping
-export function makeConstraint(feature, target) {
+export function makeConstraint(feature, target, span) {
+  console.log("cc: making constraint with span", span);
   let attribute = feature.attribute;
   let dataType = feature.dataType;
   switch (attribute) {
     case 'pos':
       target = target.map(token => token.getAttribute('pos'));
-      return new POSConstraint(target);
+      return new POSConstraint(target, span);
     case 'sound': case 'rhyme':
       let firstPronunciationPerToken = target.map((token) => {
         let phonemes = token.getAttribute('phonemes', []); 
@@ -24,15 +25,15 @@ export function makeConstraint(feature, target) {
         return tokenPhonemes.split(' ');
       }).flat().filter(phoneme => phoneme && phoneme.length > 0);
 
-      if (attribute === 'rhyme') { return new BetterRhymeConstraint(finalTarget); }
-      return new SoundConstraint(finalTarget);
+      if (attribute === 'rhyme') { return new BetterRhymeConstraint(finalTarget, span); }
+      return new SoundConstraint(finalTarget, span);
   }
   
   switch(dataType) {
     case 'number':
-      return new NumericalRangeConstraint(attribute, feature);
+      return new NumericalRangeConstraint(attribute, feature, span);
     case 'category':
-      return new CategoricalConstraint(attribute, feature);
+      return new CategoricalConstraint(attribute, feature, span);
   }
 
   console.error('Could not make constraint for feature:', feature);
@@ -40,12 +41,12 @@ export function makeConstraint(feature, target) {
 }
 
 export class Constraint {
-  constructor(name, feature) {
+  constructor(name, feature, span) {
+    this.id = getUniqueID();
     this.name = name;
     this.feature = feature;
+    this.span = span;
     this.dataType = feature.dataType;
-    this.id = getUniqueUUID();
-    this.span = null;
     this.isPre = false;         // can the constraint be computed quickly?
     this.range = null;          // what are the possible values of the constraint
     this.filterThreshold = 0;   // what is the minimum score to consider the constraint satisfied
@@ -84,8 +85,8 @@ export class Constraint {
 }
 
 export class AlliterationConstraint extends Constraint {
-  constructor(targetToken) {
-    super('test', 'test');
+  constructor(targetToken, span) {
+    super('test', 'test', span);
     this.targetLetter = this.firstLetterInToken(targetToken);
   }
 
@@ -110,8 +111,8 @@ export class AlliterationConstraint extends Constraint {
  * such as part of speech or rhyme scheme
 */
 export class CategoricalConstraint extends Constraint {
-    constructor(name, feature, defaultTarget=null) {
-      super(name, feature);
+    constructor(name, feature, defaultTarget=null, span) {
+      super(name, feature, span);
       this.defaultTarget = defaultTarget;
       this.targetSequence = null; // what is the constraint's goal sequence
       this.range = null;
@@ -268,8 +269,8 @@ export class CategoricalConstraint extends Constraint {
 export class POSConstraint extends CategoricalConstraint { // may want to make a 'categorical constraint'
   static defaultTarget = 'noun';
   
-  constructor(targetPOSPhrase) {
-    super('pos', Feature.POS, POSConstraint.defaultTarget);
+  constructor(targetPOSPhrase, span) {
+    super('pos', Feature.POS, POSConstraint.defaultTarget, span);
     this.ignore = ["_SP"]
     this.targetSequence = targetPOSPhrase.filter(
       pos => !this.ignore.includes(pos)
@@ -282,8 +283,8 @@ export class POSConstraint extends CategoricalConstraint { // may want to make a
 
 export class BetterRhymeConstraint extends CategoricalConstraint {
   static defaultTarget = '';
-  constructor(targetPhones) {
-    super('rhyme', Feature.Rhyme, BetterRhymeConstraint.defaultTarget);
+  constructor(targetPhones, span) {
+    super('rhyme', Feature.Rhyme, BetterRhymeConstraint.defaultTarget, span);
     this.targetSequence = targetPhones.map((sound, i) => ({ sound, index: i }));
     this.vowelSounds = ["AA", "AE", "AH", "AO", "AW", "AY", "EH", "ER", "EY", "IH", "IY", "OW", "OY", "UH", "UW"];
     this.consonantSounds = ["B", "CH", "D", "DH", "F", "G", "HH", "JH", "K", "L", "M", "N", "NG", "P", "R", "S", "SH", "T", "TH", "V", "W", "Y", "Z", "ZH"];
@@ -361,8 +362,8 @@ export class BetterRhymeConstraint extends CategoricalConstraint {
 
 class SoundConstraint extends CategoricalConstraint {
   static defaultTarget = '';
-  constructor(targetPhones) {
-    super('sound', Feature.Sound, SoundConstraint.defaultTarget);
+  constructor(targetPhones, span) {
+    super('sound', Feature.Sound, SoundConstraint.defaultTarget, span);
     this.targetSequence = targetPhones.map((sound, i) => { return { sound: sound, index: i }; });
     this.flatten = true;
 
@@ -393,8 +394,8 @@ class SoundConstraint extends CategoricalConstraint {
 export class NumericalRangeConstraint extends Constraint {
   defaultRange = [0, 1];
 
-  constructor(name, feature) {
-    super(name, "number");
+  constructor(name, feature, span) {
+    super(name, "number", span);
     this.feature = feature
     this.range = this.defaultRange;
     this.targetMin = this.defaultRange[0];

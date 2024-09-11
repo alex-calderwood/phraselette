@@ -57,9 +57,12 @@ class App extends Component {
       tokens: Object.keys(this.tokenManager.tokens),
       selection: null,
       constraints: [],
+      searchResults: {},
       isSearching: false,
       info: {},
     };
+
+    window.state = this.state;
 
     this.editorRef = React.createRef();
     this.containerRef = React.createRef();
@@ -201,7 +204,6 @@ class App extends Component {
     }
 
     // console.log('on highlight change', prismID, shouldHighlight, prisms, toHighlight);
-
     this.setState({ prismToHighlight: prismID });
   }
 
@@ -223,18 +225,29 @@ class App extends Component {
   /*
    * A callback that is triggered when a prism finishes its .search() operation
    */
-  async onSearchComplete() {
+  async onSearchComplete(selectionRange) {
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
-    let predictions = prisms
-      .map((p) => p?.insights?.results)
-      .filter((r) => r && r.length > 0)
-      .flat();
+    let predictions = prisms.map(
+      (p) => p?.insights[selectionRange]?.results
+    )
+    .filter((r) => r && r.length > 0)
+    .flat();
+
+    console.log("check: onsearchcomplete predictions", predictions, "range", selectionRange);
+
     let filteredPredictions = await resolveConstraints(
       predictions,
       constraints
     );
-    this.setState({ searchResults: filteredPredictions });
+
+    this.setState(prevState => ({
+      searchResults: {
+        ...prevState.searchResults,
+        [selectionRange]: filteredPredictions
+      }
+    }));
+
     this.setSearchingState(false); // UI update
   }
 
@@ -272,7 +285,7 @@ class App extends Component {
   swapSequence(oldTokens, newSequence) {
     // Calculate the start and end positions
     if (oldTokens.length === 0 || !newSequence) {
-      console.error("swapSequence called with", oldTokens, newSequence);
+      console.error("swapSequence called with old tokens", oldTokens, "new sequence", newSequence);
       return;
     }
 
@@ -325,8 +338,8 @@ class App extends Component {
     }
   }
 
-  onConstraintUpdate(prism) {
-    let predictions = prism?.insights?.results || [];
+  onConstraintUpdate(prism, selectionRange) {
+    let predictions = prism?.insights[selectionRange]?.results || [];
     let document = this._currentDocument(); // still don't love this
     let constraints = Constraint.subsetByFeatures(
       this.state.constraints,
@@ -350,26 +363,26 @@ class App extends Component {
   };
 
   render() {
-    let startIndex = this.state.selection
+    const startIndex = this.state.selection
       ? this.state.selection.startIndex
       : null;
-    let endIndex = this.state.selection ? this.state.selection.endIndex : null;
-    let selectionText = this.state.selection ? this.state.selection.text : null;
+    const endIndex = this.state.selection ? this.state.selection.endIndex : null;
+    const selectionRange = [startIndex, endIndex];
+    const selectionText = this.state.selection ? this.state.selection.text : null;
 
     const hasSelection = selectionText && selectionText.length > 0;
-    let showSelection = debugMode && startIndex !== null && endIndex !== null;
+    const showSelection = debugMode && startIndex !== null && endIndex !== null;
 
+    const localSearchResults = this.state.searchResults[selectionRange]
+      ? this.state.searchResults[selectionRange]
+      : [];
+
+    const searchRanges = Object.keys(this.state.searchResults);
+
+    console.log("app: searchResults", Object.keys(this.state.searchResults), this.state.searchResults);
+    
     let activePrisms = Prism.getActive(this.state.prisms);
     window.activePrisms = activePrisms; // for debugging
-
-    // get the prism that represents word breaks
-    let wordsPrism = Prism.firstByType(
-      this.state.prisms,
-      this.tokenManager.wordsPrism
-    );
-    let searchResults = this.state.searchResults
-      ? this.state.searchResults
-      : [];
 
     return (
       <div className="context-container" ref={this.containerRef}>
@@ -383,6 +396,7 @@ class App extends Component {
               prismToHighlight={this.state.prismToHighlight}
               ref={this.editorRef}
               doSearch={this.searchPrisms.bind(this)}
+              searchRanges={searchRanges} // TODO come up with a better name than searchRanges
             />
           </div>
 
@@ -411,18 +425,9 @@ class App extends Component {
                   onRetokenize={this.handleRetokenize}
                   onSearch={this.handleSearch}
                 />
-                {/* Display the selected span and some info about it */}
-                {/* <WordView
-                key={"wordslense"}
-                tokenManager={this.tokenManager} 
-                wordsPrism={wordsPrism}
-                startIndex={startIndex} endIndex={endIndex} 
-                onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
-                debugMode={debugMode}
-              /> */}
                 {/* Constrained search results */}
                 <SearchResults
-                  results={searchResults}
+                  results={localSearchResults}
                   isSearching={this.state.isSearching}
                   wrap={false}
                   verticalLayout={true}
