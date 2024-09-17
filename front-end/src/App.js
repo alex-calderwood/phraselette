@@ -319,7 +319,7 @@ class App extends Component {
     this.editorRef.current.swapText(start, end, newText);
   }
 
-  // Wrapper that is used to swap only while in App.js
+  // Swap the highlighted text in the editor for a sequence in the suggestion set (for instance after a user's click)
   handleTopLevelSequenceClick = (newSequence) => {
     // Determine which prism type to use (e.g., 'words' or the first active prism)
     const prismType = this.state.activePrisms[0]?.type || 'words';
@@ -398,7 +398,6 @@ class App extends Component {
 
     const searchRanges = [...this.state.searchResults.keys()];
 
-    console.log('search ranges', searchRanges, 'results', this.state.searchResults);
     const activePrisms = Prism.getActive(this.state.prisms);
     window.activePrisms = activePrisms; // for debugging
 
@@ -464,7 +463,7 @@ class App extends Component {
                       isSearching={prism.isSearching}
                       startIndex={startIndex}
                       endIndex={endIndex}
-                      onSwapSequence={this.swapSequence.bind(this)}
+                      onClickSequence={this.handleTopLevelSequenceClick}
                       debugMode={debugMode}
                       constraints={Constraint.subsetByFeatures(
                         this.state.constraints,

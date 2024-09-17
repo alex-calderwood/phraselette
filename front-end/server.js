@@ -98,7 +98,7 @@ wss.on("connection", (clientSocket, req) => {
   });
 
   clientSocket.on("close", () => {
-    console.log("server: ws:close", clientID);
+    console.log("server: ws: close", clientID);
     // broadcast({type: "leave", clientID: clientID});
   });
 });

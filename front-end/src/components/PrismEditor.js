@@ -181,7 +181,7 @@ export class PrismEditor extends Component {
         focusSpan  = focus;
       }
 
-      if (anchor.tagName === 'DIV') {
+      if (anchor.tagName === 'DIV') { // perhaps deprecated when we switched to plaintext mode
         anchorSpan = anchor;
         focusSpan  = focus;
       }
@@ -570,11 +570,8 @@ export class PrismEditor extends Component {
         span.style.backgroundColor = color;
         continue;
       } 
-      let div = document.querySelector(`div[c='${i}']`); // TODO
-      if (div) {
-        // nothing needs to be done to color a new line character
-        continue;
-      }
+      let div = document.querySelector(`div[c='${i}']`); // perhaps unneeded now that we switched to plaintext mode
+      if (div) { continue; } // nothing needs to be done to color a new line character
       console.error("editor: coloring-> no span for", token)
     }
   }
@@ -694,7 +691,7 @@ export class PrismEditor extends Component {
       <div
         className="editor"
         ref={this.contentRef}
-        contentEditable
+        contentEditable="plaintext-only"
         dangerouslySetInnerHTML={{ __html: this.state.content }}
         // onFocus={this.handleFocus}
       ></div>
@@ -772,49 +769,6 @@ function getCursorOffsetInDiv(editor) {
 
   return 0; // No range found, or no selection
 }
-
-// function setCursorAtOffset(editor, offset) {
-//   try {
-//     var currentOffset = 0;
-//     var found = false;
-
-//     // Helper function to traverse the nodes
-//     function traverseNodes(node) {
-//       if (node.nodeType === 3) { // Text node
-//         var nextOffset = currentOffset + node.length;
-//         if (offset <= nextOffset) {
-//           rangy.getSelection().collapse(node, offset - currentOffset);
-//           found = true;
-//           return; // Found the position, exit the traversal
-//         }
-//         currentOffset = nextOffset;
-//       } else if (node.nodeType === 1) { // Element node (e.g., <div>, <br>, etc.)
-//         // Count a newline if it's a block element or a break
-//         if (node.tagName === 'BR' || window.getComputedStyle(node).display === 'block') {
-//           currentOffset++;
-//           if (offset === currentOffset) {
-//             rangy.getSelection().collapse(node, 0);
-//             found = true;
-//             return; // Found the position, exit the traversal
-//           }
-//         }
-//         // Recurse through child nodes
-//         Array.from(node.childNodes).forEach(traverseNodes);
-//         if (found) return;
-//       }
-//     }
-
-//     // Start traversal from the editor's child nodes
-//     Array.from(editor.childNodes).forEach(traverseNodes);
-
-//     // If the specified offset is beyond the last character, collapse at the end
-//     if (!found) {
-//       rangy.getSelection().collapse(editor, editor.childNodes.length);
-//     }
-//   } catch (e) {
-//     console.error('Error setting cursor position:', e);
-//   }
-// }
 
 function setSelection(editor, startOffset, endOffset = startOffset) {
   try {
