@@ -619,7 +619,7 @@ export class PrismEditor extends Component {
     spans.forEach(span => {
       const c = getCharIndex(span);
       if (c >= start && c <= end) {
-        span.classList.add('rainbow');
+        span.classList.add('rain');
       }
     });
   }

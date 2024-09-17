@@ -67,16 +67,18 @@
     rgba(143, 0, 255, var(--rainbow-alpha))
   );
 }
-/* 
-.rainbow {
+
+.rain {
   background-size: 200% 200%;
   background: linear-gradient(
-    14deg,
+    0deg,
+    rgba(255, 0, 0, var(--rainbow-alpha)),
+    rgba(255, 127, 0, var(--rainbow-alpha)),
+    rgba(255, 255, 0, var(--rainbow-alpha)),
     rgba(0, 255, 0, var(--rainbow-alpha)),
-    rgba(0, 0, 255, var(--rainbow-alpha)),
-    rgba(75, 0, 130, var(--rainbow-alpha)),
+    rgba(0, 0, 255, var(--rainbow-alpha))
   );
-} */
+}
 
 .left, .right {
   flex: 0 0 50%; /* Make them take up 50% of the space */
