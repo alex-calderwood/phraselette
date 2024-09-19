@@ -1,6 +1,7 @@
 import { getUniqueID } from '../scripts/utils.js';
 import { Feature } from './Feature.js';
 import { POS } from '../../data/pos.js';
+import { overlaps } from '../scripts/utils.js';
 
 // feature -> constraint mapping
 export function makeConstraint(feature, target, span) {
@@ -69,18 +70,25 @@ export class Constraint {
   * Does the constraint apply to the given span?
   */
   applies(span) {
-    return true;
-    // TODO implement this kind of logic...
-      if (this.span === null) {
-        return false;
-      }
+    // return true;
+    if (this.span === null) {
+      return false;
+    }
 
-      return overlaps(this.span, span);
+    return overlaps(this.span, span);
   }
 
-  static subsetByFeatures(constraints, features) { 
+  static subsetByFeatures(constraints, features, span=null) { 
+    if (span !== null) {
+      constraints = constraints.filter((constraint) => {
+        return constraint.applies(span);
+      });
+    }
+
     // could also hard code the mapping for a speedup
-    return constraints.filter((constraint) => { return features.includes(constraint.feature); });
+    return constraints.filter((constraint) => { 
+      return features.includes(constraint.feature);
+    });
   }
 }
 

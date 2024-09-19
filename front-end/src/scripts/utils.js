@@ -12,10 +12,22 @@ export function insertAfter(newNode, referenceNode) {
 * Does span1 overlap with span2?
 */
 export function overlaps(span1, span2) {
-  // return span1.start <= span2.end && span1.end >= span2.start;
-  return (span1.start >= span2.start && span1.start <= span2.end) 
-  || (span1.end >= span2.start && span1.end <= span2.end)
-  || (span1.start <= span2.start && span1.end >= span2.end);
+  // Helper function to normalize input to {start, end} format
+  const normalize = (span) => {
+    if (Array.isArray(span)) {
+      return { start: span[0], end: span[1] };
+    }
+    return span;
+  };
+
+  // Normalize both inputs
+  const s1 = normalize(span1);
+  const s2 = normalize(span2);
+
+  // Check for overlap
+  return (s1.start >= s2.start && s1.start <= s2.end) 
+    || (s1.end >= s2.start && s1.end <= s2.end)
+    || (s1.start <= s2.start && s1.end >= s2.end);
 }
 
 export function scientific(num) {

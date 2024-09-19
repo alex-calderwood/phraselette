@@ -325,18 +325,41 @@ class App extends Component {
     this.updateRangeMapAfterSwap(start, oldEnd, newEnd);
   }
 
+  // updateRangeMapAfterSwap(oldStart, oldEnd, newEnd) {
+  //   console.log("openings: updating range map", 'start', oldStart, 'old end', oldEnd, 'new end', newEnd);
+  //   this.setState(prevState => {
+  //     const newSearchResults = prevState.searchResults.copy();
+  //     newSearchResults.updateRange(oldStart, oldEnd, oldStart, newEnd);
+  //     console.log('openings: old search results', prevState.searchResults, 'new results', newSearchResults)
+  //     return { searchResults: newSearchResults };
+  //   });
+  // }
+
   updateRangeMapAfterSwap(oldStart, oldEnd, newEnd) {
-    console.log("openings: updating range map", 'start', oldStart, 'old end', oldEnd, 'new end', newEnd);
+    const lengthDiff = newEnd - oldEnd;
+    
     this.setState(prevState => {
       const newSearchResults = prevState.searchResults.copy();
-      newSearchResults.updateRange(oldStart, oldEnd, oldStart, newEnd);
-      console.log('openings: old search results', prevState.searchResults, 'new results', newSearchResults)
+      
+      // Update all ranges
+      newSearchResults.ranges.forEach(range => {
+        if (range.start > oldStart) {
+          // This range comes after the swap, shift it
+          range.start += lengthDiff;
+          range.end += lengthDiff;
+        } else if (range.start === oldStart && range.end === oldEnd) {
+          // This is the swapped range, update its end
+          range.end = newEnd;
+        }
+        // Ranges that end before oldStart are unaffected
+      });
+  
       return { searchResults: newSearchResults };
     });
   }
 
-  // Swap the highlighted text in the editor for a sequence in the suggestion set (for instance after a user's click)
-  handleTopLevelSequenceClick = (newSequence) => {
+  // Swap the highlighted text in the editor for a sequence in the suggestion set 
+  handleSequenceClick = (newSequence) => {
     // Determine which prism type to use (e.g., 'words' or the first active prism)
     const prismType = this.state.activePrisms[0]?.type || 'words';
     
@@ -399,15 +422,7 @@ class App extends Component {
       ? this.state.searchResults[[start, end]].value
       : [];
 
-
-    if (this.state.searchResults.findRange(start, end) == undefined && start == end) {
-      let enclosingRange = this.state.searchResults.findEnclosingRange(this.state.start);
-      if (enclosingRange != undefined) {
-        localSearchResults = enclosingRange.value;
-        [start, end] = [enclosingRange.start, enclosingRange.end];
-        selectionText = this.text.slice(start, end + 1);
-      }
-    }
+    ({ start, end, localSearchResults, selectionText } = this.expandToOpening(start, end, localSearchResults, selectionText));
 
     const hasSelection = selectionText && selectionText.length > 0;
     const showSelection = debugMode && this.state.start !== null && this.state.end !== null;
@@ -416,6 +431,9 @@ class App extends Component {
 
     // openings are the ranges that are highlighted, that have active constraints or search results 
     const openings = [...this.state.searchResults.keys()]
+
+    const constraintSpan = {start, end};
+    console.log()
 
     const activePrisms = Prism.getActive(this.state.prisms);
     window.activePrisms = activePrisms; // for debugging
@@ -468,11 +486,16 @@ class App extends Component {
                   wrap={false}
                   verticalLayout={true}
                   showLength={true}
-                  onClickSequence={this.handleTopLevelSequenceClick}
+                  onClickSequence={this.handleSequenceClick}
                 />
                 {/* Display the active prisms */}
                 {activePrisms.map((prism) => {
-                  console.log("app: rendering prism", prism.id);
+                  let constraints = Constraint.subsetByFeatures(
+                    this.state.constraints,
+                    prism.features,
+                    constraintSpan,
+                  )
+                  console.log("app: rendering prism", prism.id, "with constraints", constraints, 'and span', constraintSpan, 'from all constraints', this.state.constraints);
                   return (
                     <PrismView
                       key={prism.id}
@@ -481,12 +504,9 @@ class App extends Component {
                       isSearching={prism.isSearching}
                       startIndex={start}
                       endIndex={end}
-                      onClickSequence={this.handleTopLevelSequenceClick}
+                      onClickSequence={this.handleSequenceClick}
                       debugMode={debugMode}
-                      constraints={Constraint.subsetByFeatures(
-                        this.state.constraints,
-                        prism.features
-                      )}
+                      constraints={constraints}
                       addConstraint={this.addConstraint.bind(this)}
                       onRemovePrism={() => this.handleRemovePrism(prism)}
                       removeConstraint={this.removeConstraint.bind(this)}
@@ -509,6 +529,18 @@ class App extends Component {
         </div>
       </div>
     );
+  }
+
+  expandToOpening(start, end, localSearchResults, selectionText) {
+    if (this.state.searchResults.findRange(start, end) == undefined && start == end) {
+      let enclosingRange = this.state.searchResults.findEnclosingRange(this.state.start);
+      if (enclosingRange != undefined) {
+        localSearchResults = enclosingRange.value;
+        [start, end] = [enclosingRange.start, enclosingRange.end];
+        selectionText = this.text.slice(start, end + 1);
+      }
+    }
+    return { start, end, localSearchResults, selectionText};
   }
 }
 
