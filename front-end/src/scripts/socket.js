@@ -89,7 +89,7 @@ function assignSocket(socketProtocol, host, extraHandlers){
 
     const handler = handlers[msg.type];
     if (!handler) {
-      console.error("ws: nohandler", event.data);
+      console.error("ws: nohandler event.data", event.data, 'handlers', handlers, 'type', msg.type);
       return;
     }
     handler(msg);

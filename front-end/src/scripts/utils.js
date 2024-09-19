@@ -1,6 +1,6 @@
-export function getUniqueID() {
-  var id = 'id-' + Math.random().toString(16).slice(2);
-  return id; // TODO small chance of collision, 
+export function getUniqueID(typeIdentifier='id') {
+  var id = `${typeIdentifier}-` + Math.random().toString(16).slice(2);
+  return id; // small chance of collision
 }
 
 // for some reason javascript doesn't have this built in
@@ -56,38 +56,111 @@ export function humanLog(logProb) {
   }
 }
 
+/**
+ * Represents a range with a start, end, and associated value.
+ */
+class Range {
+  constructor(start, end, value, id=getUniqueID('range')) {
+    this.start = start;
+    this.end = end;
+    this.value = value;
+    this.id = id;
+  }
+
+  /**
+   * @returns {Range} a copy (with the identical ID so be careful)
+   **/
+  copy() {
+    let range = new Range(this.start, this.end, this.value, this.id);
+    return range;
+  }
+}
+
+/**
+ * A data structure for managing ranges and their associated values.
+ * Supports operations like setting, getting, updating, and querying ranges.
+ */
 export class RangeMap {
   constructor() {
-    this.map = new Map();
-    
+    this.ranges = [];
+
     return new Proxy(this, {
       get(target, prop) {
-        if (typeof prop === 'symbol' || prop === 'map' || prop === 'keys') {
-          return target[prop];
-        }
-        return target.map.get(prop);
+        if (prop in target) return target[prop];
+        const [start, end] = prop.split(',').map(Number);
+        return target.findRange(start, end);
       },
       set(target, prop, value) {
-        if (typeof prop === 'symbol' || prop === 'map' || prop === 'keys') {
-          target[prop] = value;
+        const [start, end] = prop.split(',').map(Number);
+        const existingRange = target.findRange(start, end);
+        if (existingRange) {
+          existingRange.value = value;
         } else {
-          target.map.set(prop, value);
+          target.set(start, end, value);
         }
         return true;
       }
     });
   }
 
-  keys() {
-    return Array.from(this.map.keys()).map(key => {
-      const [start, end] = key.split(',');
-      return [RangeMap.parseValue(start), RangeMap.parseValue(end)];
-    });
+  set(start, end, value) {
+    if (isNaN(start) || isNaN(end)) {
+      console.warn('Attempted to set a range with NaN value. This entry will be ignored.');
+      return null; // or you could throw an error if you prefer
+    }
+
+    const newRange = new Range(start, end, value);
+    this.ranges.push(newRange);
+    return newRange.id;
   }
 
-  static parseValue(value) {
-    if (value === 'null') return null;
-    if (value === 'NaN') return NaN;
-    return isNaN(Number(value)) ? value : Number(value);
+  get(start, end) {
+    const range = this.ranges.find(r => r.start === start && r.end === end);
+    return range ? range.value : undefined;
+  }
+
+  findRange(start, end) {
+    return this.ranges.find(r => r.start === start && r.end === end);
+  }
+
+  findRangeById(id) {
+    return this.ranges.find(r => r.id === id);
+  }
+
+  updateRange(start, end, newStart, newEnd) {
+    const range = this.findRange(start, end);
+    if (range) {
+      range.start = newStart;
+      range.end = newEnd;
+      return true;
+    }
+    return false;
+  }
+
+  updateRangeById(id, newStart, newEnd) {
+    const range = this.findRangeById(id);
+    if (range) {
+      range.start = newStart;
+      range.end = newEnd;
+      return true;
+    }
+    return false;
+  }
+
+  copy() {
+    const newRangeMap = new RangeMap();
+    this.ranges.forEach(range => {
+      newRangeMap.set(range.start, range.end, range.value);
+    });
+    // console.log("openings: copy", this, newRangeMap);
+    return newRangeMap;
+  }
+
+  getAllRanges() {
+    return this.ranges;
+  }
+
+  keys() {
+    return this.ranges.map(r => [r.start, r.end]);
   }
 }

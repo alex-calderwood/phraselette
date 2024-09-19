@@ -66,28 +66,18 @@ export class Prism {
    * @param {Constraint[]} constraints - the constraints applicable to the current prism
   */
   async onSearchResults(newInsights, document, constraints) {
-
-    console.log("prism: new insights", newInsights);
-
-    // let oldInsights = TODO // Here now, need to index into the dict object
-    // something like
     let oldInsights = this.insights[document.selectionRange];
-
-    console.log("prism: old insights", oldInsights)
-    // TODO but what about when this is null? maybe it's already handled
-
     let predictions = newInsights?.predictions || [];
     let summary     = newInsights?.summary || oldInsights?.summary;
 
     constraints = Constraint.subsetByFeatures(constraints, this.features)
-    const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
+    // const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
     let results = await resolveConstraints(predictions, constraints, false);
     results = sortPredictions(results, this.sortBy, true);
 
-    // TODO check this is working
     let resolvedInsights = {...newInsights, results: results, summary: summary};
-    console.log("prism: resolved insights", resolvedInsights);
     this.insights[document.selectionRange] = resolvedInsights;
+    console.log("prism: resolved insights", resolvedInsights);
 
     this.isSearching = false;
     this.onSearchComplete(document.selectionRange);

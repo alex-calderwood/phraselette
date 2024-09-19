@@ -71,8 +71,6 @@ export class PrismView extends Component {
     const hasHistogramData = !!this.prism?.insights[selectionRange]?.summary;
     this.setState({ hasHistogramData: hasHistogramData});
     this.forceUpdate();
-    console.log('check: constraint: updating ui on constraint' , this.prism, "selectionRange", this.selectionRange, "has histogram data", hasHistogramData);
-
   }
 
   tokenContent(prism, start, end, tokens) {
@@ -118,13 +116,12 @@ export class PrismView extends Component {
     let results = prism?.insights[selectionRange]?.results || [];
     let text = prism?.insights[selectionRange]?.text || null;
 
-    console.log("check: prism results", results, "text", text);
-
     let activeNotHidden = prism.active && !prism.hidden;
     let showTokenContent       = activeNotHidden && tokens.length > 0;
     let showResults     = activeNotHidden && (results.length > 0 || this.props.isSearching)
     let showtext        = activeNotHidden && text;
-    let displayingFull  = showTokenContent || showResults;
+    let displayingFull 
+     = showTokenContent || showResults;
 
     let rotated = activeNotHidden ? "rotated" : "";
     let border  = activeNotHidden ? "border"  : "";
@@ -171,6 +168,7 @@ export class PrismView extends Component {
             onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)} /> : "" }
           
           {showResults ? <SearchResults
+                      showLength={true}
                       isSearching={this.props.isSearching} 
                       tokenType={prism.type}
                       onClickSequence={this.props.onClickSequence}

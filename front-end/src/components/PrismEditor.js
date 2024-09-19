@@ -42,11 +42,9 @@ export class PrismEditor extends Component {
     this.editorNode.addEventListener('blur', this.handleBlur);
     this.editorNode.addEventListener('focus', this.handleFocus);
 
-    // this.editorNode.addEventListener('focus', this.handleFocus);
-
     let initializationText = "";
-    // let testingText = `I arrived without a ladder, deciding it was better to be on time than prepared.`
-  let testingText = `how well I would write if I were not here! If between the white page and the writing of words and stories that take shape and disappear without anyone's ever writing them there were not interposed that uncomfortable partition which is my person! Style, taste, individual philosophy, subjectivity, cultural background, real experience, psychology, talent, tricks of the trade: all the elements that make what I write recognizable as mine seem to me a cage that restricts my possibilities.`;
+    // Italo Calvino Quote for testing
+    let testingText = `how well I would write if I were not here! If between the white page and the writing of words and stories that take shape and disappear without anyone's ever writing them there were not interposed that uncomfortable partition which is my person! Style, taste, individual philosophy, subjectivity, cultural background, real experience, psychology, talent, tricks of the trade: all the elements that make what I write recognizable as mine seem to me a cage that restricts my possibilities.`;
     // initializationText = testingText; // comment this out to have an empty editor
  
     let content = [];
@@ -102,12 +100,10 @@ export class PrismEditor extends Component {
       });
     }
 
-    if (hasArrayChanged(this.props.activeRanges, prevProps.activeRanges)) {
-      console.log("editor: active ranges changed from", prevProps.activeRanges, "to", this.props.activeRanges );
-
-      this.props.activeRanges.forEach(range => {
-        this.colorRange(range[0], range[1])
-      });
+    // Update the 'Openings' (the highlighted constraint areas in the doc)
+    if (hasArrayChanged(this.props.openings, prevProps.openings)) {
+      console.log("editor: openings changed from", prevProps.openings, "to", this.props.openings );
+      this.colorOpenings(this.props.openings);
     }
   }
 
@@ -127,16 +123,18 @@ export class PrismEditor extends Component {
   */
   onInput = (event) => {
     // turn the text into styled character spans: <span>a</span><span>b</span>
-    // this.splitIntoCharactersAndStyle(this.contentRef.current);
+    // this.splitIntoStyledCharacterSpans(this.contentRef.current);
 
     // update the state text
     let newText = getTextWithWhitespace(this.contentRef.current);
+
+    console.log("editor: whitespace text", newText);
 
     // Ensure there's always at least one empty span
     // if (newText.length === 0) {
     //   this.contentRef.current.innerHTML = `<span id="$abcde" c="0"></span>`;
     // } else {
-    //   this.splitIntoCharactersAndStyle(this.contentRef.current);
+    //   this.splitIntoStyledCharacterSpans(this.contentRef.current);
     // }
 
     // // update each modified token (currently broken)
@@ -148,11 +146,11 @@ export class PrismEditor extends Component {
     // give the new text to the parent component
     if (this.props.setText) { this.props.setText(newText); }
 
-      // // If the editor is empty after input, ensure there's an empty span and move the cursor
-      // if (newText.length === 0) {
-      //   this.contentRef.current.innerHTML = `<span id="${getUniqueID()}" c="0"></span>`;
-      //   setTimeout(() => this.moveSelectionToEndOfEditor(), 0);
-      // }
+    // // If the editor is empty after input, ensure there's an empty span and move the cursor
+    // if (newText.length === 0) {
+    //   this.contentRef.current.innerHTML = `<span id="${getUniqueID()}" c="0"></span>`;
+    //   setTimeout(() => this.moveSelectionToEndOfEditor(), 0);
+    // }
 
     // Use a timeout to delay execution of restoring the selection
     // This ensures that the DOM updates have completed before the selection is restored
@@ -236,7 +234,6 @@ export class PrismEditor extends Component {
     if (this.keyUpSelection) {
       const startOffset = this.keyUpSelection.prefixOffset;
       const endOffset = startOffset + (this.keyUpSelection.text ? this.keyUpSelection.text.length : 0);
-      console.log('editor: restoring selection', startOffset, endOffset);
       setSelection(this.editorNode, startOffset, endOffset);
     }
   }
@@ -368,9 +365,9 @@ export class PrismEditor extends Component {
   manualRetokenizeAction() {
     console.log('editor: manually tokenizing');
     this.forceTokenize();
-    this.splitIntoCharactersAndStyle(this.contentRef.current);
+    this.splitIntoStyledCharacterSpans(this.contentRef.current);
     // setTimeout(() => {
-    //   this.restoreSelection();
+    //   this.restoreSelecdtion();
     // }, 0);
   }
 
@@ -404,6 +401,8 @@ export class PrismEditor extends Component {
   */
   onKeyUp(event) {
     this.keyUpSelection = this.currentSelection();
+    this.splitIntoStyledCharacterSpans(this.contentRef.current);
+    this.restoreSelection(event);
   }
 
   onClick = (event) => {
@@ -414,7 +413,7 @@ export class PrismEditor extends Component {
     event.preventDefault();
     const text = (event.clipboardData || window.clipboardData).getData('text/plain');
     document.execCommand('insertText', false, text);
-    this.splitIntoCharactersAndStyle(this.contentRef.current);
+    this.splitIntoStyledCharacterSpans(this.contentRef.current);
   };
 
   // to call upon other actions that modify the selection
@@ -436,8 +435,7 @@ export class PrismEditor extends Component {
   swapText = (start, end, newText) => {
     let startSpan = document.querySelector(`span[c='${start}']`);
     let endSpan = document.querySelector(`span[c='${end}']`);
-    console.log('start span', startSpan, 'end span', endSpan, start, end, newText)
-
+    console.log('editor: start span', startSpan, 'end span', endSpan, start, end, newText)
 
     // select the text to replace
     let range = rangy.createRange();
@@ -466,7 +464,7 @@ export class PrismEditor extends Component {
     endSpan.remove()
 
     // // style the new text
-    this.splitIntoCharactersAndStyle(this.contentRef.current);
+    this.splitIntoStyledCharacterSpans(this.contentRef.current);
 
     // Create a new range for the inserted text
     let newRange = rangy.createRange();
@@ -609,6 +607,38 @@ export class PrismEditor extends Component {
       console.error('editor: No token manager to color');
     }
   }
+
+  colorOpenings(openings) {
+    // openings.forEach(range => {
+    //   this.colorRange(range[0], range[1])
+    // });
+
+    // for each character color or remove the 'rain' tag
+    let spans = document.querySelectorAll('span[c]');
+    for (let i = 0; i < spans.length; i++) {
+      let span = spans[i];
+      let c = getCharIndex(span);
+      if (c === null) {
+        console.error('editor: colorOpenings called with null c', span);
+        continue;
+      }
+
+      let shouldRain = false;
+      for (let j = 0; j < openings.length; j++) {
+        let range = openings[j];
+        if (c >= range[0] && c <= range[1]) {
+          shouldRain = true;
+          break;
+        }
+      }
+
+      if (shouldRain) {
+        span.classList.add('rain');
+      } else {
+        span.classList.remove('rain');
+      }
+    }
+  }
   
   colorRange(start, end) {
     const spans = document.querySelectorAll('span[c]');
@@ -623,8 +653,12 @@ export class PrismEditor extends Component {
 
   /*
   * Split the content into individual characters and apply the appropriate styles.
+  * <div>text</div>
+  * becomes
+  * <div><span>t</span><span>e</span><span>x</span><span>t</span></div>
+  * Each span is given a unique character id and a numerical index indicating its location in the text.
   */
-  splitIntoCharactersAndStyle(content) {
+  splitIntoStyledCharacterSpans(content) {
     let children = [...traverseDOM(content)];
 
     let i = 0;
@@ -650,8 +684,6 @@ export class PrismEditor extends Component {
         newSpans.push(span);
       }
     }
-  
-  
 
     while (child) {
       if (child.tagName == "BR") {

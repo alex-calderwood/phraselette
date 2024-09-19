@@ -33,9 +33,11 @@ export class ReaderPrism extends Prism {
   async onSearchResults(insights, document, constraints) {
     let message = insights.message;
     let revisions = message.revisions;
-    console.log('critic got words', revisions)
+    console.log('reader: got words', revisions);
 
     let predictions = await ThesaurusPrism.processRevisions(revisions, document);
+
+    console.log('reader: predictions', predictions);
     
     super.onSearchResults({predictions: predictions, text: message.response}, document, constraints);
   }

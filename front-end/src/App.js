@@ -89,6 +89,7 @@ class App extends Component {
         this.state.constraints,
         reader.features
       );
+      console.log('reader: handleReaderResponse', {doc, reader, constraints});
       reader.onSearchResults({ message: msg }, doc, constraints);
     }
 
@@ -226,7 +227,6 @@ class App extends Component {
    * A callback that is triggered when a prism finishes its .search() operation
    */
   async onSearchComplete(selectionRange) {
-
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
     let predictions = prisms.map(
@@ -235,24 +235,13 @@ class App extends Component {
     .filter((r) => r && r.length > 0)
     .flat();
 
-    console.log("check: onsearchcomplete predictions", predictions, "range", selectionRange);
-
     let filteredPredictions = await resolveConstraints(
       predictions,
       constraints
     );
 
-    // this.setState(prevState => {
-    //   const newSearchResults = new Map(prevState.searchResults);
-    //   newSearchResults.set(selectionRange, filteredPredictions);
-    //   return { searchResults: newSearchResults };
-    // });
-
     this.setState(prevState => {
-      const newSearchResults = new RangeMap();
-      prevState.searchResults.keys().forEach(range => { // Copy existing entries
-        newSearchResults[range] = prevState.searchResults[range];
-      });
+      const newSearchResults = prevState.searchResults.copy()
       newSearchResults[selectionRange] = filteredPredictions;
       return { searchResults: newSearchResults };
     });
@@ -282,31 +271,40 @@ class App extends Component {
    * Then, we want to change the text in the editor for the new token text.
    * TODO: this seems to break things.
    */
-  swapToken(originalToken, newToken) {
-    this.tokenManager.swapToken(originalToken, newToken);
-    this.editorRef.current.swapText(
-      originalToken.start,
-      originalToken.end,
-      newToken.text
-    );
-  }
+  // swapToken(originalToken, newToken) {
+  //   this.tokenManager.swapToken(originalToken, newToken);
+  //   this.editorRef.current.swapText(
+  //     originalToken.start,
+  //     originalToken.end,
+  //     newToken.text
+  //   );
+  // }
 
+  /*
+   * Handle the swapping of tokens in the editor (as when the user selects a token replacement in the sidebar).
+   * First, we want to swap the tokens in the tokenManager.
+   * Then, we want to change the text in the editor for the new token text.
+   */
   swapSequence(oldTokens, newSequence) {
-    // Calculate the start and end positions
     if (oldTokens.length === 0 || !newSequence) {
       console.error("app: swapSequence called with old tokens", oldTokens, "new sequence", newSequence);
       return;
     }
 
     const start = oldTokens[0].start;
-    const end = oldTokens[oldTokens.length - 1].end;
+    const oldEnd = oldTokens[oldTokens.length - 1].end;
+    const newEnd = start + newSequence.textContent.length - 1;
     console.log(
       "app: swapSequence to",
       newSequence,
       "from",
       oldTokens,
+      'start',
       start,
-      end
+      'newEnd',
+      newEnd,
+      'oldEnd',
+      oldEnd,
     );
 
     // Get the new text from the sequence
@@ -316,7 +314,20 @@ class App extends Component {
     this.tokenManager.swapSequence(oldTokens, newSequence.span);
 
     // Update the editor text
-    this.editorRef.current.swapText(start, end, newText);
+    this.editorRef.current.swapText(start, oldEnd, newText);
+
+    // Update the RangeMap
+    this.updateRangeMapAfterSwap(start, oldEnd, newEnd);
+  }
+
+  updateRangeMapAfterSwap(oldStart, oldEnd, newEnd) {
+    console.log("openings: updating range map", 'start', oldStart, 'old end', oldEnd, 'new end', newEnd);
+    this.setState(prevState => {
+      const newSearchResults = prevState.searchResults.copy();
+      newSearchResults.updateRange(oldStart, oldEnd, oldStart, newEnd);
+      console.log('openings: old search results', prevState.searchResults, 'new results', newSearchResults)
+      return { searchResults: newSearchResults };
+    });
   }
 
   // Swap the highlighted text in the editor for a sequence in the suggestion set (for instance after a user's click)
@@ -368,13 +379,13 @@ class App extends Component {
   };
 
   handleSearch = () => {
-    const selectionRange = [this.state.selection.startIndex, this.state.selection.endIndex];
+    const selectionRange = [this.state.selection.startIndex, this.state.selection.endIndex - 1].sort((a, b) => a - b);
+
+    console.log('openings: handle search selection range', this.state.selection.startIndex, this.state.selection.endIndex);
     this.setState(prevState => {
-      const newSearchResults = new RangeMap();
-      prevState.searchResults.keys().forEach(range => { // Copy existing entries
-        newSearchResults[range] = prevState.searchResults[range];
-      });
-      newSearchResults[selectionRange] = [];
+      const newSearchResults = prevState.searchResults.copy();
+      newSearchResults[selectionRange] = []; // Reset the results of the current range
+      console.log('openings: handle search reset results', newSearchResults, 'prev results', prevState.searchResults)
       return { searchResults: newSearchResults };
     });
 
@@ -382,9 +393,7 @@ class App extends Component {
   };
 
   render() {
-    const startIndex = this.state.selection
-      ? this.state.selection.startIndex
-      : null;
+    const startIndex = this.state.selection ? this.state.selection.startIndex : null;
     const endIndex = this.state.selection ? this.state.selection.endIndex : null;
     const selectionRange = [startIndex, endIndex];
     const selectionText = this.state.selection ? this.state.selection.text : null;
@@ -396,7 +405,8 @@ class App extends Component {
       ? this.state.searchResults[selectionRange]
       : [];
 
-    const searchRanges = [...this.state.searchResults.keys()];
+    // openings are the ranges that are highlighted, that have active constraints or search results 
+    const openings = [...this.state.searchResults.keys()]
 
     const activePrisms = Prism.getActive(this.state.prisms);
     window.activePrisms = activePrisms; // for debugging
@@ -413,7 +423,7 @@ class App extends Component {
               prismToHighlight={this.state.prismToHighlight}
               ref={this.editorRef}
               doSearch={this.searchPrisms.bind(this)}
-              activeRanges={searchRanges}
+              openings={openings}
             />
           </div>
 
@@ -451,7 +461,6 @@ class App extends Component {
                   showLength={true}
                   onClickSequence={this.handleTopLevelSequenceClick}
                 />
-                {/* onClickSequence={this.onClickSequence.bind(this)} /> */}
                 {/* Display the active prisms */}
                 {activePrisms.map((prism) => {
                   console.log("app: rendering prism", prism.id);
@@ -479,7 +488,6 @@ class App extends Component {
               </div>
             )}
             {/* End inspector */}
-
 
             <div className="lenses">
               <PrismSelector 

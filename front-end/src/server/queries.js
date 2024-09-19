@@ -10,7 +10,7 @@ async function queryThesaurus(message, clientSocket, mock=false) {
     if (mock) {
         clientSocket.send(JSON.stringify({
             type: "thesaurusResponse",
-            revisions: ["strangulation", "entreatment", "warily", "Macbeth", "socketwrench"],
+            revisions: ["entreatment", "warily", "Macbeth", "socketwrench"],
             prism: message.prism,
         }))
         return;
@@ -54,11 +54,10 @@ async function queryReader(message, clientSocket) {
         prompt: revisionsPrompt,
     });
 
-    console.log("revisionPrompt", revisionsPrompt)
     let revisionResponse = claudeReplyText(revisonJSON);
     console.log("revisionResponse", revisionResponse)
-    const revisions = processRevisions(revisionResponse);
 
+    const revisions = processRevisions(revisionResponse);
     clientSocket.send(JSON.stringify({
         type: "readerResponse",
         response: response,

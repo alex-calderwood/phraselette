@@ -18,8 +18,6 @@ class HistogramRangeConstraintView extends Component {
     const selectionRange = [this.props.startIndex, this.props.endIndex];
     const data = prism?.insights[selectionRange]?.summary || null;
 
-    console.log("check: histogram: data for histogram", data, prism)
-
     return (
       <ConstraintWrapper {...this.props} >
         <LogHistogram data={data} onUpdate={this.update} hasData={hasHistogramData}/>

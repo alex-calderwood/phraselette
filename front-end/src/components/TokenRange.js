@@ -118,7 +118,6 @@ export class TokenRange extends Component {
     );
   }
 
-
   renderSequence(sequence, tokenType, expanded) {
     let prob = sequence.getAttribute('prob', null);
     let probColor = zeroToOneColor(prob);
