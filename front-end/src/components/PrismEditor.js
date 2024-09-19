@@ -107,10 +107,10 @@ export class PrismEditor extends Component {
     }
   }
 
-  // handleBlur = () => {
-  //   this.onKeyDown();
-  //   this.onKeyUp();
-  // }
+  handleBlur = () => {
+    this.onKeyDown();
+    this.onKeyUp();
+  }
 
   handleFocus = () => {
     this.restoreSelection();
