@@ -123,6 +123,10 @@ export class RangeMap {
     return this.ranges.find(r => r.start === start && r.end === end);
   }
 
+  findEnclosingRange(index) {
+    return this.ranges.find(r => r.start <= index && r.end >= index);
+  }
+
   findRangeById(id) {
     return this.ranges.find(r => r.id === id);
   }

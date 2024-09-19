@@ -393,17 +393,26 @@ class App extends Component {
   };
 
   render() {
-    const selectionRange = [this.state.start, this.state.end];
-    const selectionText = this.state.selection ? this.state.selection.text : null;
+    let [start, end] = [this.state.start, this.state.end];
+    let selectionText = this.state.selection ? this.state.selection.text : null;
+    let localSearchResults = this.state.searchResults[[start, end]]
+      ? this.state.searchResults[[start, end]].value
+      : [];
+
+
+    if (this.state.searchResults.findRange(start, end) == undefined && start == end) {
+      let enclosingRange = this.state.searchResults.findEnclosingRange(this.state.start);
+      if (enclosingRange != undefined) {
+        localSearchResults = enclosingRange.value;
+        [start, end] = [enclosingRange.start, enclosingRange.end];
+        selectionText = this.text.slice(start, end + 1);
+      }
+    }
 
     const hasSelection = selectionText && selectionText.length > 0;
     const showSelection = debugMode && this.state.start !== null && this.state.end !== null;
 
-    const localSearchResults = this.state.searchResults[selectionRange]
-      ? this.state.searchResults[selectionRange].value
-      : [];
-
-    console.log("app: local search results", localSearchResults, 'all', this.state.searchResults, 'selection range', selectionRange);
+    console.log("app: local search results", localSearchResults, 'all', this.state.searchResults, 'selection range', [start, end]);
 
     // openings are the ranges that are highlighted, that have active constraints or search results 
     const openings = [...this.state.searchResults.keys()]
@@ -443,7 +452,7 @@ class App extends Component {
                 )}
                 {showSelection ? (
                   <div className="selection-info">
-                    {this.state.start} - {this.state.end}
+                    {start} - {end}
                   </div>
                 ) : (
                   ""
@@ -470,8 +479,8 @@ class App extends Component {
                       tokenManager={this.tokenManager}
                       prism={prism}
                       isSearching={prism.isSearching}
-                      startIndex={this.state.start}
-                      endIndex={this.state.end}
+                      startIndex={start}
+                      endIndex={end}
                       onClickSequence={this.handleTopLevelSequenceClick}
                       debugMode={debugMode}
                       constraints={Constraint.subsetByFeatures(

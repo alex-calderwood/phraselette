@@ -185,7 +185,10 @@ export class PrismEditor extends Component {
       let startDocumentSpanIndex = getCharIndex(anchorSpan) + windowSelection.anchorOffset;
       let endDocumentSpanIndex = getCharIndex(focusSpan) + windowSelection.focusOffset;
 
-      let [startIndex, endIndex] = [startDocumentSpanIndex, endDocumentSpanIndex - 1].sort((a, b) => a - b);
+      let [startIndex, endIndex] = [startDocumentSpanIndex, endDocumentSpanIndex].sort((a, b) => a - b);
+      if (startDocumentSpanIndex !== endDocumentSpanIndex) {
+        endIndex = endIndex - 1;
+      }
 
       // super slow but more robust than the other options
       let offset = null;
@@ -484,6 +487,8 @@ export class PrismEditor extends Component {
 
     // console.log('editor: selection', selection, selection.anchorOffset, selection.focusOffset, 'range', newRange, newRange.startOffset, newRange.endOffset);
     this.updateSelection();
+
+    if (this.props.setText) { this.props.setText(getTextWithWhitespace(this.contentRef.current)); }
   }
 
   /* 
