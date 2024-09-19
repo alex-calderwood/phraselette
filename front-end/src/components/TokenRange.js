@@ -29,10 +29,9 @@ export class TokenRange extends Component {
     this.debouncedSetHoveredSequenceId = debounce(this.setHoveredSequenceId, 5);
     this.debouncedSetHoveredTokenId = debounce(this.setHoveredTokenId, 5);
 
-    let tokenType = this.props.tokenType;
-    let tokens = this.props.tokens;
-
-    console.log('tokenrange: constructor tokens for type', tokenType, tokens);
+    // let tokenType = this.props.tokenType;
+    // let tokens = this.props.tokens;
+    // console.log('tokenrange: constructor tokens for type', tokenType, tokens);
   }
 
   setHoveredSequenceId = (id) => {

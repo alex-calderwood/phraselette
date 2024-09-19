@@ -33,7 +33,7 @@ import { RangeMap } from "./scripts/utils";
 //         `-!'                       \\
 
 const initialPrismType = "words";
-const debugMode = false;
+const debugMode = true;
 
 class App extends Component {
   constructor(props) {
@@ -109,7 +109,11 @@ class App extends Component {
    */
   setSelection(selection) {
     console.log("app: setting selection", selection);
-    this.setState({ selection: selection });
+    this.setState({ 
+      selection: selection,
+      start: selection.startTextIndex,
+      end: selection.endTextIndex,
+    });
   }
 
   setSearchingState(isSearching) {
@@ -227,6 +231,7 @@ class App extends Component {
    * A callback that is triggered when a prism finishes its .search() operation
    */
   async onSearchComplete(selectionRange) {
+    console.log("app: search complete selection range", selectionRange);
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
     let predictions = prisms.map(
@@ -335,12 +340,8 @@ class App extends Component {
     // Determine which prism type to use (e.g., 'words' or the first active prism)
     const prismType = this.state.activePrisms[0]?.type || 'words';
     
-    // Get the current selection range
-    const startChar = this.state.selection ? this.state.selection.startIndex : null;
-    const endChar = this.state.selection ? this.state.selection.endIndex - 1 : null;
-  
     // Retrieve the relevant tokens
-    const oldTokens = startChar !== null ? this.tokenManager.tokensAt(prismType, startChar, endChar) : [];
+    const oldTokens = this.state.start !== null ? this.tokenManager.tokensAt(prismType, this.state.start, this.state.end) : [];
   
     console.log('app: handling top-level click', oldTokens, newSequence);
     
@@ -379,9 +380,8 @@ class App extends Component {
   };
 
   handleSearch = () => {
-    const selectionRange = [this.state.selection.startIndex, this.state.selection.endIndex - 1].sort((a, b) => a - b);
-
-    console.log('openings: handle search selection range', this.state.selection.startIndex, this.state.selection.endIndex);
+    const selectionRange = [this.state.start, this.state.end];
+    console.log('openings: handle search selection range', this.state.start, this.state.end);
     this.setState(prevState => {
       const newSearchResults = prevState.searchResults.copy();
       newSearchResults[selectionRange] = []; // Reset the results of the current range
@@ -393,17 +393,17 @@ class App extends Component {
   };
 
   render() {
-    const startIndex = this.state.selection ? this.state.selection.startIndex : null;
-    const endIndex = this.state.selection ? this.state.selection.endIndex : null;
-    const selectionRange = [startIndex, endIndex];
+    const selectionRange = [this.state.start, this.state.end];
     const selectionText = this.state.selection ? this.state.selection.text : null;
 
     const hasSelection = selectionText && selectionText.length > 0;
-    const showSelection = debugMode && startIndex !== null && endIndex !== null;
+    const showSelection = debugMode && this.state.start !== null && this.state.end !== null;
 
     const localSearchResults = this.state.searchResults[selectionRange]
-      ? this.state.searchResults[selectionRange]
+      ? this.state.searchResults[selectionRange].value
       : [];
+
+    console.log("app: local search results", localSearchResults, 'all', this.state.searchResults, 'selection range', selectionRange);
 
     // openings are the ranges that are highlighted, that have active constraints or search results 
     const openings = [...this.state.searchResults.keys()]
@@ -417,11 +417,11 @@ class App extends Component {
           <div className="left">
             {/* The text editor */}
             <PrismEditor
+              ref={this.editorRef}
               tokenManager={this.tokenManager}
-              setSelection={this.setSelection.bind(this)}
+              registerSelection={this.setSelection.bind(this)}
               setText={this.setText.bind(this)}
               prismToHighlight={this.state.prismToHighlight}
-              ref={this.editorRef}
               doSearch={this.searchPrisms.bind(this)}
               openings={openings}
             />
@@ -443,7 +443,7 @@ class App extends Component {
                 )}
                 {showSelection ? (
                   <div className="selection-info">
-                    {startIndex} - {endIndex}
+                    {this.state.start} - {this.state.end}
                   </div>
                 ) : (
                   ""
@@ -470,8 +470,8 @@ class App extends Component {
                       tokenManager={this.tokenManager}
                       prism={prism}
                       isSearching={prism.isSearching}
-                      startIndex={startIndex}
-                      endIndex={endIndex}
+                      startIndex={this.state.start}
+                      endIndex={this.state.end}
                       onClickSequence={this.handleTopLevelSequenceClick}
                       debugMode={debugMode}
                       constraints={Constraint.subsetByFeatures(

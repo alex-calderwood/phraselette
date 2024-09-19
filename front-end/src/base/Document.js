@@ -8,13 +8,17 @@ export class Document {
     // The text before the user's selection
     get prefixText() {
         if (this._bounce()) return '';
-        return this.text.slice(0, this.selection.startIndex);
+        let text = this.text.slice(0, this.selection.startTextIndex);
+        console.log("doc: prefix text", text)
+        return text
     }
 
     // The text after the user's selection
     get suffixText() {
         if (this._bounce()) return '';
-        return this.text.slice(this.selection.endIndex)
+        let text = this.text.slice(this.selection.endTextIndex); // TODO verify this is correct
+        console.log("doc: TODO PLEASE VERIFY THIS suffix text", text)
+        return text
     }
 
     // The text inside the user's selection
@@ -37,7 +41,7 @@ export class Document {
 
     get selectionRange() {        
         if (this._bounce()) return [0, 0];
-        return [this.selection.startIndex, this.selection.endIndex];
+        return [this.selection.startTextIndex, this.selection.endTextIndex];
     }
 
     _bounce() {

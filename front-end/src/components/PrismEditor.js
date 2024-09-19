@@ -107,10 +107,10 @@ export class PrismEditor extends Component {
     }
   }
 
-  handleBlur = () => {
-    this.onKeyDown();
-    this.onKeyUp();
-  }
+  // handleBlur = () => {
+  //   this.onKeyDown();
+  //   this.onKeyUp();
+  // }
 
   handleFocus = () => {
     this.restoreSelection();
@@ -127,8 +127,6 @@ export class PrismEditor extends Component {
 
     // update the state text
     let newText = getTextWithWhitespace(this.contentRef.current);
-
-    console.log("editor: whitespace text", newText);
 
     // Ensure there's always at least one empty span
     // if (newText.length === 0) {
@@ -184,8 +182,10 @@ export class PrismEditor extends Component {
         focusSpan  = focus;
       }
 
-      let startIndex = getCharIndex(anchorSpan) + windowSelection.anchorOffset;
-      let endIndex = getCharIndex(focusSpan) + windowSelection.focusOffset;
+      let startDocumentSpanIndex = getCharIndex(anchorSpan) + windowSelection.anchorOffset;
+      let endDocumentSpanIndex = getCharIndex(focusSpan) + windowSelection.focusOffset;
+
+      let [startIndex, endIndex] = [startDocumentSpanIndex, endDocumentSpanIndex - 1].sort((a, b) => a - b);
 
       // super slow but more robust than the other options
       let offset = null;
@@ -207,6 +207,10 @@ export class PrismEditor extends Component {
         achorSpan: anchorSpan,
         focusSpan: focusSpan,
 
+        // for working with the editor
+        startDocumentSpanIndex: startDocumentSpanIndex,
+        endDocumentSpanIndex: endDocumentSpanIndex,
+
         // we use the above to calculate these helper variables
         // they may not be up to date if accessed during an input event
         // both indicies represent the 0 based index of the character that the cursor precedes
@@ -214,8 +218,8 @@ export class PrismEditor extends Component {
         // Each number counts the number of characters that precede it.
         // However, it is ambiguous from these two values alone whether the cursor is in the end of the span or the beginning of the next
         // in those cases, use the above values
-        startIndex: startIndex,
-        endIndex: endIndex,
+        startTextIndex: startIndex,
+        endTextIndex: endIndex,
 
         prefixOffset: offset,
 
@@ -234,7 +238,7 @@ export class PrismEditor extends Component {
     if (this.keyUpSelection) {
       const startOffset = this.keyUpSelection.prefixOffset;
       const endOffset = startOffset + (this.keyUpSelection.text ? this.keyUpSelection.text.length : 0);
-      setSelection(this.editorNode, startOffset, endOffset);
+      moveSelection(this.editorNode, startOffset, endOffset);
     }
   }
 
@@ -397,7 +401,10 @@ export class PrismEditor extends Component {
   }
 
   /*
-   * Handles keydown events to save the selection before the input event is processed and the text changed.
+   Handles keydown events:
+    - save the selection before the input event is processed and the text changed
+    - style the text into our span format
+    - move the cursor back to the correct location after styling
   */
   onKeyUp(event) {
     this.keyUpSelection = this.currentSelection();
@@ -421,7 +428,7 @@ export class PrismEditor extends Component {
     let selection = this.currentSelection();
     this.keyDownSelection = selection;
     this.keyUpSelection   = selection;
-    this.props.setSelection(selection); // give the new selection to the parent
+    this.props.registerSelection(selection); // give the new selection to the parent
     return selection;
   }
 
@@ -568,7 +575,7 @@ export class PrismEditor extends Component {
         span.style.backgroundColor = color;
         continue;
       } 
-      let div = document.querySelector(`div[c='${i}']`); // perhaps unneeded now that we switched to plaintext mode
+      let div = document.querySelector(`div[c='${i}']`);
       if (div) { continue; } // nothing needs to be done to color a new line character
       console.error("editor: coloring-> no span for", token)
     }
@@ -609,11 +616,7 @@ export class PrismEditor extends Component {
   }
 
   colorOpenings(openings) {
-    // openings.forEach(range => {
-    //   this.colorRange(range[0], range[1])
-    // });
-
-    // for each character color or remove the 'rain' tag
+    // for each character, color or remove the 'rain' tag
     let spans = document.querySelectorAll('span[c]');
     for (let i = 0; i < spans.length; i++) {
       let span = spans[i];
@@ -632,7 +635,7 @@ export class PrismEditor extends Component {
         }
       }
 
-      if (shouldRain) {
+      if (shouldRain) { // add the rainbow opening style
         span.classList.add('rain');
       } else {
         span.classList.remove('rain');
@@ -802,7 +805,7 @@ function getCursorOffsetInDiv(editor) {
   return 0; // No range found, or no selection
 }
 
-function setSelection(editor, startOffset, endOffset = startOffset) {
+function moveSelection(editor, startOffset, endOffset = startOffset) {
   try {
     var currentOffset = 0;
     var startNode = null;
@@ -871,6 +874,8 @@ function setSelection(editor, startOffset, endOffset = startOffset) {
 /**
  * Extracts the text content from a contenteditable element, preserving explicit line breaks.
  *
+ * It needed to be this complex for when we were doing rich text, but now the <br> and <div> stuff isn't used.
+ * 
  * This function clones the provided element to avoid altering the original content. It then
  * replaces <br> tags and the beginnings of <div> tags with newline characters to preserve
  * the visual representation of line breaks. The function does not modify <span> tags, as they

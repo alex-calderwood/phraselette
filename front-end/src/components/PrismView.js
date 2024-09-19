@@ -132,7 +132,6 @@ export class PrismView extends Component {
 
     let textContent = showtext ? this.bulletedText(text) : "";
 
-
     return <div className={`prism`}>
         <div className={`prism-title ${rotated}`} onClick={this.toggleHidden.bind(this)}>
           {prism.type} {title}
