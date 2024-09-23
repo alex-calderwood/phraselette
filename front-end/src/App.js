@@ -231,7 +231,6 @@ class App extends Component {
    * A callback that is triggered when a prism finishes its .search() operation
    */
   async onSearchComplete(selectionRange) {
-    console.log("app: search complete selection range", selectionRange);
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
     let predictions = prisms.map(
@@ -246,10 +245,12 @@ class App extends Component {
     );
 
     this.setState(prevState => {
-      const newSearchResults = prevState.searchResults.copy()
-      newSearchResults[selectionRange] = filteredPredictions;
+      const newSearchResults = prevState.searchResults.copy();
+      newSearchResults.set(selectionRange.start, selectionRange.end, filteredPredictions);
       return { searchResults: newSearchResults };
     });
+
+    console.log("app: search complete selection range", selectionRange);
 
     this.setSearchingState(false); // UI update
   }
@@ -439,7 +440,7 @@ class App extends Component {
     let selectionText = this.state.selection ? this.state.selection.text : null;
     let localSearchResults = this.state.searchResults.get(start, end) || [];
 
-    ({ start, end, localSearchResults, selectionText } = this.expandToOpening(start, end, localSearchResults, selectionText));
+    ({ start, end, localSearchResults, selectionText } = this.expandSelectionToOpening(start, end, localSearchResults, selectionText));
 
     const hasSelection = selectionText && selectionText.length > 0;
     const showSelection = debugMode && this.state.start !== null && this.state.end !== null;
@@ -549,7 +550,7 @@ class App extends Component {
     );
   }
 
-  expandToOpening(start, end, localSearchResults, selectionText) {
+  expandSelectionToOpening(start, end, localSearchResults, selectionText) {
     if (this.state.searchResults.get(start, end) == undefined && start == end) {
       let enclosingRange = this.state.searchResults.findEnclosingRange(this.state.start);
       if (enclosingRange != undefined) {

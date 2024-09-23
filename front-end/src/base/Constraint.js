@@ -84,9 +84,8 @@ export class Constraint {
         return constraint.applies(span);
       });
     }
-
-    // could also hard code the mapping for a speedup
-    return constraints.filter((constraint) => { 
+    
+    return constraints.filter((constraint) => { // could also hard code the mapping for a speedup
       return features.includes(constraint.feature);
     });
   }

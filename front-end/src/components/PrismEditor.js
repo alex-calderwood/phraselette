@@ -138,14 +138,15 @@ export class PrismEditor extends Component {
    *        - spaces aren't being saved correctly on firefox (works on Chrome)
   */
   onInput = (event) => {
-    // const selection = this.currentSelection();
+    const selection = this.currentSelection();
+    console.log('testing: onInput', selection);
     const newText = getTextWithWhitespace(this.contentRef.current);
 
 
     console.log('testing: onInput pre',this.lastText);
     console.log('testing: onInput new', newText);
     
-    const changes = this.calculateChanges(this.lastText, newText);
+    const changes = this.calculateChanges(event, this.keyDownSelection, selection);
 
     changes.forEach(change => {
       this.changeTracker.addChange(change);
@@ -192,58 +193,65 @@ export class PrismEditor extends Component {
     // }, 0);
   };
 
-  calculateChanges(oldText, newText) {
+  calculateChanges(event, preChangeSelection, postChangeSelection) {
     const changes = [];
-    let i = 0;
-    let j = 0;
-
-    while (i < oldText.length || j < newText.length) {
-        if (i < oldText.length && j < newText.length && oldText[i] === newText[j]) {
-            // Characters match, move both indices
-            i++;
-            j++;
+    
+    switch (event.inputType) {
+      case 'insertText':
+      case 'insertCompositionText':
+        if (preChangeSelection.startTextIndex !== preChangeSelection.endTextIndex) {
+          changes.push(new TextChange(
+            ChangeType.REPLACE,
+            preChangeSelection.startTextIndex,
+            preChangeSelection.endTextIndex,
+            event.data
+          ));
         } else {
-            // Characters don't match, or we've reached the end of one string
-            const startI = i;
-            const startJ = j;
-
-            // Check for one-character insertion
-            if (i + 1 < oldText.length && oldText[i + 1] === newText[j]) {
-                changes.push(new TextChange(ChangeType.DELETE, i, i + 1, oldText[i]));
-                i++;
-            }
-            // Check for one-character deletion
-            else if (j + 1 < newText.length && oldText[i] === newText[j + 1]) {
-                changes.push(new TextChange(ChangeType.INSERT, i, j + 1, newText[j]));
-                j++;
-            }
-            // For longer changes, use the original logic
-            else {
-                // Move i to the next matching character or end of oldText
-                while (i < oldText.length && (j >= newText.length || oldText[i] !== newText[j])) {
-                    i++;
-                }
-
-                // Move j to the next matching character or end of newText
-                while (j < newText.length && (i >= oldText.length || oldText[i] !== newText[j])) {
-                    j++;
-                }
-
-                if (i > startI) {
-                    // Deletion
-                    changes.push(new TextChange(ChangeType.DELETE, startI, i, oldText.slice(startI, i)));
-                }
-
-                if (j > startJ) {
-                    // Insertion
-                    changes.push(new TextChange(ChangeType.INSERT, startI, j, newText.slice(startJ, j)));
-                }
-            }
+          changes.push(new TextChange(
+            ChangeType.INSERT,
+            preChangeSelection.startTextIndex,
+            postChangeSelection.startTextIndex,
+            event.data
+          ));
         }
+        break;
+  
+      case 'deleteContentBackward':
+      case 'deleteContentForward':
+      case 'deleteContent':
+        changes.push(new TextChange(
+          ChangeType.DELETE,
+          postChangeSelection.startTextIndex,
+          preChangeSelection.endTextIndex,
+          ''  // We don't need the deleted text
+        ));
+        break;
+  
+      case 'insertFromPaste':
+        const pastedText = event.clipboardData.getData('text/plain');
+        if (preChangeSelection.startTextIndex !== preChangeSelection.endTextIndex) {
+          changes.push(new TextChange(
+            ChangeType.REPLACE,
+            preChangeSelection.startTextIndex,
+            preChangeSelection.endTextIndex,
+            pastedText
+          ));
+        } else {
+          changes.push(new TextChange(
+            ChangeType.INSERT,
+            preChangeSelection.startTextIndex,
+            postChangeSelection.endTextIndex,
+            pastedText
+          ));
+        }
+        break;
+  
+      default:
+        console.warn(`Unhandled input type: ${event.inputType}`);
     }
-
+  
     return changes;
-}
+  }
 
   updateOpenings() {
     const changes = this.changeTracker.getChanges();
@@ -493,9 +501,8 @@ export class PrismEditor extends Component {
    * Handles keydown events to save the selection before the input event is processed and the text changed.
   */
   onKeyDown(event) {
-    console.log('testing: onKeyDown');
-
     this.keyDownSelection = this.currentSelection();
+    console.log('testing: onKeyDown', this.keyDownSelection);
   }
 
   /*

@@ -31,6 +31,10 @@ export class RangeMap {
     }
 
     set(start, end, value) {
+        if (start == null || Number.isNaN(start) || end == null || Number.isNaN(end)) {
+            console.error(`range: invalid range: [${start}, ${end}] for value:`, value);
+        }
+
         const existingRange = this.findExactRange(start, end);
         if (existingRange) {
             // Update the value of the existing range
@@ -155,8 +159,7 @@ export class RangeMap {
             return acc;
         }, {});
 
-        console.log(`testing: Updated ranges 1:`, updatedRanges);
-        console.log(`testing: Updated ranges 2:`, this.ranges);
+        console.log(`testing: updated ranges:`, this.ranges);
         return updatedRanges;
       }
 
