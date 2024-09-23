@@ -58,8 +58,8 @@ class App extends Component {
       tokens: Object.keys(this.tokenManager.tokens),
       selection: null,
       constraints: [],
-      searchResults: new RangeMap(),
-      isSearching: false,
+      openings: new RangeMap(),
+      isSearching: {},
       info: {},
       start: 0,
       end: 0,
@@ -83,7 +83,7 @@ class App extends Component {
         this.state.constraints,
         dictPrism.features
       );
-      let opening = this.state.searchResults.findRangeById(msg.opening);
+      let opening = this.state.openings.findRangeById(msg.opening);
       console.log('thesaurus: handleReaderResponse TODO check opening', opening);
       dictPrism.onSearchResults(opening, { message: msg }, doc, constraints);
     }
@@ -95,7 +95,7 @@ class App extends Component {
         this.state.constraints,
         reader.features
       );
-      let opening = this.state.searchResults.findRangeById(msg.opening);
+      let opening = this.state.openings.findRangeById(msg.opening);
       console.log('reader: handleReaderResponse TODO check opening', {doc, reader, constraints, opening});
       reader.onSearchResults(opening, { message: msg }, doc, constraints);
     }
@@ -133,8 +133,10 @@ class App extends Component {
     });
   }
 
-  setSearchingState(isSearching) {
-    this.setState({ isSearching: isSearching });
+  setSearchingState(openingID, isSearching) {
+    this.setState({
+      isSearching: { ...this.state.isSearching, [openingID]: isSearching },
+    });
   }
 
   setText(text) {
@@ -233,7 +235,7 @@ class App extends Component {
    * Saearch for alternate words using each prism.
    */
   async searchAllPrisms(opening, document) {
-    this.setSearchingState(true); // UI update // TODO this should be indexed by openingID
+    this.setSearchingState(opening.id, true); // UI update // TODO this should be indexed by openingID
 
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
@@ -274,14 +276,14 @@ class App extends Component {
     );
 
     this.setState(prevState => {
-      const newSearchResults = prevState.searchResults.copy();
+      const newSearchResults = prevState.openings.copy();
       newSearchResults.set(opening.start, opening.end, filteredPredictions);
-      return { searchResults: newSearchResults };
+      return { openings: newSearchResults };
     });
 
     // TODO we should set the search state based on opening ID
     console.log('app: search complete', opening, 'search results', filteredPredictions);
-    this.setSearchingState(false); // UI update
+    this.setSearchingState(opening.id, false); // UI update
   }
 
   addConstraint(constraint) {
@@ -351,25 +353,15 @@ class App extends Component {
     // Update the editor text
     this.editorRef.current.swapText(start, oldEnd, newText);
 
-    // Update the RangeMap
-    this.updateRangeMapAfterSwap(start, oldEnd, newEnd);
+    // Update the Openin
+    this.updateOpeningRangesAfterSwap(start, oldEnd, newEnd);
   }
 
-  // updateRangeMapAfterSwap(oldStart, oldEnd, newEnd) {
-  //   console.log("openings: updating range map", 'start', oldStart, 'old end', oldEnd, 'new end', newEnd);
-  //   this.setState(prevState => {
-  //     const newSearchResults = prevState.searchResults.copy();
-  //     newSearchResults.updateRange(oldStart, oldEnd, oldStart, newEnd);
-  //     console.log('openings: old search results', prevState.searchResults, 'new results', newSearchResults)
-  //     return { searchResults: newSearchResults };
-  //   });
-  // }
-
-  updateRangeMapAfterSwap(oldStart, oldEnd, newEnd) {
+  updateOpeningRangesAfterSwap(oldStart, oldEnd, newEnd) {
     const lengthDiff = newEnd - oldEnd;
     
     this.setState(prevState => {
-      const newSearchResults = prevState.searchResults.copy();
+      const newSearchResults = prevState.openings.copy();
       
       // Update all ranges
       newSearchResults.allRanges().forEach(range => {
@@ -384,7 +376,7 @@ class App extends Component {
         // Ranges that end before oldStart are unaffected
       });
   
-      return { searchResults: newSearchResults };
+      return { openings: newSearchResults };
     });
   }
 
@@ -404,7 +396,7 @@ class App extends Component {
 
   updateOpenings = (changes) => {
     this.setState(prevState => {
-      const newSearchResults = prevState.searchResults.copy();
+      const newSearchResults = prevState.openings.copy();
       
       changes.forEach(change => {
         newSearchResults.updateRanges(change);
@@ -412,7 +404,7 @@ class App extends Component {
 
       console.log('app: new openings after update', newSearchResults.allRanges());
 
-      return { searchResults: newSearchResults };
+      return { openings: newSearchResults };
     });
   }
 
@@ -455,10 +447,10 @@ class App extends Component {
     // we don't need to call expandtoopening because we already have the expanded start, end
     let opening = null;
     this.setState(prevState => {
-      const newSearchResults = prevState.searchResults.copy();
+      const newSearchResults = prevState.openings.copy();
       opening = newSearchResults.set(this.state.start, this.state.end, []); // create a new opening or reset what is there
-      console.log('openings: handle search reset results', newSearchResults, 'prev results', prevState.searchResults)
-      return { searchResults: newSearchResults };
+      console.log('openings: handle search reset results', newSearchResults, 'prev results', prevState.openings)
+      return { openings: newSearchResults };
     },
     () => { // After the state updates, trigger the search
       return this.editorRef.current?.manualSearchAction(opening);
@@ -475,17 +467,17 @@ class App extends Component {
     const showSelection = debugMode && this.state.start !== null && this.state.end !== null;
 
     const document = this._currentDocument(); // TODO would be nice to not have to recompute this all the time... I'm not sure where it should go
-
-    console.log("app: render", start, end, selectionText, localResults, opening);
-
+    
     // openings are the ranges that are highlighted, that have active constraints or search results 
-    const openings = this.state.searchResults.keys();
+    const openingKeys = this.state.openings.keys();
 
     const constraintSpan = {start, end};
-    console.log()
-
     const activePrisms = Prism.getActive(this.state.prisms);
     window.activePrisms = activePrisms; // for debugging
+
+    const renderData = {start, end, selectionText, localResults, opening}
+    console.log("app: render", renderData);
+    window.renderData = renderData;
 
     return (
       <div className="context-container" ref={this.containerRef}>
@@ -500,14 +492,13 @@ class App extends Component {
               prismToHighlight={this.state.prismToHighlight}
               searchAllPrisms={this.searchAllPrisms.bind(this)}
               updateOpenings={this.updateOpenings}
-              document={document}
-              openings={openings}
-              // opening={opening}
+              openingKeys={openingKeys}
+              // opening={opening} 
+              // document={document} // could send these in if needed
             />
           </div>
 
-          <div className="right">
-            {/* Everything on the right hand side of the screen */}
+          <div className="right">  {/* Everything on the right hand side of the screen */}
             {!hasSelection && (
               <div className={`inspector`}>
                 <InstructionsView />
@@ -534,7 +525,7 @@ class App extends Component {
                 {/* Constrained search results */}
                 <SearchResults
                   results={localResults}
-                  isSearching={this.state.isSearching}
+                  isSearching={this.state.isSearching[opening?.id]}
                   wrap={false}
                   verticalLayout={true}
                   showLength={true}
@@ -589,9 +580,9 @@ class App extends Component {
   */
   expandToOpening(start, end, localResults, opening) {
     if (start == end) {
-      opening = this.state.searchResults.findEnclosingRange(start);
+      opening = this.state.openings.findEnclosingRange(start);
     } else {
-      opening = this.state.searchResults.findExactRange(start, end);
+      opening = this.state.openings.findExactRange(start, end);
     }
 
     if (opening == undefined) {
