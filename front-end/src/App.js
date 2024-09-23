@@ -17,7 +17,7 @@ import PrismSelector from "./components/PrismSelector";
 import { resolveConstraints } from "./scripts/resolution";
 import { assignSocket } from "./scripts/socket";
 
-import { RangeMap } from "./scripts/utils";
+import { RangeMap } from "./base/RangeMap";
 
 //         *-*.                                 //        /    /    /
 //      _-',^. `-_.                         //        /   /  /
@@ -342,14 +342,14 @@ class App extends Component {
       const newSearchResults = prevState.searchResults.copy();
       
       // Update all ranges
-      newSearchResults.ranges.forEach(range => {
+      newSearchResults.allRanges().forEach(range => {
         if (range.start > oldStart) {
           // This range comes after the swap, shift it
-          range.start += lengthDiff;
-          range.end += lengthDiff;
+          newSearchResults.updateRangeById(range.id, range.start + lengthDiff, range.end + lengthDiff);
         } else if (range.start === oldStart && range.end === oldEnd) {
           // This is the swapped range, update its end
-          range.end = newEnd;
+          newSearchResults.updateRangeById(range.id, range.start, newEnd);
+
         }
         // Ranges that end before oldStart are unaffected
       });
@@ -370,6 +370,26 @@ class App extends Component {
     
     // Call swapSequence with the retrieved tokens and the clicked sequence
     this.swapSequence(oldTokens, newSequence);
+  }
+
+  updateOpenings = (changes) => {
+    console.log("testing: app update openings changes", changes);
+    this.setState(prevState => {
+      const newSearchResults = prevState.searchResults.copy();
+
+      console.log('testing: old ranges', prevState.searchResults.allRanges());
+      
+      changes.forEach(change => {
+        newSearchResults.updateRanges(change);
+        newSearchResults.allRanges().forEach(range => {
+          console.log('testing: range after change', range.start, range.end);
+        });
+      });
+
+      console.log('testing: new ranges', newSearchResults.allRanges());
+
+      return { searchResults: newSearchResults };
+    });
   }
 
   onKeyDown(event) {
@@ -403,11 +423,10 @@ class App extends Component {
   };
 
   handleSearch = () => {
-    const selectionRange = [this.state.start, this.state.end];
     console.log('openings: handle search selection range', this.state.start, this.state.end);
     this.setState(prevState => {
       const newSearchResults = prevState.searchResults.copy();
-      newSearchResults[selectionRange] = []; // Reset the results of the current range
+      newSearchResults.set(this.state.start, this.state.end, []);
       console.log('openings: handle search reset results', newSearchResults, 'prev results', prevState.searchResults)
       return { searchResults: newSearchResults };
     });
@@ -418,9 +437,7 @@ class App extends Component {
   render() {
     let [start, end] = [this.state.start, this.state.end];
     let selectionText = this.state.selection ? this.state.selection.text : null;
-    let localSearchResults = this.state.searchResults[[start, end]]
-      ? this.state.searchResults[[start, end]].value
-      : [];
+    let localSearchResults = this.state.searchResults.get(start, end) || [];
 
     ({ start, end, localSearchResults, selectionText } = this.expandToOpening(start, end, localSearchResults, selectionText));
 
@@ -430,7 +447,7 @@ class App extends Component {
     console.log("app: local search results", localSearchResults, 'all', this.state.searchResults, 'selection range', [start, end]);
 
     // openings are the ranges that are highlighted, that have active constraints or search results 
-    const openings = [...this.state.searchResults.keys()]
+    const openings = this.state.searchResults.keys();
 
     const constraintSpan = {start, end};
     console.log()
@@ -450,6 +467,7 @@ class App extends Component {
               setText={this.setText.bind(this)}
               prismToHighlight={this.state.prismToHighlight}
               doSearch={this.searchPrisms.bind(this)}
+              updateOpenings={this.updateOpenings}
               openings={openings}
             />
           </div>
@@ -493,8 +511,8 @@ class App extends Component {
                   let constraints = Constraint.subsetByFeatures(
                     this.state.constraints,
                     prism.features,
-                    constraintSpan,
-                  )
+                    // constraintSpan,
+                  ) // TODO we need to finish this port
                   console.log("app: rendering prism", prism.id, "with constraints", constraints, 'and span', constraintSpan, 'from all constraints', this.state.constraints);
                   return (
                     <PrismView
@@ -532,7 +550,7 @@ class App extends Component {
   }
 
   expandToOpening(start, end, localSearchResults, selectionText) {
-    if (this.state.searchResults.findRange(start, end) == undefined && start == end) {
+    if (this.state.searchResults.get(start, end) == undefined && start == end) {
       let enclosingRange = this.state.searchResults.findEnclosingRange(this.state.start);
       if (enclosingRange != undefined) {
         localSearchResults = enclosingRange.value;

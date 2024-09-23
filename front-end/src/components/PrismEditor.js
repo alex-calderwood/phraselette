@@ -4,6 +4,7 @@ import { getUniqueID, insertAfter } from "../scripts/utils";
 import { TokenManager } from "../base/TokenManager";
 import { getColor } from "../scripts/color";
 import { Document } from "../base/Document";
+import { TextChangeTracker, TextChange, ChangeType } from "../base/TextChange";
 
 /* 
 * Given character span <span c="5" id="id14acbb15b7e0e"">f</span>
@@ -29,6 +30,9 @@ export class PrismEditor extends Component {
     this.contentRef = React.createRef();
     this.tokenManager = this.props.tokenManager;
     this.tokenManager.setOnToken(this.updateUITokens.bind(this)); // Claude says this causes many unnecessary re-renders and updates could be batched 
+    this.changeTracker = new TextChangeTracker();
+
+    this.lastText = ''; // Store the last known text content
   }
 
   componentDidMount() {
@@ -48,6 +52,7 @@ export class PrismEditor extends Component {
     // initializationText = testingText; // comment this out to have an empty editor
  
     let content = [];
+
     // let initialId = getUniqueID();
     // for (let i = 0; i < initializationText.length; i++) {
     //   let c = initializationText[i];
@@ -72,8 +77,11 @@ export class PrismEditor extends Component {
       if (initializationText?.length > 0) setTimeout(() => this.moveSelectionToEndOfEditor(), 0);
     });
 
+    this.lastText = getTextWithWhitespace(this.contentRef.current);
+
     window.editorNode = this.editorNode;
     window.currentSelection = this.currentSelection.bind(this);
+
   } // didMount
 
   componentWillUnmount() {
@@ -101,19 +109,27 @@ export class PrismEditor extends Component {
     }
 
     // Update the 'Openings' (the highlighted constraint areas in the doc)
-    if (hasArrayChanged(this.props.openings, prevProps.openings)) {
-      console.log("editor: openings changed from", prevProps.openings, "to", this.props.openings );
-      this.colorOpenings(this.props.openings);
-    }
+    // if (hasArrayChanged(this.props.openings, prevProps.openings)) {
+      // console.log("editor: openings changed from", prevProps.openings, "to", this.props.openings );
+    this.colorOpenings(this.props.openings);
+    // }
   }
 
   handleBlur = () => {
+    console.log('testing: handleBlur');
+
     this.onKeyDown();
     this.onKeyUp();
   }
 
   handleFocus = () => {
-    this.restoreSelection();
+    console.log('testing: handleFocus');
+
+    this.restoreSelection(this.keyUpSelection);
+  }
+
+  getContent = () => {
+    return this.contentRef.current.textContent || '';
   }
 
   /*
@@ -122,11 +138,31 @@ export class PrismEditor extends Component {
    *        - spaces aren't being saved correctly on firefox (works on Chrome)
   */
   onInput = (event) => {
-    // turn the text into styled character spans: <span>a</span><span>b</span>
-    // this.splitIntoStyledCharacterSpans(this.contentRef.current);
+    // const selection = this.currentSelection();
+    const newText = getTextWithWhitespace(this.contentRef.current);
 
-    // update the state text
-    let newText = getTextWithWhitespace(this.contentRef.current);
+
+    console.log('testing: onInput pre',this.lastText);
+    console.log('testing: onInput new', newText);
+    
+    const changes = this.calculateChanges(this.lastText, newText);
+
+    changes.forEach(change => {
+      this.changeTracker.addChange(change);
+      console.log('testing: change', change);
+    });
+
+
+    this.updateOpenings();
+
+    this.changeTracker.clear();
+
+    // Update lastText
+    this.lastText = newText;
+
+    // give the new text to the parent component
+    if (this.props.setText) { this.props.setText(newText); }
+    
 
     // Ensure there's always at least one empty span
     // if (newText.length === 0) {
@@ -141,8 +177,7 @@ export class PrismEditor extends Component {
     // // pass the new text into the tokenizer to update its token list and associated character indices
     // this.tokenizeOnTextUpdate(newText, this.props.lenseToHighlight); // TODO this will be prismToHighlight when we bring it back
 
-    // give the new text to the parent component
-    if (this.props.setText) { this.props.setText(newText); }
+    // this.setState({ content: newText });
 
     // // If the editor is empty after input, ensure there's an empty span and move the cursor
     // if (newText.length === 0) {
@@ -153,9 +188,67 @@ export class PrismEditor extends Component {
     // Use a timeout to delay execution of restoring the selection
     // This ensures that the DOM updates have completed before the selection is restored
     // setTimeout(() => {
-    //   this.restoreSelection(event);
+    //   this.restoreSelection(this.keyUpSelection, event);
     // }, 0);
   };
+
+  calculateChanges(oldText, newText) {
+    const changes = [];
+    let i = 0;
+    let j = 0;
+
+    while (i < oldText.length || j < newText.length) {
+        if (i < oldText.length && j < newText.length && oldText[i] === newText[j]) {
+            // Characters match, move both indices
+            i++;
+            j++;
+        } else {
+            // Characters don't match, or we've reached the end of one string
+            const startI = i;
+            const startJ = j;
+
+            // Check for one-character insertion
+            if (i + 1 < oldText.length && oldText[i + 1] === newText[j]) {
+                changes.push(new TextChange(ChangeType.DELETE, i, i + 1, oldText[i]));
+                i++;
+            }
+            // Check for one-character deletion
+            else if (j + 1 < newText.length && oldText[i] === newText[j + 1]) {
+                changes.push(new TextChange(ChangeType.INSERT, i, j + 1, newText[j]));
+                j++;
+            }
+            // For longer changes, use the original logic
+            else {
+                // Move i to the next matching character or end of oldText
+                while (i < oldText.length && (j >= newText.length || oldText[i] !== newText[j])) {
+                    i++;
+                }
+
+                // Move j to the next matching character or end of newText
+                while (j < newText.length && (i >= oldText.length || oldText[i] !== newText[j])) {
+                    j++;
+                }
+
+                if (i > startI) {
+                    // Deletion
+                    changes.push(new TextChange(ChangeType.DELETE, startI, i, oldText.slice(startI, i)));
+                }
+
+                if (j > startJ) {
+                    // Insertion
+                    changes.push(new TextChange(ChangeType.INSERT, startI, j, newText.slice(startJ, j)));
+                }
+            }
+        }
+    }
+
+    return changes;
+}
+
+  updateOpenings() {
+    const changes = this.changeTracker.getChanges();
+    this.props.updateOpenings(changes);
+  }
 
   /* 
   * Return the current cursor selection. Used to restore the cursor after user input. Also used for
@@ -237,10 +330,10 @@ export class PrismEditor extends Component {
     }
   };
 
-  restoreSelection(event) { // TODO this should use the event data again
-    if (this.keyUpSelection) {
-      const startOffset = this.keyUpSelection.prefixOffset;
-      const endOffset = startOffset + (this.keyUpSelection.text ? this.keyUpSelection.text.length : 0);
+  restoreSelection(selection, event) { // TODO this should use the event data again
+    if (selection) {
+      const startOffset = selection.prefixOffset;
+      const endOffset = startOffset + (selection.text ? selection.length : 0);
       moveSelection(this.editorNode, startOffset, endOffset);
     }
   }
@@ -400,6 +493,8 @@ export class PrismEditor extends Component {
    * Handles keydown events to save the selection before the input event is processed and the text changed.
   */
   onKeyDown(event) {
+    console.log('testing: onKeyDown');
+
     this.keyDownSelection = this.currentSelection();
   }
 
@@ -410,9 +505,11 @@ export class PrismEditor extends Component {
     - move the cursor back to the correct location after styling
   */
   onKeyUp(event) {
+    console.log('testing: onKeyUp');
+
     this.keyUpSelection = this.currentSelection();
     this.splitIntoStyledCharacterSpans(this.contentRef.current);
-    this.restoreSelection(event);
+    this.restoreSelection(this.keyUpSelection, event);
   }
 
   onClick = (event) => {
@@ -659,6 +756,20 @@ export class PrismEditor extends Component {
     });
   }
 
+
+  // New helper function to process text nodes
+  // processTextNode(textNode, charIndex) {
+  //   let changes = [];
+  //   let text = textNode.textContent;
+  //   for (let j = 0; j < text.length; j++) {
+  //     const [span, newID] = this.createCharacterSpan(text[j], charIndex + j);
+  //     changes.push({ type: 'insert', node: span, target: textNode });
+  //   }
+  //   changes.push({ type: 'remove', node: textNode });
+  //   return changes;
+  // }
+
+
   /*
   * Split the content into individual characters and apply the appropriate styles.
   * <div>text</div>
@@ -694,6 +805,26 @@ export class PrismEditor extends Component {
     }
 
     while (child) {
+
+      // if (child.nodeType === Node.TEXT_NODE) {
+      //   // Handle text nodes
+      //   let text = child.textContent;
+      //   let textParent = child.parentNode || content;
+      //   let nextSibling = child.nextSibling;
+        
+      //   for (let j = 0; j < text.length; j++) {
+      //     const [span, newID] = this.createCharacterSpan(text[j], c);
+      //     textParent.insertBefore(span, nextSibling);
+      //     newSpans.push(span);
+      //     c++;
+      //   }
+        
+      //   textParent.removeChild(child);
+      //   i++;
+      //   child = children[i];
+      //   continue;
+      // }
+
       if (child.tagName == "BR") {
         i++;
         child = children[i];
@@ -776,10 +907,10 @@ export class PrismEditor extends Component {
 // }
 
 function* traverseDOM(node) {
-  if ((node.tagName === 'DIV' || node.tagName === 'SPAN' || node.tagName === 'BR')
-    // and its not div.editor
+  if (
+    // node.nodeType === Node.TEXT_NODE || 
+    (node.tagName === 'DIV' || node.tagName === 'SPAN' || node.tagName === 'BR')
     && node.className !== 'editor'
-    // and it is not a rangy selection marker (id contains the string selectionBoundary)
     && !node.id.includes('selectionBoundary')) {
     yield node;
   }
