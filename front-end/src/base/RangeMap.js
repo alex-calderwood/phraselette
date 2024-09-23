@@ -39,13 +39,13 @@ export class RangeMap {
         if (existingRange) {
             // Update the value of the existing range
             existingRange.value = value;
-            return existingRange.id;
+            return existingRange;
         }
         
         // Create a new range
         const id = getUniqueID('range');
         this.ranges[id] = new Range(start, end, value, id);
-        return id;
+        return this.ranges[id];
     }
 
     findExactRange(start, end) {
@@ -90,9 +90,10 @@ export class RangeMap {
     }
 
     updateRanges(change) {
-        console.log(`testing: Updating ranges for change:`, change);
+        console.log(`range: updating ranges for change:`, change);
       
         const updatedRanges = this.allRanges().map(range => {
+          let oldRange = range.copy();
           let updatedRange = range.copy();
           let updateType = 'unchanged';
           
@@ -103,7 +104,7 @@ export class RangeMap {
                 range.start + change.text.length, range.end + change.text.length
               );
               updateType = 'shifted';
-              console.log(`testing: shifted', Range ${range.id}:`, range.start, range.end, change.text, change.text.length);
+              console.log(`range: shifted', Range ${range.id}:`, range.start, range.end, change.text, change.text.length);
             } else if (change.startIndex <= range.end) {
               // Insert within the range
               updatedRange = this.updateRangeById(range.id, 
@@ -147,8 +148,8 @@ export class RangeMap {
           }
       
           if (updateType !== 'unchanged') {
-            console.log(`testing: Range ${range.id} ${updateType}:`, 
-              `[${range.start}, ${range.end}] -> [${updatedRange.start}, ${updatedRange.end}]`);
+            console.log(`range: range ${oldRange.id} ${updateType}:`, 
+              `[${oldRange.start}, ${oldRange.end}] -> [${updatedRange.start}, ${updatedRange.end}]`);
           }
       
           return updatedRange;

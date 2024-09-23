@@ -66,9 +66,8 @@ export class PrismView extends Component {
   }
 
   prismHandleOnConstraintUpdate() {
-    const selectionRange = [this.props.startIndex, this.props.endIndex];
-    this.props.onConstraintUpdate(this.prism, selectionRange);
-    const hasHistogramData = !!this.prism?.insights[selectionRange]?.summary;
+    this.props.onConstraintUpdate(this.prism, this.props.opening);
+    const hasHistogramData = !!this.prism?.insights[this.props.opening.id]?.summary;
     this.setState({ hasHistogramData: hasHistogramData});
     this.forceUpdate();
   }
@@ -109,12 +108,12 @@ export class PrismView extends Component {
     let prism = this.prism;
     let start = this.props.startIndex;
     let end = this.props.endIndex;
-    let selectionRange = [this.props.startIndex, this.props.endIndex];
+    let opening = this.props.opening;
     let onRemovePrism = this.props.onRemovePrism;
 
     let tokens = start !== null ? this.tokenManager.tokensAt(prism.tokenType, start, end) : [];
-    let results = prism?.insights[selectionRange]?.results || [];
-    let text = prism?.insights[selectionRange]?.text || null;
+    let results = prism?.insights[opening?.id]?.results || [];
+    let text = prism?.insights[opening?.id]?.text || null;
 
     let activeNotHidden = prism.active && !prism.hidden;
     let showTokenContent       = activeNotHidden && tokens.length > 0;
@@ -154,6 +153,7 @@ export class PrismView extends Component {
               prism={prism}
               startIndex={start}
               endIndex={end}
+              opening={opening}
               onDelete={this.props.removeConstraint} 
               hasHistogramData={this.state.hasHistogramData}
               onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)}/>}) : ""

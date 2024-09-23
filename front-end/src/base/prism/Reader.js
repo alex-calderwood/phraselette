@@ -18,7 +18,7 @@ export class ReaderPrism extends Prism {
     this.title = value;
   }
 
-  async search(document, constraints) {
+  async search(opening, document, constraints) {
     this.onSearchTriggered();
     let description = this.textFields.description.text;
     sendMessage({
@@ -26,11 +26,12 @@ export class ReaderPrism extends Prism {
       context: document.prefixText,
       selection: document.selectionText,
       description: description,
+      opening: opening.id,
       prism: this.id,
     });
   }
 
-  async onSearchResults(insights, document, constraints) {
+  async onSearchResults(opening, insights, document, constraints) {
     let message = insights.message;
     let revisions = message.revisions;
     console.log('reader: got words', revisions);
@@ -39,6 +40,6 @@ export class ReaderPrism extends Prism {
 
     console.log('reader: predictions', predictions);
     
-    super.onSearchResults({predictions: predictions, text: message.response}, document, constraints);
+    super.onSearchResults(opening, {predictions: predictions, text: message.response}, document, constraints);
   }
 }

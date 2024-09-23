@@ -17,25 +17,26 @@ export class ThesaurusPrism extends Prism {
     this.title = value;
   }
 
-  async search(document, constraints) {
+  async search(opening, document, constraints) {
     this.onSearchTriggered(); // UI update
     let description = this.textFields.description.text;
     sendMessage({
       type: "thesaurus",
       word: document.selectionText,
       description: description,
+      opening: opening.id,
       prism: this.id,
     });
   }
 
-  async onSearchResults(insights, document, constraints) {
+  async onSearchResults(opening, insights, document, constraints) {
     let message = insights.message;
     let words = message.revisions;
     console.log('thesaurus: thesaurus got words', words)
 
     let predictions = await ThesaurusPrism.processRevisions(words, document);
     
-    super.onSearchResults({predictions: predictions}, document, constraints);
+    super.onSearchResults(opening, {predictions: predictions}, document, constraints);
   }
 
   static async processRevisions(words, document) {

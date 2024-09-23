@@ -65,8 +65,8 @@ export class Prism {
    * @param {Document} document - the working document in the editor. Should be taken with a small grain of salt as I haven't tested that it is up to date.
    * @param {Constraint[]} constraints - the constraints applicable to the current prism
   */
-  async onSearchResults(newInsights, document, constraints) {
-    let oldInsights = this.insights[document.selectionRange];
+  async onSearchResults(opening, newInsights, document, constraints) {
+    let oldInsights = this.insights[opening.id];
     let predictions = newInsights?.predictions || [];
     let summary     = newInsights?.summary || oldInsights?.summary;
 
@@ -76,11 +76,11 @@ export class Prism {
     results = sortPredictions(results, this.sortBy, true);
 
     let resolvedInsights = {...newInsights, results: results, summary: summary};
-    this.insights[document.selectionRange] = resolvedInsights;
+    this.insights[opening.id] = resolvedInsights;
     console.log("prism: resolved insights", resolvedInsights);
 
     this.isSearching = false;
-    this.onSearchComplete(document.selectionRange);
+    this.onSearchComplete(opening);
   }
 
   /* 
@@ -92,7 +92,7 @@ export class Prism {
   }
 
   // Search logic to be overriden
-  async search(document, constraints) {  return []; }
+  async search(opening, document, constraints) {  return []; }
 
   // Static methods
 

@@ -20,7 +20,7 @@ export class ContextPrism extends Prism {
   /*
    * Given a document and a list of constraints, return a list of sequences that maximally satisfy the constraints.
   */
-  async search(document, constraints) {
+  async search(opening, document, constraints) {
     this.onSearchTriggered(); // UI
     let selectionWords = document.selectionText.split(' ').length; // TODO I suppose we should have the tokenized words to calculate this...
     let numWords = selectionWords;
@@ -34,16 +34,16 @@ export class ContextPrism extends Prism {
     constraints = Constraint.subsetByFeatures(constraints, this.features)
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
 
-    console.log('searching LLM', {preConstraints, selectionWords, numWords, numTokens})
+    console.log('searching LLM', {preConstraints, selectionWords, numWords, numTokens});
 
     // TODO document that constraints might have been altererd in the meantime...
     // should copy them if necessary - at least document?
     await searchForward(document, preConstraints, numTokens).then(
-      ([predictions, summary]) => {return this.onSearchResults({predictions, summary}, document, constraints, numWords)}
+      ([predictions, summary]) => {return this.onSearchResults(opening, {predictions, summary}, document, constraints, numWords)}
     )
   }
 
-  async onSearchResults(insights, document, constraints, numWords) {
+  async onSearchResults(opening, insights, document, constraints, numWords) {
     let predictions = insights.predictions;
 
     for (let prediction of predictions) {
@@ -56,7 +56,7 @@ export class ContextPrism extends Prism {
     predictions = this.deduplicate(predictions);  
     predictions = predictions.filter((prediction) => { return !this.badPrediction(prediction) }); 
 
-    super.onSearchResults({...insights, predictions: predictions}, document, constraints);
+    super.onSearchResults(opening, {...insights, predictions: predictions}, document, constraints);
   }
 
   badPrediction(prediction) {

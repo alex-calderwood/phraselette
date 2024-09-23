@@ -116,15 +116,11 @@ export class PrismEditor extends Component {
   }
 
   handleBlur = () => {
-    console.log('testing: handleBlur');
-
     this.onKeyDown();
     this.onKeyUp();
   }
 
   handleFocus = () => {
-    console.log('testing: handleFocus');
-
     this.restoreSelection(this.keyUpSelection);
   }
 
@@ -139,23 +135,15 @@ export class PrismEditor extends Component {
   */
   onInput = (event) => {
     const selection = this.currentSelection();
-    console.log('testing: onInput', selection);
     const newText = getTextWithWhitespace(this.contentRef.current);
-
-
-    console.log('testing: onInput pre',this.lastText);
-    console.log('testing: onInput new', newText);
-    
     const changes = this.calculateChanges(event, this.keyDownSelection, selection);
 
     changes.forEach(change => {
       this.changeTracker.addChange(change);
-      console.log('testing: change', change);
+      console.log('onInput: change', change);
     });
 
-
     this.updateOpenings();
-
     this.changeTracker.clear();
 
     // Update lastText
@@ -164,7 +152,6 @@ export class PrismEditor extends Component {
     // give the new text to the parent component
     if (this.props.setText) { this.props.setText(newText); }
     
-
     // Ensure there's always at least one empty span
     // if (newText.length === 0) {
     //   this.contentRef.current.innerHTML = `<span id="$abcde" c="0"></span>`;
@@ -177,8 +164,6 @@ export class PrismEditor extends Component {
 
     // // pass the new text into the tokenizer to update its token list and associated character indices
     // this.tokenizeOnTextUpdate(newText, this.props.lenseToHighlight); // TODO this will be prismToHighlight when we bring it back
-
-    // this.setState({ content: newText });
 
     // // If the editor is empty after input, ensure there's an empty span and move the cursor
     // if (newText.length === 0) {
@@ -479,10 +464,11 @@ export class PrismEditor extends Component {
     // }, 0);
   }
 
-  manualSearchAction() {
+  manualSearchAction(opening) {
     this.onKeyDown();
     this.manualRetokenizeAction();
 
+    // let document = this.props.document; // TODO check that this is updated, would love to not have to rebuild this...
     let document = new Document(
       getTextWithWhitespace(this.contentRef.current),
       this.keyDownSelection,
@@ -490,7 +476,7 @@ export class PrismEditor extends Component {
     );
 
     console.log('editor: manually searching text', document.selectionText);
-    this.props.doSearch(document);
+    this.props.searchAllPrisms(opening, document);
     console.log('editor: keydown',  { ...this.keyDownSelection });
     // setTimeout(() => {
     //   this.restoreSelection();
@@ -502,7 +488,7 @@ export class PrismEditor extends Component {
   */
   onKeyDown(event) {
     this.keyDownSelection = this.currentSelection();
-    console.log('testing: onKeyDown', this.keyDownSelection);
+    console.log('editor: onKeyDown', this.keyDownSelection);
   }
 
   /*
@@ -512,8 +498,6 @@ export class PrismEditor extends Component {
     - move the cursor back to the correct location after styling
   */
   onKeyUp(event) {
-    console.log('testing: onKeyUp');
-
     this.keyUpSelection = this.currentSelection();
     this.splitIntoStyledCharacterSpans(this.contentRef.current);
     this.restoreSelection(this.keyUpSelection, event);

@@ -61,6 +61,10 @@ class App extends Component {
       searchResults: new RangeMap(),
       isSearching: false,
       info: {},
+      start: 0,
+      end: 0,
+      localResults: [],
+      opening: undefined,
     };
 
     window.state = this.state;
@@ -79,7 +83,9 @@ class App extends Component {
         this.state.constraints,
         dictPrism.features
       );
-      dictPrism.onSearchResults({ message: msg }, doc, constraints);
+      let opening = this.state.searchResults.findRangeById(msg.opening);
+      console.log('thesaurus: handleReaderResponse TODO check opening', opening);
+      dictPrism.onSearchResults(opening, { message: msg }, doc, constraints);
     }
 
     function handleReaderResponse(msg) {
@@ -89,8 +95,9 @@ class App extends Component {
         this.state.constraints,
         reader.features
       );
-      console.log('reader: handleReaderResponse', {doc, reader, constraints});
-      reader.onSearchResults({ message: msg }, doc, constraints);
+      let opening = this.state.searchResults.findRangeById(msg.opening);
+      console.log('reader: handleReaderResponse TODO check opening', {doc, reader, constraints, opening});
+      reader.onSearchResults(opening, { message: msg }, doc, constraints);
     }
 
     let handlers = {
@@ -108,11 +115,21 @@ class App extends Component {
    * Called when the user selects new text.
    */
   setSelection(selection) {
-    console.log("app: setting selection", selection);
-    this.setState({ 
+    let [start, end] = [selection.startTextIndex, selection.endTextIndex];
+    let selectionText = this.state.selection ? this.state.selection.text : null;
+    let localResults = [];
+    let opening = null;
+    ({start, end, localResults, selectionText, opening} = this.expandToOpening(start, end, localResults, opening));
+
+    console.log("app: setting selection", selection, start, end, selectionText, localResults, opening);
+
+    this.setState({
       selection: selection,
-      start: selection.startTextIndex,
-      end: selection.endTextIndex,
+      selectionText: selectionText,
+      start: start,
+      end: end,
+      localResults: localResults,
+      opening: opening
     });
   }
 
@@ -215,26 +232,38 @@ class App extends Component {
   /*
    * Saearch for alternate words using each prism.
    */
-  async searchPrisms(doc) {
-    this.setSearchingState(true); // UI update
+  async searchAllPrisms(opening, document) {
+    this.setSearchingState(true); // UI update // TODO this should be indexed by openingID
 
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
 
+    // if (opening == null) {
+    //   // use the document's selection to see if we have created a new opening
+    //   let start = document.selection.startTextIndex;
+    //   let end = document.selection.endTextIndex;
+    //   let localResults = null;
+    //   ({start, end, localResults, selectionText, opening} = this.expandToOpening(start, end, localResults, opening));
+    //   console.log('app: using new opening', opening, 'start', start, 'end', end);
+    // }
+    if (opening == null) {
+      console.error("app: no opening found for search");
+      return;
+    }
+
     for (let prism of prisms) {
-      prism.search(doc, constraints);
-      // prism.search(doc, [])
+      prism.search(opening, document, constraints);
     }
   }
 
   /*
    * A callback that is triggered when a prism finishes its .search() operation
    */
-  async onSearchComplete(selectionRange) {
+  async onSearchComplete(opening) {
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
     let predictions = prisms.map(
-      (p) => p?.insights[selectionRange]?.results
+      (p) => p?.insights[opening.id]?.results
     )
     .filter((r) => r && r.length > 0)
     .flat();
@@ -246,12 +275,12 @@ class App extends Component {
 
     this.setState(prevState => {
       const newSearchResults = prevState.searchResults.copy();
-      newSearchResults.set(selectionRange.start, selectionRange.end, filteredPredictions);
+      newSearchResults.set(opening.start, opening.end, filteredPredictions);
       return { searchResults: newSearchResults };
     });
 
-    console.log("app: search complete selection range", selectionRange);
-
+    // TODO we should set the search state based on opening ID
+    console.log('app: search complete', opening, 'search results', filteredPredictions);
     this.setSearchingState(false); // UI update
   }
 
@@ -374,20 +403,14 @@ class App extends Component {
   }
 
   updateOpenings = (changes) => {
-    console.log("testing: app update openings changes", changes);
     this.setState(prevState => {
       const newSearchResults = prevState.searchResults.copy();
-
-      console.log('testing: old ranges', prevState.searchResults.allRanges());
       
       changes.forEach(change => {
         newSearchResults.updateRanges(change);
-        newSearchResults.allRanges().forEach(range => {
-          console.log('testing: range after change', range.start, range.end);
-        });
       });
 
-      console.log('testing: new ranges', newSearchResults.allRanges());
+      console.log('app: new openings after update', newSearchResults.allRanges());
 
       return { searchResults: newSearchResults };
     });
@@ -399,12 +422,12 @@ class App extends Component {
     }
 
     if (event.metaKey && event.key === "'") {
-      return this.handleSearch();
+      return this.triggerSearch();
     }
   }
 
-  onConstraintUpdate(prism, selectionRange) {
-    let predictions = prism?.insights[selectionRange]?.results || [];
+  onConstraintUpdate(prism, opening) {
+    let predictions = prism?.insights[opening.id]?.results || [];
     let document = this._currentDocument(); // still don't love this
     let constraints = Constraint.subsetByFeatures(
       this.state.constraints,
@@ -416,36 +439,44 @@ class App extends Component {
       document,
       constraints
     );
-    prism.onSearchResults({ predictions: predictions }, document, constraints);
+    prism.onSearchResults(opening, { predictions: predictions }, document, constraints);
   }
 
   handleRetokenize = () => {
     return this.editorRef.current?.manualRetokenizeAction();
   };
 
-  handleSearch = () => {
+  triggerSearch = () => {
     console.log('openings: handle search selection range', this.state.start, this.state.end);
+
+    // which opening do we want to use?
+    // the one that is already attached the expanded start, end if it exists
+    // if it doesn't exist, we should create it here
+    // we don't need to call expandtoopening because we already have the expanded start, end
+    let opening = null;
     this.setState(prevState => {
       const newSearchResults = prevState.searchResults.copy();
-      newSearchResults.set(this.state.start, this.state.end, []);
+      opening = newSearchResults.set(this.state.start, this.state.end, []); // create a new opening or reset what is there
       console.log('openings: handle search reset results', newSearchResults, 'prev results', prevState.searchResults)
       return { searchResults: newSearchResults };
+    },
+    () => { // After the state updates, trigger the search
+      return this.editorRef.current?.manualSearchAction(opening);
     });
-
-    return this.editorRef.current?.manualSearchAction();
   };
 
   render() {
     let [start, end] = [this.state.start, this.state.end];
-    let selectionText = this.state.selection ? this.state.selection.text : null;
-    let localSearchResults = this.state.searchResults.get(start, end) || [];
-
-    ({ start, end, localSearchResults, selectionText } = this.expandSelectionToOpening(start, end, localSearchResults, selectionText));
+    let selectionText = this.state.selectionText;
+    let localResults = this.state.localResults;
+    let opening = this.state.opening;
 
     const hasSelection = selectionText && selectionText.length > 0;
     const showSelection = debugMode && this.state.start !== null && this.state.end !== null;
 
-    console.log("app: local search results", localSearchResults, 'all', this.state.searchResults, 'selection range', [start, end]);
+    const document = this._currentDocument(); // TODO would be nice to not have to recompute this all the time... I'm not sure where it should go
+
+    console.log("app: render", start, end, selectionText, localResults, opening);
 
     // openings are the ranges that are highlighted, that have active constraints or search results 
     const openings = this.state.searchResults.keys();
@@ -467,9 +498,11 @@ class App extends Component {
               registerSelection={this.setSelection.bind(this)}
               setText={this.setText.bind(this)}
               prismToHighlight={this.state.prismToHighlight}
-              doSearch={this.searchPrisms.bind(this)}
+              searchAllPrisms={this.searchAllPrisms.bind(this)}
               updateOpenings={this.updateOpenings}
+              document={document}
               openings={openings}
+              // opening={opening}
             />
           </div>
 
@@ -496,11 +529,11 @@ class App extends Component {
                 )}
                 <ControlButtons
                   onRetokenize={this.handleRetokenize}
-                  onSearch={this.handleSearch}
+                  onSearch={this.triggerSearch}
                 />
                 {/* Constrained search results */}
                 <SearchResults
-                  results={localSearchResults}
+                  results={localResults}
                   isSearching={this.state.isSearching}
                   wrap={false}
                   verticalLayout={true}
@@ -523,6 +556,7 @@ class App extends Component {
                       isSearching={prism.isSearching}
                       startIndex={start}
                       endIndex={end}
+                      opening={opening}
                       onClickSequence={this.handleSequenceClick}
                       debugMode={debugMode}
                       constraints={constraints}
@@ -550,16 +584,27 @@ class App extends Component {
     );
   }
 
-  expandSelectionToOpening(start, end, localSearchResults, selectionText) {
-    if (this.state.searchResults.get(start, end) == undefined && start == end) {
-      let enclosingRange = this.state.searchResults.findEnclosingRange(this.state.start);
-      if (enclosingRange != undefined) {
-        localSearchResults = enclosingRange.value;
-        [start, end] = [enclosingRange.start, enclosingRange.end];
-        selectionText = this.text.slice(start, end + 1);
-      }
+  /*
+   * If the current selection is within a larger opening, use that opening.
+  */
+  expandToOpening(start, end, localResults, opening) {
+    if (start == end) {
+      opening = this.state.searchResults.findEnclosingRange(start);
+    } else {
+      opening = this.state.searchResults.findExactRange(start, end);
     }
-    return { start, end, localSearchResults, selectionText};
+
+    if (opening == undefined) {
+      localResults = [];
+    } else {
+      localResults = opening.value;
+      [start, end] = [opening.start, opening.end];
+    }
+
+    let selectionText = this.text.slice(start, end + 1);
+
+    console.log('app: TEST THIS WITH BOTH start==end and != getOpening', start, end, opening);
+    return { start, end, localResults: localResults, selectionText, opening};
   }
 }
 
