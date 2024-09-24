@@ -466,7 +466,7 @@ class App extends Component {
     const hasSelection = selectionText && selectionText.length > 0;
     const showSelection = debugMode && this.state.start !== null && this.state.end !== null;
 
-    const document = this._currentDocument(); // TODO would be nice to not have to recompute this all the time... I'm not sure where it should go
+    // const document = this._currentDocument(); // TODO would be nice to not have to recompute this all the time... I'm not sure where it should go
     
     // openings are the ranges that are highlighted, that have active constraints or search results 
     const openingKeys = this.state.openings.keys();
@@ -478,6 +478,7 @@ class App extends Component {
     const renderData = {start, end, selectionText, localResults, opening}
     console.log("app: render", renderData);
     window.renderData = renderData;
+    window.state = this.state;
 
     return (
       <div className="context-container" ref={this.containerRef}>
@@ -560,8 +561,8 @@ class App extends Component {
                 })}
               </div>
             )}
-            {/* End inspector */}
 
+            {/* End inspector */}
             <div className="lenses">
               <PrismSelector 
                 prisms={this.state.prisms} 
@@ -594,7 +595,6 @@ class App extends Component {
 
     let selectionText = this.text.slice(start, end + 1);
 
-    console.log('app: TEST THIS WITH BOTH start==end and != getOpening', start, end, opening);
     return { start, end, localResults: localResults, selectionText, opening};
   }
 }
