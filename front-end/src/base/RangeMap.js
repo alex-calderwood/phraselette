@@ -127,13 +127,8 @@ export class RangeMap {
         updateType = this._handleInsert(change, range);
       } else if (change.type === ChangeType.DELETE) {
         updateType = this._handleDelete(change, range);
-      } else if (change.type === ChangeType.REPLACE) {
-        const deleteType = this._handleDelete(change, range);
-        const insertChange = {...change, startIndex: change.startIndex};
-        const insertType = this._handleInsert(insertChange, range);
-        updateType = deleteType !== 'unchanged' && insertType !== 'unchanged' 
-          ? `${deleteType}-${insertType}` 
-          : insertType !== 'unchanged' ? insertType : deleteType;
+      } else {
+        throw new Error(`range: unsupported change type:`, change.type);
       }
   
       if (updateType !== "unchanged") {
@@ -155,17 +150,32 @@ export class RangeMap {
     if (change.endIndex <= range.start) {
       updateType = "shifted";
       this.updateRangeById(range.id, range.start - deleteLength, range.end - deleteLength);
-    } else if (change.startIndex < range.end && change.endIndex > range.start) {
+    } 
+    else if (change.startIndex <= range.end && change.endIndex >= range.start) {
       updateType = "trimmed";
-      const newStart = Math.max(range.start, change.startIndex);
-      const newEnd = Math.min(range.end, change.startIndex) + Math.max(0, range.end - change.endIndex);
-      this.updateRangeById(range.id, newStart, newEnd);
-    } else if (
-      change.startIndex <= range.start &&
-      change.endIndex >= range.end
-    ) {
-      updateType = "collapsed"; // Delete the entire range
-      this.updateRangeById(range.id, change.startIndex, change.startIndex);
+
+      let newStart = range.start;
+      let newEnd = range.end;
+    
+      // Adjust newStart if deletion overlaps the start of the range
+      if (change.startIndex <= range.start) {
+        newStart = change.endIndex + 1 - deleteLength;
+      }
+    
+      // Adjust newEnd if deletion overlaps the end of the range
+      if (change.endIndex >= range.end) {
+        newEnd = change.startIndex - 1;
+      } else {
+        newEnd = range.end - deleteLength;
+      }
+    
+      // If the range is invalid after adjustment, remove it
+      if (newStart > newEnd) {
+        updateType = "collapsed";
+        delete this.ranges[range.id];
+      } else {
+        this.updateRangeById(range.id, newStart, newEnd);
+      }
     }
     return updateType;
   }
@@ -176,11 +186,11 @@ export class RangeMap {
     console.log("hello:", 'insert length', insertLength);
   
     if (change.startIndex <= range.start) {
-      this.updateRangeById(range.id, range.start + insertLength, range.end + insertLength);
       updateType = "shifted";
+      this.updateRangeById(range.id, range.start + insertLength, range.end + insertLength);
     } else if (change.startIndex <= range.end) {
-      this.updateRangeById(range.id, range.start, range.end + insertLength);
       updateType = "expanded";
+      this.updateRangeById(range.id, range.start, range.end + insertLength);
     }
   
     return updateType;
