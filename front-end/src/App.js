@@ -434,6 +434,11 @@ class App extends Component {
   triggerSearch = () => {
     console.log('openings: handle search selection range', this.state.start, this.state.end);
 
+    if (this.state.start === null || this.state.end === null || this.state.start === this.state.end) {
+      console.error("app: not supporting search with no selection or single letter");
+      return;
+    }
+
     // which opening do we want to use?
     // the one that is already attached the expanded start, end if it exists
     // if it doesn't exist, we should create it here

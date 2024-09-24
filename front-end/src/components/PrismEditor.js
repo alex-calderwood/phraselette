@@ -221,18 +221,32 @@ export class PrismEditor extends Component {
           1
         ));
         break;
-      case 'deleteContentBackward':
       case 'deleteContentForward':
+        throw new Error('deleteContentForward not implemented');
+      case 'deleteContentBackward':
       case 'deleteContent':
-        changes.push(new TextChange(
-          ChangeType.DELETE,
-          preChangeSelection.startTextIndex,
-          preChangeSelection.endTextIndex,
-          preChangeSelection.text,
-          preChangeSelection.text.length
-        ));
+        if (Number.isNaN(preChangeSelection.startTextIndex) || Number.isNaN(preChangeSelection.startTextIndex) || preChangeSelection.startTextIndex === 0) {
+          break;
+        }
+
+        if (preChangeSelection.startTextIndex !== preChangeSelection.endTextIndex) {
+          changes.push(new TextChange(
+            ChangeType.DELETE,
+            preChangeSelection.startTextIndex,
+            preChangeSelection.endTextIndex,
+            preChangeSelection.text,
+            preChangeSelection.text.length
+          ));
+        } else {
+          changes.push(new TextChange(
+            ChangeType.DELETE,
+            preChangeSelection.startTextIndex - 1,
+            preChangeSelection.startTextIndex - 1,
+            preChangeSelection.text,
+            1
+          ));
+        }
         break;
-  
       case 'insertFromPaste':
         const pastedText = event.clipboardData.getData('text/plain');
         if (preChangeSelection.startTextIndex !== preChangeSelection.endTextIndex) {
