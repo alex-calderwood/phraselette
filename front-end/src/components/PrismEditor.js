@@ -45,6 +45,7 @@ export class PrismEditor extends Component {
     this.editorNode.addEventListener('paste', this.handlePaste);
     this.editorNode.addEventListener('blur', this.handleBlur);
     this.editorNode.addEventListener('focus', this.handleFocus);
+    this.editorNode.addEventListener('dblclick', this.onDoubleClick.bind(this));
 
     let initializationText = "";
     // Italo Calvino Quote for testing
@@ -92,7 +93,7 @@ export class PrismEditor extends Component {
     this.editorNode.removeEventListener('paste', this.handlePaste);
     this.editorNode.removeEventListener('blur', this.handleBlur);
     this.editorNode.removeEventListener('focus', this.handleFocus);
-    // this.editorNode.removeEventListener('focus', this.handleFocus);
+    this.editorNode.removeEventListener('dblclick', this.onDoubleClick);
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -140,7 +141,6 @@ export class PrismEditor extends Component {
 
     changes.forEach(change => {
       this.changeTracker.addChange(change);
-      console.log('onInput: change', change);
     });
 
     this.updateOpenings();
@@ -180,35 +180,56 @@ export class PrismEditor extends Component {
 
   calculateChanges(event, preChangeSelection, postChangeSelection) {
     const changes = [];
+    console.log("hello: preChangeSelection", preChangeSelection, "postChangeSelection", postChangeSelection);
     
     switch (event.inputType) {
       case 'insertText':
       case 'insertCompositionText':
         if (preChangeSelection.startTextIndex !== preChangeSelection.endTextIndex) {
           changes.push(new TextChange(
-            ChangeType.REPLACE,
+            ChangeType.DELETE,
             preChangeSelection.startTextIndex,
             preChangeSelection.endTextIndex,
-            event.data
-          ));
-        } else {
-          changes.push(new TextChange(
-            ChangeType.INSERT,
-            preChangeSelection.startTextIndex,
-            postChangeSelection.startTextIndex,
-            event.data
+            preChangeSelection.text,
+            preChangeSelection.text.length
           ));
         }
+        changes.push(new TextChange(
+          ChangeType.INSERT,
+          preChangeSelection.startTextIndex,
+          preChangeSelection.startTextIndex + event.data.length - 1,
+          event.data,
+          event.data.length
+        ));
         break;
-  
+      case 'insertLineBreak':
+      case 'insertParagraph':
+        if (preChangeSelection.startTextIndex !== preChangeSelection.endTextIndex) {
+          changes.push(new TextChange(
+            ChangeType.DELETE,
+            preChangeSelection.startTextIndex,
+            preChangeSelection.endTextIndex,
+            preChangeSelection.text,
+            preChangeSelection.text.length
+          ));
+        }
+        changes.push(new TextChange(
+          ChangeType.INSERT,
+          preChangeSelection.startTextIndex,
+          preChangeSelection.startTextIndex,
+          "\n",
+          1
+        ));
+        break;
       case 'deleteContentBackward':
       case 'deleteContentForward':
       case 'deleteContent':
         changes.push(new TextChange(
           ChangeType.DELETE,
-          postChangeSelection.startTextIndex,
+          preChangeSelection.startTextIndex,
           preChangeSelection.endTextIndex,
-          ''  // We don't need the deleted text
+          preChangeSelection.text,
+          preChangeSelection.text.length
         ));
         break;
   
@@ -219,14 +240,16 @@ export class PrismEditor extends Component {
             ChangeType.REPLACE,
             preChangeSelection.startTextIndex,
             preChangeSelection.endTextIndex,
-            pastedText
+            pastedText,
+            pastedText.length
           ));
         } else {
           changes.push(new TextChange(
             ChangeType.INSERT,
             preChangeSelection.startTextIndex,
-            postChangeSelection.endTextIndex,
-            pastedText
+            preChangeSelection.startTextIndex + pastedText.length - 1,
+            pastedText,
+            pastedText.length
           ));
         }
         break;
@@ -234,6 +257,8 @@ export class PrismEditor extends Component {
       default:
         console.warn(`Unhandled input type: ${event.inputType}`);
     }
+
+    console.log('hello: change', event.inputType, changes[0], changes[1]);
   
     return changes;
   }
@@ -501,6 +526,19 @@ export class PrismEditor extends Component {
     this.keyUpSelection = this.currentSelection();
     this.splitIntoStyledCharacterSpans(this.contentRef.current);
     this.restoreSelection(this.keyUpSelection, event);
+  }
+
+  onDoubleClick = (event) => {
+    // double clicking causes an off by one issue when deleting (Chrome also deletes the previous span)
+    // so we are disabling the default behavior and moving the cursor to the location of the first click
+
+    event.preventDefault(); 
+    console.log('double click')
+    event.stopPropagation();
+    
+    moveSelection(this.editorNode, this.keyDownSelection.endTextIndex, this.keyDownSelection.endTextIndex);
+    this.updateSelection();
+
   }
 
   onClick = (event) => {
@@ -856,46 +894,11 @@ export class PrismEditor extends Component {
         contentEditable="plaintext-only"
         dangerouslySetInnerHTML={{ __html: this.state.content }}
         // onFocus={this.handleFocus}
+        // onDoubleClick={this.onDoubleClick}
       ></div>
     );
   }
 }
-
-// function getEditLength(event) {
-//   if (event.inputType === 'insertText') {
-//     return event.data ? event.data.length : 0;
-//   } else if (event.inputType === 'deleteContentBackward') {
-//     return -1;
-//   } else if (event.inputType === 'deleteContentForward') {
-//     return -1;
-//   } else if (event.inputType === 'deleteContent') {
-//     return -1;
-//   } else if (event.inputType === 'insertParagraph') {
-//     return 1; // currently a bug where we add two characters on paragraph
-//   } else if (event.inputType === 'insertLineBreak') {
-//     return 1;
-//   } else if (event.inputType === 'insertFromPaste') {
-//     return event.data ? event.data.length : 0;
-//   }
-//   console.error('unexpected event', event.inputType, event);
-// }
-
-// function getNextChar(node) {
-//   if (node.tagName === 'DIV') {
-//     if (node.firstChild !== null) {
-//       return node.firstChild;
-//     }
-//   }
-
-//   if (node.nextSibling !== null) {
-//     return node.nextSibling;
-//   }
-//   if (node.parentNode.nextSibling !== null) {
-//     return node.parentNode.nextSibling.firstChild; // we will want to do this if we get rid of the extra spans
-//     // return node.parentNode.nextSibling;
-//   }
-//   return null;
-// }
 
 function* traverseDOM(node) {
   if (

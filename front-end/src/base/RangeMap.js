@@ -30,7 +30,14 @@ export class RangeMap {
     this.ranges = {};
   }
 
-  set(start, end, value) {
+  /*
+   * Create a new opening or set the one that is there. 
+   * WARNING this should be used with caution, because the opening, 
+   * if it does exist might have moved. Only use when you are certain
+   * you want to create a new opening at the [start, end] if it doesn't exist
+   * otherwise, use setById().
+  */
+  set(start, end, value, ignoreWarnings = false) {
     if (
       start == null ||
       Number.isNaN(start) ||
@@ -51,7 +58,23 @@ export class RangeMap {
 
     const id = getUniqueID("range");
     this.ranges[id] = new Range(start, end, value, id);
+    if (!ignoreWarnings) {
+      console.warn(
+        `range: created new range: [${start}, ${end}] for value:`,
+        value
+      );
+    }
     return this.ranges[id];
+  }
+
+  setById(id, value) {
+    const range = this.ranges[id];
+    if (range) {
+      range.value = value;
+      return range;
+    }
+    console.error(`range: setById could not find range with id:`, id);
+    return null;
   }
 
   findExactRange(start, end) {
@@ -87,7 +110,7 @@ export class RangeMap {
       range.end = newEnd;
       return range;
     }
-    console.error(`range: could not find range with id:`, id);
+    console.error(`range: updateRangeById could not find range with id:`, id);
     return null;
   }
 
@@ -106,7 +129,8 @@ export class RangeMap {
         updateType = this._handleDelete(change, range);
       } else if (change.type === ChangeType.REPLACE) {
         const deleteType = this._handleDelete(change, range);
-        const insertType = this._handleInsert(change, range);
+        const insertChange = {...change, startIndex: change.startIndex};
+        const insertType = this._handleInsert(insertChange, range);
         updateType = deleteType !== 'unchanged' && insertType !== 'unchanged' 
           ? `${deleteType}-${insertType}` 
           : insertType !== 'unchanged' ? insertType : deleteType;
@@ -124,7 +148,8 @@ export class RangeMap {
   }
 
   _handleDelete(change, range) {
-    const deleteLength = change.endIndex - change.startIndex;
+    const deleteLength = change.length;
+    console.log("hello:", 'delete length', deleteLength);
     let updateType = "unchanged";
   
     if (change.endIndex <= range.start) {
@@ -140,19 +165,21 @@ export class RangeMap {
       change.endIndex >= range.end
     ) {
       updateType = "collapsed"; // Delete the entire range
-      updatedRange = this.updateRangeById(range.id, change.startIndex, change.startIndex);
+      this.updateRangeById(range.id, change.startIndex, change.startIndex);
     }
-    return { updatedRange, updateType };
+    return updateType;
   }
 
   _handleInsert(change, range) {
     let updateType = "unchanged";
+    let insertLength = change.length;
+    console.log("hello:", 'insert length', insertLength);
   
     if (change.startIndex <= range.start) {
-      this.updateRangeById(range.id, range.start + change.text.length, range.end + change.text.length);
+      this.updateRangeById(range.id, range.start + insertLength, range.end + insertLength);
       updateType = "shifted";
     } else if (change.startIndex <= range.end) {
-      this.updateRangeById(range.id, range.start, range.end + change.text.length);
+      this.updateRangeById(range.id, range.start, range.end + insertLength);
       updateType = "expanded";
     }
   

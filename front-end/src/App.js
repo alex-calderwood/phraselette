@@ -240,14 +240,6 @@ class App extends Component {
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
 
-    // if (opening == null) {
-    //   // use the document's selection to see if we have created a new opening
-    //   let start = document.selection.startTextIndex;
-    //   let end = document.selection.endTextIndex;
-    //   let localResults = null;
-    //   ({start, end, localResults, selectionText, opening} = this.expandToOpening(start, end, localResults, opening));
-    //   console.log('app: using new opening', opening, 'start', start, 'end', end);
-    // }
     if (opening == null) {
       console.error("app: no opening found for search");
       return;
@@ -276,9 +268,10 @@ class App extends Component {
     );
 
     this.setState(prevState => {
-      const newSearchResults = prevState.openings.copy();
-      newSearchResults.set(opening.start, opening.end, filteredPredictions);
-      return { openings: newSearchResults };
+      const newOpenings = prevState.openings.copy();
+      newOpenings.setById(opening.id, filteredPredictions); // this is wrong because the opening location might have changed
+      
+      return { openings: newOpenings };
     });
 
     // TODO we should set the search state based on opening ID
@@ -448,8 +441,8 @@ class App extends Component {
     let opening = null;
     this.setState(prevState => {
       const newSearchResults = prevState.openings.copy();
-      opening = newSearchResults.set(this.state.start, this.state.end, []); // create a new opening or reset what is there
-      console.log('openings: handle search reset results', newSearchResults, 'prev results', prevState.openings)
+      opening = newSearchResults.set(this.state.start, this.state.end, [], true); // create a new opening or reset what is there
+      console.log('openings: handle search reset results', newSearchResults, 'prev results', prevState.openings);
       return { openings: newSearchResults };
     },
     () => { // After the state updates, trigger the search
