@@ -77,32 +77,32 @@ class App extends Component {
     const loc = window.location;
     const socketProtocol = { "http:": "ws", "https:": "wss" }[loc.protocol];
 
-    function handleDictResponse(msg) {
-      let doc = this._currentDocument();
+    function handleThesResponse(msg) {
       let dictPrism = Prism.getByID(this.state.prisms, msg.prism);
       let constraints = Constraint.subsetByFeatures(
         this.state.constraints,
         dictPrism.features
       );
       let opening = this.state.openings.findRangeById(msg.opening);
-      console.log('thesaurus: handleReaderResponse TODO check opening', opening);
+      let doc = this._currentDocument().updateToOpening(opening);
+      console.log('reader: handleThesResponse', {doc, reader, constraints, opening});
       dictPrism.onSearchResults(opening, { message: msg }, doc, constraints);
     }
 
     function handleReaderResponse(msg) {
-      let doc = this._currentDocument();
       let reader = Prism.getByID(this.state.prisms, msg.prism);
       let constraints = Constraint.subsetByFeatures(
         this.state.constraints,
         reader.features
       );
       let opening = this.state.openings.findRangeById(msg.opening);
-      console.log('reader: handleReaderResponse TODO check opening', {doc, reader, constraints, opening});
+      let doc = this._currentDocument().updateToOpening(opening);
+      console.log('reader: handleReaderResponse', {doc, reader, constraints, opening});
       reader.onSearchResults(opening, { message: msg }, doc, constraints);
     }
 
     let handlers = {
-      thesaurusResponse: handleDictResponse.bind(this),
+      thesaurusResponse: handleThesResponse.bind(this),
       readerResponse: handleReaderResponse.bind(this),
     };
     assignSocket(

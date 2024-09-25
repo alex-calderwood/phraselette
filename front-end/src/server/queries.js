@@ -12,6 +12,7 @@ async function queryThesaurus(message, clientSocket, mock=false) {
             type: "thesaurusResponse",
             revisions: ["entreatment", "warily", "Macbeth", "socketwrench"],
             prism: message.prism,
+            opening: message.opening,
         }))
         return;
     }
@@ -25,6 +26,7 @@ async function queryThesaurus(message, clientSocket, mock=false) {
         type: "thesaurusResponse",
         revisions: revisions,
         prism: message.prism,
+        opening: message.opening,
     }))
 }
 
@@ -63,6 +65,7 @@ async function queryReader(message, clientSocket) {
         response: response,
         revisions: revisions,
         prism: message.prism,
+        opening: message.opening,
     }))
 }
 

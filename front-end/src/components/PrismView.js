@@ -18,6 +18,7 @@ class PrismEditableTextField extends Component {
 
   editTextField() {
     let value = document.getElementById(this.id).value || '';
+    console.log("textfield: updating", value);
     this.setState({ text: value });
     this.props.prism.updateTextField(this.props.field.name, value);
   }

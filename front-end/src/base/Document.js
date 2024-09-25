@@ -49,6 +49,22 @@ export class Document {
     }
 
     static fromSelection(selection) {
-        return new Document
+        return new Document // TODO
+    }
+
+    clone() {
+        return new Document(this.text, this.selection, this.tokenManager);
+    }
+
+    updateToOpening(opening) {
+        let copy = this.clone();
+        copy.selection = {
+            ...this.selection,
+            startTextIndex: opening.start,
+            endTextIndex: opening.end,
+            text: this.text.slice(opening.start, opening.end + 1),
+            note: 'Document modified by Document.updateToOpening - not all data aligns'
+        }
+        return copy;
     }
 }
