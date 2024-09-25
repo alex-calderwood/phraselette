@@ -18,6 +18,7 @@ import { resolveConstraints } from "./scripts/resolution";
 import { assignSocket } from "./scripts/socket";
 
 import { RangeMap } from "./base/RangeMap";
+import { ChangeType, TextChange } from "./base/TextChange";
 
 //         *-*.                                 //        /    /    /
 //      _-',^. `-_.                         //        /   /  /
@@ -324,36 +325,32 @@ class App extends Component {
     // Get the new text from the sequence
     const newText = newSequence.textContent;
 
-    // Update the tokenManager
+    // Update the tokenManager TODO should use the range logic...
     this.tokenManager.swapSequence(oldTokens, newSequence.span);
 
     // Update the editor text
     this.editorRef.current.swapText(start, oldEnd, newText);
 
-    // Update the Openin
-    this.updateOpeningRangesAfterSwap(start, oldEnd, newEnd);
+    this.updateOpeningsAfterSwap(start, oldEnd, newEnd, newText);
   }
 
-  updateOpeningRangesAfterSwap(oldStart, oldEnd, newEnd) {
+  updateOpeningsAfterSwap(oldStart, oldEnd, newEnd, newText) {
     const lengthDiff = newEnd - oldEnd;
-    
-    this.setState(prevState => {
-      const newSearchResults = prevState.openings.copy();
-      
-      // Update all ranges
-      newSearchResults.allRanges().forEach(range => {
-        if (range.start > oldStart) {
-          // This range comes after the swap, shift it
-          newSearchResults.updateRangeById(range.id, range.start + lengthDiff, range.end + lengthDiff);
-        } else if (range.start === oldStart && range.end === oldEnd) {
-          // This is the swapped range, update its end
-          newSearchResults.updateRangeById(range.id, range.start, newEnd);
 
-        }
-        // Ranges that end before oldStart are unaffected
+    this.setState(prevState => {
+      const newOpenings = prevState.openings.copy();
+      
+      newOpenings.allRanges().forEach(opening => {
+        if (opening.start > oldStart) {
+          // This range comes after the swap, shift it
+          newOpenings.updateRangeById(opening.id, opening.start + lengthDiff, opening.end + lengthDiff);
+        } else if (opening.start === oldStart && opening.end === oldEnd) {
+          // This is the swapped range, update its end
+          newOpenings.updateRangeById(opening.id, opening.start, newEnd);
+        }  // Ranges that end before oldStart are unaffected
       });
   
-      return { openings: newSearchResults };
+      return { openings: newOpenings };
     });
   }
 
@@ -440,15 +437,13 @@ class App extends Component {
     let selectionText = this.state.selectionText;
     let localResults = this.state.localResults;
     let opening = this.state.opening;
+    let openings = this.state.openings;
 
     const hasSelection = selectionText && selectionText.length > 0;
     const showSelection = debugMode && this.state.start !== null && this.state.end !== null;
 
     // const document = this._currentDocument(); // TODO would be nice to not have to recompute this all the time... I'm not sure where it should go
     
-    // openings are the ranges that are highlighted, that have active constraints or search results 
-    const openingKeys = this.state.openings.keys();
-    console.log('openings:', openingKeys)
 
     const constraintSpan = {start, end};
     const activePrisms = Prism.getActive(this.state.prisms);
@@ -472,7 +467,7 @@ class App extends Component {
               prismToHighlight={this.state.prismToHighlight}
               searchAllPrisms={this.searchAllPrisms.bind(this)}
               updateOpenings={this.updateOpenings}
-              openingKeys={openingKeys}
+              openings={openings}
               // opening={opening} 
               // document={document} // could send these in if needed
             />

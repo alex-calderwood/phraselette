@@ -110,10 +110,10 @@ export class PrismEditor extends Component {
     }
 
     // Update the 'Openings' (the highlighted constraint areas in the doc)
-    // if (hasArrayChanged(this.props.openings, prevProps.openings)) {
-      // console.log("editor: openings changed from", prevProps.openings, "to", this.props.openings );
-    // this.colorOpenings(this.props.openingKeys);
-    // }
+    if (hasArrayChanged(this.props.openings.keys(), prevProps.openings.keys())) {
+      // this.styleContent();
+      this.colorOpenings(this.props.openings.keys());
+    }
   }
 
   handleBlur = () => {
@@ -818,7 +818,7 @@ export class PrismEditor extends Component {
   styleContent() {
     this.splitIntoStyledCharacterSpans(this.contentRef.current);
     // Update the 'Openings' (the highlighted constraint areas in the doc) 
-    this.colorOpenings(this.props.openingKeys);
+    this.colorOpenings(this.props.openings.keys());
   }
 
   /*
