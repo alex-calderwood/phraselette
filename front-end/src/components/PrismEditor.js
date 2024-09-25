@@ -112,7 +112,7 @@ export class PrismEditor extends Component {
     // Update the 'Openings' (the highlighted constraint areas in the doc)
     // if (hasArrayChanged(this.props.openings, prevProps.openings)) {
       // console.log("editor: openings changed from", prevProps.openings, "to", this.props.openings );
-    this.colorOpenings(this.props.openingKeys);
+    // this.colorOpenings(this.props.openingKeys);
     // }
   }
 
@@ -156,7 +156,7 @@ export class PrismEditor extends Component {
     // if (newText.length === 0) {
     //   this.contentRef.current.innerHTML = `<span id="$abcde" c="0"></span>`;
     // } else {
-    //   this.splitIntoStyledCharacterSpans(this.contentRef.current);
+    //   this.styleContent();
     // }
 
     // // update each modified token (currently broken)
@@ -497,7 +497,7 @@ export class PrismEditor extends Component {
   manualRetokenizeAction() {
     console.log('editor: manually tokenizing');
     this.forceTokenize();
-    this.splitIntoStyledCharacterSpans(this.contentRef.current);
+    this.styleContent();
     // setTimeout(() => {
     //   this.restoreSelecdtion();
     // }, 0);
@@ -537,8 +537,11 @@ export class PrismEditor extends Component {
     - move the cursor back to the correct location after styling
   */
   onKeyUp(event) {
+    console.log('editor: onKeyUp');
     this.keyUpSelection = this.currentSelection();
-    this.splitIntoStyledCharacterSpans(this.contentRef.current);
+
+    this.styleContent();
+
     this.restoreSelection(this.keyUpSelection, event);
   }
 
@@ -563,7 +566,7 @@ export class PrismEditor extends Component {
     event.preventDefault();
     const text = (event.clipboardData || window.clipboardData).getData('text/plain');
     document.execCommand('insertText', false, text);
-    this.splitIntoStyledCharacterSpans(this.contentRef.current);
+    this.styleContent();
   };
 
   // to call upon other actions that modify the selection
@@ -613,8 +616,8 @@ export class PrismEditor extends Component {
     startSpan.remove() // TODO these lines seem to make it so that the selection later isn't accessable I think I'm deleteing the rangy ranges
     endSpan.remove()
 
-    // // style the new text
-    this.splitIntoStyledCharacterSpans(this.contentRef.current);
+    // // style the new text content
+    this.styleContent();
 
     // Create a new range for the inserted text
     let newRange = rangy.createRange();
@@ -767,7 +770,7 @@ export class PrismEditor extends Component {
       let span = spans[i];
       let c = getCharIndex(span);
       if (c === null) {
-        console.error('editor: colorOpenings called with null c', span);
+        console.error('editor: color openings called with null c', span);
         continue;
       }
 
@@ -812,6 +815,11 @@ export class PrismEditor extends Component {
   //   return changes;
   // }
 
+  styleContent() {
+    this.splitIntoStyledCharacterSpans(this.contentRef.current);
+    // Update the 'Openings' (the highlighted constraint areas in the doc) 
+    this.colorOpenings(this.props.openingKeys);
+  }
 
   /*
   * Split the content into individual characters and apply the appropriate styles.

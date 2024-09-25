@@ -269,12 +269,11 @@ class App extends Component {
 
     this.setState(prevState => {
       const newOpenings = prevState.openings.copy();
-      newOpenings.setById(opening.id, filteredPredictions); // this is wrong because the opening location might have changed
+      newOpenings.setById(opening.id, filteredPredictions);
       
       return { openings: newOpenings };
     });
 
-    // TODO we should set the search state based on opening ID
     console.log('app: search complete', opening, 'search results', filteredPredictions);
     this.setSearchingState(opening.id, false); // UI update
   }
@@ -294,21 +293,6 @@ class App extends Component {
       }),
     });
   }
-
-  /*
-   * Handle the swapping of tokens in the editor (as when the user selects a token replacement in the sidebar).
-   * First, we want to swap the tokens in the tokenManager.
-   * Then, we want to change the text in the editor for the new token text.
-   * TODO: this seems to break things.
-   */
-  // swapToken(originalToken, newToken) {
-  //   this.tokenManager.swapToken(originalToken, newToken);
-  //   this.editorRef.current.swapText(
-  //     originalToken.start,
-  //     originalToken.end,
-  //     newToken.text
-  //   );
-  // }
 
   /*
    * Handle the swapping of tokens in the editor (as when the user selects a token replacement in the sidebar).
@@ -439,10 +423,6 @@ class App extends Component {
       return;
     }
 
-    // which opening do we want to use?
-    // the one that is already attached the expanded start, end if it exists
-    // if it doesn't exist, we should create it here
-    // we don't need to call expandtoopening because we already have the expanded start, end
     let opening = null;
     this.setState(prevState => {
       const newSearchResults = prevState.openings.copy();
@@ -468,6 +448,7 @@ class App extends Component {
     
     // openings are the ranges that are highlighted, that have active constraints or search results 
     const openingKeys = this.state.openings.keys();
+    console.log('openings:', openingKeys)
 
     const constraintSpan = {start, end};
     const activePrisms = Prism.getActive(this.state.prisms);
