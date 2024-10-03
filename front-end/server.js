@@ -116,23 +116,27 @@ async function handleStream(message, clientSocket) {
   }
 
   if (message.type === 'stream') {
-    for await (const chunk of makeRequest(message)) {
+    let count = 0;
+    for await (const chunk of makePythonRequest(message)) {
       clientSocket.send(JSON.stringify({ 
         id: message.id, 
         type: 'stream',
         subtype: message.subtype,
         data: chunk
       }));
+      count ++;
     }
     clientSocket.send(JSON.stringify({
       id: message.id, 
       type: 'stream_end',
       subtype: message.subtype,
     }));
+
+    console.log(`sent stream_end to client after ${count} chunks for message ${message.id}`);
   }
 }
 
-async function* makeRequest(message) {
+async function* makePythonRequest(message) {
   const { subtype, data } = message;
   const endpoint = `${flaskHost}:${flaskPort}/${subtype}`;
 

@@ -105,6 +105,7 @@ def stream_parse(text, extra_context, requests):
         add_extra_request_data(requests, token_data)
 
         response = json.dumps(token_data) + BREAK_TOKEN
+        print('spacy response', response)
         yield response
 
         # If there's whitespace following the token, create a separate token for it
@@ -127,11 +128,11 @@ def stream_parse(text, extra_context, requests):
 
             # Yield the whitespace token
             response = json.dumps(whitespace_data) + BREAK_TOKEN
+            print('spacy response', response)
             yield response
 
 def add_extra_request_data(requests, token_data):
     if requests:
-        print(requests)
         extra_data = {}
         for request in requests:
             make_request = get_additional_word_data.get(request)

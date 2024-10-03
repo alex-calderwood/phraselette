@@ -78,15 +78,15 @@ class App extends Component {
     const socketProtocol = { "http:": "ws", "https:": "wss" }[loc.protocol];
 
     function handleThesResponse(msg) {
-      let dictPrism = Prism.getByID(this.state.prisms, msg.prism);
+      let thesaurus = Prism.getByID(this.state.prisms, msg.prism);
       let constraints = Constraint.subsetByFeatures(
         this.state.constraints,
-        dictPrism.features
+        thesaurus.features
       );
       let opening = this.state.openings.findRangeById(msg.opening);
       let doc = this._currentDocument().updateToOpening(opening);
-      console.log('reader: handleThesResponse', {doc, reader, constraints, opening});
-      dictPrism.onSearchResults(opening, { message: msg }, doc, constraints);
+      console.log('thesaurus: handleThesResponse', {doc, thesaurus, constraints, opening});
+      thesaurus.onSearchResults(opening, { message: msg }, doc, constraints);
     }
 
     function handleReaderResponse(msg) {
