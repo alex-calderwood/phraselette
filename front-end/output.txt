@@ -1,6 +1,0 @@
-npm error Missing script: "start:prod"
-npm error
-npm error To see a list of scripts, run:
-npm error   npm run
-
-npm error A complete log of this run can be found in: /Users/alex/.npm/_logs/2024-08-19T20_20_49_954Z-debug-0.log

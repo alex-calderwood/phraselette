@@ -7,6 +7,7 @@ const https = require("https");
 // const {getScrap, makeScrap , refreshScrap, unpackSelection} = require("./scraps.js");
 // const {sendPicreadBatch} = require("./imggen.js");
 const {groupBy, capitalizeFirst, fetchJSONResponse, apiCreds} = require("./utils.js");
+const {authorizeGoogle, createSheet, appendSheetItem} = require("./textgen_logging.js");
 
 /// *** non-handler functions ***
 const anthropicHostname = "api.anthropic.com";
@@ -49,9 +50,31 @@ async function sendClaudeReq(partialPayload) {
   // put payload-related headers on request
   opts.headers["Content-Type"] = "application/json";
   opts.headers["Content-Length"] = Buffer.byteLength(payloadString);
+  
   // send the request and handle any response 
-  // make it a promise so we can await it
-  return fetchJSONResponse(opts, payloadString);
+  // if logging to google sheets, wait for the request to complete and then log it;
+  // otherwise make it a promise so we can await it
+  // return fetchJSONResponse(opts, payloadString);
+  console.log("logging: api creds", apiCreds, ('googleSheetID' in apiCreds), ('googleSheetName' in apiCreds) )
+  if (('googleSheetID' in apiCreds) || ('googleSheetName' in apiCreds)) {
+    const claudeResponse = await fetchJSONResponse(opts, payloadString);
+    const claudeText = claudeReplyText(claudeResponse);
+    const googleAuth = await authorizeGoogle();
+    console.log("logging: google auth", googleAuth, apiCreds)
+    if (!('googleSheetID' in apiCreds) || (apiCreds.googleSheetID == null)) {
+      const sheetID = await createSheet(googleAuth, apiCreds.googleSheetName)
+      apiCreds.googleSheetID = sheetID
+      console.log("Created Google sheet with ID: " + sheetID)
+    }
+    appendSheetItem(googleAuth, apiCreds.googleSheetID, prompt, 
+      payload["model"], JSON.stringify({"max_tokens": payload["max_tokens"]}), 
+      claudeText).catch(console.error);
+    return claudeResponse
+  } else {
+    const claudeResponse = fetchJSONResponse(opts, payloadString);
+    return claudeResponse
+  }
+
 }
 
 // Given the complete `claudeJSON` returned by `sendClaudeReq`,
