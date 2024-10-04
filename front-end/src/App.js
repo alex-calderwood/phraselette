@@ -259,20 +259,25 @@ class App extends Component {
     let prisms = Prism.getActive(this.state.prisms);
     let predictions = prisms.map(
       (p) => p?.insights[opening.id]?.results
-    )
-    .filter((r) => r && r.length > 0)
+    ).filter((r) => r && r.length > 0)
     .flat();
 
     let filteredPredictions = await resolveConstraints(
       predictions,
-      constraints
+      constraints,
+      opening
     );
 
     this.setState(prevState => {
       const newOpenings = prevState.openings.copy();
-      newOpenings.setById(opening.id, filteredPredictions);
+      newOpenings.setById(opening.id, predictions);
+
+      console.log("reader: onSearchComplete", {'old': this.state.localResults, predictions, 'new filtered': filteredPredictions})
       
-      return { openings: newOpenings };
+      return { 
+        openings: newOpenings,
+        localResults: filteredPredictions
+      };
     });
 
     console.log('app: search complete', opening, 'search results', filteredPredictions);
@@ -394,16 +399,21 @@ class App extends Component {
 
   onConstraintUpdate(prism, opening) {
     let predictions = prism?.insights[opening.id]?.results || [];
-    let document = this._currentDocument(); // still don't love this
+    let document = this._currentDocument().updateToOpening(opening);
     let constraints = Constraint.subsetByFeatures(
       this.state.constraints,
       prism.features
     );
     console.log(
       "app: updating constraints",
-      predictions,
-      document,
-      constraints
+      {
+        opening,
+        predictions,
+        document,
+        constraints,
+        prism,
+        insights: prism?.insights
+      }
     );
     prism.onSearchResults(opening, { predictions: predictions }, document, constraints);
   }
@@ -422,10 +432,10 @@ class App extends Component {
 
     let opening = null;
     this.setState(prevState => {
-      const newSearchResults = prevState.openings.copy();
-      opening = newSearchResults.set(this.state.start, this.state.end, [], true); // create a new opening or reset what is there
-      console.log('openings: handle search reset results', newSearchResults, 'prev results', prevState.openings);
-      return { openings: newSearchResults };
+      const newOpenings = prevState.openings.copy();
+      opening = newOpenings.set(this.state.start, this.state.end, [], true); // create a new opening or reset what is there
+      console.log('openings: handle search reset results', newOpenings, 'prev results', prevState.openings);
+      return { openings: newOpenings };
     },
     () => { // After the state updates, trigger the search
       return this.editorRef.current?.manualSearchAction(opening);
@@ -443,7 +453,6 @@ class App extends Component {
     const showSelection = debugMode && this.state.start !== null && this.state.end !== null;
 
     // const document = this._currentDocument(); // TODO would be nice to not have to recompute this all the time... I'm not sure where it should go
-    
 
     const constraintSpan = {start, end};
     const activePrisms = Prism.getActive(this.state.prisms);
@@ -511,7 +520,7 @@ class App extends Component {
                   let constraints = Constraint.subsetByFeatures(
                     this.state.constraints,
                     prism.features,
-                    // constraintSpan,
+                    opening
                   ) // TODO we need to finish this port
                   console.log("app: rendering prism", prism.id, "with constraints", constraints, 'and span', constraintSpan, 'from all constraints', this.state.constraints);
                   return (

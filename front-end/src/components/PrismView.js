@@ -68,7 +68,7 @@ export class PrismView extends Component {
 
   prismHandleOnConstraintUpdate() {
     this.props.onConstraintUpdate(this.prism, this.props.opening);
-    const hasHistogramData = !!this.prism?.insights[this.props.opening.id]?.summary;
+    const hasHistogramData = !!this.prism?.insights[this.props.opening?.id]?.summary;
     this.setState({ hasHistogramData: hasHistogramData});
     this.forceUpdate();
   }
@@ -164,7 +164,8 @@ export class PrismView extends Component {
 
           {showTokenContent ? <ConstraintCreator
             tokens={tokens}
-            startIndex={start} endIndex={end}
+            // startIndex={start} endIndex={end}
+            opening={opening}
             prism={prism}
             onAdd={this.props.addConstraint}
             onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)} /> : "" }

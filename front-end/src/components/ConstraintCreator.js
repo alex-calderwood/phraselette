@@ -16,15 +16,15 @@ export class ConstraintCreator extends Component {
     this.setState({ showFullCreator: false });
   }
 
-  addConstraint(feature, span) {
+  addConstraint(feature, opening) {
     let target = this.props.tokens;
-    let constraint = makeConstraint(feature, target=target, span);
+    let constraint = makeConstraint(feature, target=target, opening);
     this.props.onAdd(constraint);
   }
 
   render() {
     let prism = this.props.prism;
-    let span = [this.props.startIndex, this.props.endIndex];
+    let opening = this.props.opening;
 
     return <div
         className="constraint-creator"
@@ -37,7 +37,7 @@ export class ConstraintCreator extends Component {
       {this.state.showFullCreator && <div className="constraint-buttons">
         {prism.features.map((feature) => {
           return <div key={feature.plain}>
-            <button key={feature.plain} onClick={() => this.addConstraint(feature, span)}> add {feature.plain} constraint </button>
+            <button key={feature.plain} onClick={() => this.addConstraint(feature, opening)}> add {feature.plain} constraint </button>
           </div> 
         })}
       </div>}
