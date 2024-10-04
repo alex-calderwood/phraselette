@@ -55,12 +55,10 @@ async function sendClaudeReq(partialPayload) {
   // if logging to google sheets, wait for the request to complete and then log it;
   // otherwise make it a promise so we can await it
   // return fetchJSONResponse(opts, payloadString);
-  console.log("logging: api creds", apiCreds, ('googleSheetID' in apiCreds), ('googleSheetName' in apiCreds) )
   if (('googleSheetID' in apiCreds) || ('googleSheetName' in apiCreds)) {
     const claudeResponse = await fetchJSONResponse(opts, payloadString);
     const claudeText = claudeReplyText(claudeResponse);
     const googleAuth = await authorizeGoogle();
-    console.log("logging: google auth", googleAuth, apiCreds)
     if (!('googleSheetID' in apiCreds) || (apiCreds.googleSheetID == null)) {
       const sheetID = await createSheet(googleAuth, apiCreds.googleSheetName)
       apiCreds.googleSheetID = sheetID

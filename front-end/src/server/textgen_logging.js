@@ -10,7 +10,7 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets']//This more restr
 // created automatically when the authorization flow completes for the first
 // time.
 const TOKEN_PATH = path.join(process.cwd(), 'token.json');
-const CREDENTIALS_PATH = path.join(process.cwd(), 'google_client.json');
+const CREDENTIALS_PATH = path.join(process.cwd(), 'credentials.json');
 
 /**
  * Reads previously authorized credentials from the save file.
@@ -52,7 +52,6 @@ async function saveCredentials(client) {
  */
 async function authorizeGoogle() {
   let client = await loadSavedCredentialsIfExist();
-  console.log("logging: authorize client 1", client);
   if (client) {
     return client;
   }
@@ -60,7 +59,6 @@ async function authorizeGoogle() {
     scopes: SCOPES,
     keyfilePath: CREDENTIALS_PATH,
   });
-  console.log("logging: authorize client 2", client);
   if (client.credentials) {
     await saveCredentials(client);
   }
