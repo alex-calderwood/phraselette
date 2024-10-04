@@ -325,15 +325,17 @@ export class PrismEditor extends Component {
 
       let selection = {
         charId: anchorSpan.id,
-        rangy: windowSelection,
+
+        // TODO in order to move towards a serializable selection getting rid of these, but could easily create copies etc?
+        // rangy: windowSelection,
 
         // these can be used for computing span calculations
-        anchor: anchor,
-        anchorOffset: windowSelection.anchorOffset,
-        focus: focus,
-        focusOffset: windowSelection.focusOffset,
-        achorSpan: anchorSpan,
-        focusSpan: focusSpan,
+        // anchor: anchor,
+        // anchorOffset: windowSelection.anchorOffset,
+        // focus: focus,
+        // focusOffset: windowSelection.focusOffset,
+        // achorSpan: anchorSpan,
+        // focusSpan: focusSpan,
 
         // for working with the editor
         startDocumentSpanIndex: startDocumentSpanIndex,

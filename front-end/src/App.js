@@ -236,7 +236,7 @@ class App extends Component {
    * Saearch for alternate words using each prism.
    */
   async searchAllPrisms(opening, document) {
-    this.setSearchingState(opening.id, true); // UI update // TODO this should be indexed by openingID
+    this.setSearchingState(opening.id, true); // UI update
 
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
@@ -362,7 +362,7 @@ class App extends Component {
     // Retrieve the relevant tokens
     const oldTokens = this.state.start !== null ? this.tokenManager.tokensAt(prismType, this.state.start, this.state.end) : [];
   
-    console.log('app: handling top-level click', oldTokens, newSequence);
+    console.log('app: handling top-level click', this.state.start, this.state.end, oldTokens, newSequence);
     
     // Call swapSequence with the retrieved tokens and the clicked sequence
     this.swapSequence(oldTokens, newSequence);

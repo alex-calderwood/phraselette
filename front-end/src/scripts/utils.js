@@ -48,6 +48,11 @@ export function debounce(func, wait) {
   };
 }
 
+export function clone(obj) {
+  const clone = JSON.parse(JSON.stringify(obj));
+  return clone;
+}
+
 export function humanLog(logProb) {
   if (logProb === 0) return "0";
 

@@ -8,6 +8,7 @@ import { getUniqueID } from '../../scripts/utils.js';
 
 export class Prism {
   static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'basic', 'probs'];
+  static MAIN_TYPE = Prism.TYPES[0]; // the type that is used for holding misc data
   /**
    * Create a Prism.
    * @param {string} type - The category of the prism
@@ -22,6 +23,9 @@ export class Prism {
     this.active = false;
     this.description = description;
     this.editable = false;
+
+    // some prisms should not be removed
+    this.undestroyable = this.type == Prism.MAIN_TYPE;
 
     // which tokens to look up in the tokenManager
     this.tokenType = tokenType ? tokenType : this.type;  

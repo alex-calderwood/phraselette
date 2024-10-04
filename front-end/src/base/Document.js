@@ -1,8 +1,10 @@
+import { clone } from '../scripts/utils.js'
+
 export class Document {
     constructor(text, selection, tokenManager) {
         this.text = text;
-        this.selection = selection;
-        this.tokenManager = tokenManager;
+        this.selection = clone(selection);
+        this.tokenManager = tokenManager; // should this be cloned? is it being used?
     }
 
     // The text before the user's selection

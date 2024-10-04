@@ -22,7 +22,7 @@ export class ThesaurusPrism extends Prism {
     let description = this.textFields.description.text;
     sendMessage({
       type: "thesaurus",
-      word: document.selectionText,
+      selection: document.selectionText,
       description: description,
       opening: opening.id,
       prism: this.id,

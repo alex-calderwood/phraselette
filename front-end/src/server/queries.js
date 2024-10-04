@@ -1,5 +1,7 @@
 const {sendClaudeReq, claudeReplyText} = require("./textgen.js");
 
+const wordRulez = `Each suggestion should be on its own line, surrounded by HTML-like tags: <entry>{actual word/phrase here}</entry>. Preserve the case case of the query (so if the query is lower-cased, each entry should be too, unless they are proper nouns, etc.). Preserve the tense, count, number, case, definiteness of the query. Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags.`
+
 function processRevisions(response) {
     return response.match(/<entry>(.*?)<\/entry>/g).map((def) => {
         return def.replace(/<entry>|<\/entry>/g, ''); 
@@ -16,9 +18,8 @@ async function queryThesaurus(message, clientSocket, mock=false) {
         }))
         return;
     }
-    const wordRules = `Each suggestion should be on its own line, surrounded by HTML-like tags: <entry>{actual word/phrase here}</entry>. Preserve the case case of the query (so if the query is lower-cased, each entry should be too, unless they are proper nouns, etc.). Preserve the tense, count, number, case, definiteness. Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags.`
     const claudeJSON = await sendClaudeReq({
-        prompt: `You are a thesaurus written in the style of ${message.description}. You only provide words that match this theme (${message.description}), and would appear in such a thesaurus. ${wordRules} Try to provide between 10 and 30 alternatives.\nProvde synonyms for the following word or phrase (query): ${message.word}`
+        prompt: `You are a thesaurus written in the style of ${message.description}. You only provide words that match this theme (${message.description}), and would appear in such a thesaurus. ${wordRulez} Try to provide between 10 and 30 alternatives.\nProvde synonyms for the following word or phrase (query): ${message.selection}`
     });
     let response = claudeReplyText(claudeJSON);
     const revisions = processRevisions(response);
@@ -49,7 +50,7 @@ async function queryReader(message, clientSocket) {
     let response = claudeReplyText(readerJSON);
     console.log("reader response", response)
 
-    let revisionsPrompt = `<prompt>\nA reader with the persona ${message.description} was given the following passage {context} and asked to comment on the text under scrutiny ({text}). Their insight is provided: ${response}. They also provided a list of revisions (suggestions) for the text. Each suggestion is an alternate way that they would write {text}, immediately following {context}, given their feedback. ${wordRules} Do not preface the message with any additional text. Do not provide any definitions or anything other than the revision as it would immedately follow the {context}, and the surrounding <entry> tags. Try to provide between 3 and 6 alternatives.\n` + context + `<response>${response}\n`
+    let revisionsPrompt = `<prompt>\nA reader with the persona ${message.description} was given the following passage {context} and asked to comment on the text under scrutiny ({text}). Their insight is provided: ${response}. They also provided a list of revisions (suggestions) for the text. Each suggestion is an alternate way that they would write {text}, immediately following {context}, given their feedback. ${wordRulez} Do not preface the message with any additional text. Do not provide any definitions or anything other than the revision as it would immedately follow the {context}, and the surrounding <entry> tags. Try to provide between 3 and 6 alternatives.\n` + context + `<response>${response}\n`
     console.log("revisionPrompt", revisionsPrompt);
 
     const revisonJSON = await sendClaudeReq({
