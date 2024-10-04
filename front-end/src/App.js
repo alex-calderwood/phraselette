@@ -15,7 +15,7 @@ import InstructionsView from "./components/InstructionsView";
 import PrismSelector from "./components/PrismSelector";
 
 import { resolveConstraints } from "./scripts/resolution";
-import { assignSocket } from "./scripts/socket";
+import { assignSocket, registerHandlers } from "./scripts/socket";
 
 import { RangeMap } from "./base/RangeMap";
 import { ChangeType, TextChange } from "./base/TextChange";
@@ -101,14 +101,14 @@ class App extends Component {
       reader.onSearchResults(opening, { message: msg }, doc, constraints);
     }
 
-    let handlers = {
+    registerHandlers({
       thesaurusResponse: handleThesResponse.bind(this),
       readerResponse: handleReaderResponse.bind(this),
-    };
+    });
+
     assignSocket(
       socketProtocol,
-      loc.host + "/" + loc.hash.replace("#", "?"),
-      handlers
+      loc.host + "/" + loc.hash.replace("#", "?")
     );
   }
 

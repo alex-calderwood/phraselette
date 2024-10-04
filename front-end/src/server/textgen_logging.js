@@ -83,7 +83,7 @@ async function createSheet(auth, title) {
       fields: 'spreadsheetId',
     });
     const spreadsheetId = spreadsheet.data.spreadsheetId
-    await appendSheetItem(auth, spreadsheetId, "prompt", "model", "params", "output")
+    await appendSheetItem(auth, spreadsheetId, "prompt", "model", "params", "output", "date", "time")
     return spreadsheet.data.spreadsheetId;
   } catch (err) {
     // TODO (developer) - Handle exception
@@ -93,12 +93,15 @@ async function createSheet(auth, title) {
 
 async function appendSheetItem(auth, spreadsheetId, prompt, model, params, output) {
   const service = google.sheets({version: 'v4', auth});
+  const date =  new Date();
   let values = [
     [
       prompt,
       model,
       params,
-      output
+      output,
+      date.toLocaleDateString(),
+      date.toLocaleTimeString()
     ],
   ];
   const request = {

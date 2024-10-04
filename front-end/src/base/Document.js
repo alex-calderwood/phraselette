@@ -11,8 +11,7 @@ export class Document {
     get prefixText() {
         if (this._bounce()) return '';
         let text = this.text.slice(0, this.selection.startTextIndex);
-        console.log("doc: prefix text", text)
-        return text
+        return text;
     }
 
     // The text after the user's selection

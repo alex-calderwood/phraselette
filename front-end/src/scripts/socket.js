@@ -4,6 +4,7 @@ import { getUniqueID } from "./utils";
 // This will hold our websocket connection to the server;
 // it's null to begin with but initialized after connect
 let socket = null;
+let globalHandlers = {};
 
 function sendMessage(message) {
   if(checkAndRefreshSocket()){return}
@@ -75,7 +76,7 @@ export async function* streamFromWebSocket(streamType, data) {
   }
 }
 
-function assignSocket(socketProtocol, host, extraHandlers){
+function assignSocket(socketProtocol, host){
   socket = new WebSocket(`${socketProtocol}://${host}`);
   socket.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
@@ -84,31 +85,35 @@ function assignSocket(socketProtocol, host, extraHandlers){
       "stream": () => {},
       "stream_end": () => {},
       "error": (msg) => {console.error("ws: server error:", event.data)},
-      ...extraHandlers
+      ...globalHandlers
     };
 
     const handler = handlers[msg.type];
     if (!handler) {
-      console.error("ws: nohandler event.data", event.data, 'handlers', handlers, 'type', msg.type);
+      console.error("ws: nohandler event.data", event.data, 'handlers', handlers, 'type', msg.type, extraHandlers);
       return;
     }
     handler(msg);
   });
 }
 
-function checkAndRefreshSocket(){
+function checkAndRefreshSocket() {
   // check the socket state, and if it is not open, reassign the socket
   if(socket.readyState===3){
     console.log('socket closed. reassigning');
     const loc = window.location;
     const socketProtocol = {"http:": "ws", "https:": "wss"}[loc.protocol];
     assignSocket(socketProtocol, loc.host+'/'+loc.hash.replace('#', '?'));
-    return true
+    return true;
   }else if(socket.readyState===0 || socket.readyState===2){
     console.log('socket connecting or closing');
-    return true
+    return true;
   }
-  return false
+  return false;
 }
 
-export {socket, sendMessage, assignSocket, checkAndRefreshSocket};
+function registerHandlers(handlers) {
+  globalHandlers = Object.assign(globalHandlers, handlers);
+}
+
+export {socket, sendMessage, assignSocket, checkAndRefreshSocket, registerHandlers};
