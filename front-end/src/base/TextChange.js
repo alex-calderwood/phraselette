@@ -10,7 +10,6 @@ export class TextChange {
         this.endIndex = endIndex;
         this.text = text; // This is either the inserted or deleted text
         this.length = length;
-        console.log("change:", )
       }
 }
   

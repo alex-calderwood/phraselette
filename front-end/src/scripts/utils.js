@@ -72,3 +72,16 @@ export function humanLog(logProb) {
     return logProb.toFixed(1);
   }
 }
+
+// Deduplication function
+export function deduplicateByKey(arr, key) {
+  const seen = new Set();
+  return arr.filter(item => {
+    const keyValue = item[key];
+    if (seen.has(keyValue)) {
+      return false;
+    }
+    seen.add(keyValue);
+    return true;
+  });
+}

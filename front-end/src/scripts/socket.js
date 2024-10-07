@@ -80,7 +80,7 @@ function assignSocket(socketProtocol, host){
   socket = new WebSocket(`${socketProtocol}://${host}`);
   socket.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
-    if(msg.type != "stream") { console.log("ws:got", msg); }
+    if(msg.type != "stream" && msg.type != "stream_end") { console.log("ws:got", msg); }
     const handlers = {
       "stream": () => {},
       "stream_end": () => {},

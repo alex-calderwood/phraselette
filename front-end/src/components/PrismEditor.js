@@ -152,35 +152,12 @@ export class PrismEditor extends Component {
     // give the new text to the parent component
     if (this.props.setText) { this.props.setText(newText); }
     
-    // Ensure there's always at least one empty span
-    // if (newText.length === 0) {
-    //   this.contentRef.current.innerHTML = `<span id="$abcde" c="0"></span>`;
-    // } else {
-    //   this.styleContent();
-    // }
-
     // // update each modified token (currently broken)
     // this.tokenManager.synchronizeTokens(this.keyDownSelection, this.keyDownSelection, event);
-
-    // // pass the new text into the tokenizer to update its token list and associated character indices
-    // this.tokenizeOnTextUpdate(newText, this.props.lenseToHighlight); // TODO this will be prismToHighlight when we bring it back
-
-    // // If the editor is empty after input, ensure there's an empty span and move the cursor
-    // if (newText.length === 0) {
-    //   this.contentRef.current.innerHTML = `<span id="${getUniqueID()}" c="0"></span>`;
-    //   setTimeout(() => this.moveSelectionToEndOfEditor(), 0);
-    // }
-
-    // Use a timeout to delay execution of restoring the selection
-    // This ensures that the DOM updates have completed before the selection is restored
-    // setTimeout(() => {
-    //   this.restoreSelection(this.keyUpSelection, event);
-    // }, 0);
   };
 
   calculateChanges(event, preChangeSelection, postChangeSelection) {
     const changes = [];
-    console.log("hello: preChangeSelection", preChangeSelection, "postChangeSelection", postChangeSelection);
     
     switch (event.inputType) {
       case 'insertText':
@@ -272,8 +249,6 @@ export class PrismEditor extends Component {
         console.warn(`Unhandled input type: ${event.inputType}`);
     }
 
-    console.log('hello: change', event.inputType, changes[0], changes[1]);
-  
     return changes;
   }
 
@@ -518,7 +493,6 @@ export class PrismEditor extends Component {
 
     console.log('editor: manually searching text', document.selectionText);
     this.props.searchAllPrisms(opening, document);
-    console.log('editor: keydown',  { ...this.keyDownSelection });
     // setTimeout(() => {
     //   this.restoreSelection();
     // }, 0);
@@ -529,7 +503,6 @@ export class PrismEditor extends Component {
   */
   onKeyDown(event) {
     this.keyDownSelection = this.currentSelection();
-    console.log('editor: onKeyDown', this.keyDownSelection);
   }
 
   /*
@@ -539,7 +512,6 @@ export class PrismEditor extends Component {
     - move the cursor back to the correct location after styling
   */
   onKeyUp(event) {
-    console.log('editor: onKeyUp');
     this.keyUpSelection = this.currentSelection();
 
     this.styleContent();
@@ -550,9 +522,7 @@ export class PrismEditor extends Component {
   onDoubleClick = (event) => {
     // double clicking causes an off by one issue when deleting (Chrome also deletes the previous span)
     // so we are disabling the default behavior and moving the cursor to the location of the first click
-
     event.preventDefault(); 
-    console.log('double click')
     event.stopPropagation();
     
     moveSelection(this.editorNode, this.keyDownSelection.endTextIndex, this.keyDownSelection.endTextIndex);
@@ -590,7 +560,6 @@ export class PrismEditor extends Component {
   swapText = (start, end, newText) => {
     let startSpan = document.querySelector(`span[c='${start}']`);
     let endSpan = document.querySelector(`span[c='${end}']`);
-    console.log('editor: start span', startSpan, 'end span', endSpan, start, end, newText)
 
     // select the text to replace
     let range = rangy.createRange();
@@ -600,9 +569,6 @@ export class PrismEditor extends Component {
     // create a span for the new text
     let newSpan = document.createElement('span');
     newSpan.textContent = newText;
-
-    let oldText = range.toString();
-    console.log('editor: swap text', start, end, 'for', newText, 'from', oldText);
 
     // Get the parent node before deleting contents
     // let startParent = startSpan.parentNode;
@@ -630,7 +596,6 @@ export class PrismEditor extends Component {
     selection.removeAllRanges();
     selection.addRange(newRange);
 
-    // console.log('editor: selection', selection, selection.anchorOffset, selection.focusOffset, 'range', newRange, newRange.startOffset, newRange.endOffset);
     this.updateSelection();
 
     if (this.props.setText) { this.props.setText(getTextWithWhitespace(this.contentRef.current)); }

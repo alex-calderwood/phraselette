@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect} from 'react';
 import { IoPrismOutline } from "react-icons/io5";
 import { Prism } from "../base/prism/Prism"
+import { deduplicateByKey } from '../scripts/utils'
 
 export const PrismSelector = ({ prisms, activePrisms, onAddPrism, onTooltipUpdate }) => {
   const handleMouseEnter = (prism, event) => {
@@ -21,10 +22,14 @@ export const PrismSelector = ({ prisms, activePrisms, onAddPrism, onTooltipUpdat
     });
   };
 
-  const displayPrisms = Object.values(prisms).filter(prism =>
-    (prism.duplicatable || !activePrisms.map(p => p.type).includes(prism.type))
-    && !Prism.isWordType(prism.type)
+  const displayPrisms = deduplicateByKey(
+    Object.values(prisms).filter(prism => 
+      (prism.duplicatable || !activePrisms.map(p => p.type).includes(prism.type))
+      && !Prism.isWordType(prism.type)
+    ),
+    'type'
   );
+
 
   return (
     <div className="prism-selector">

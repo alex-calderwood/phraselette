@@ -66,20 +66,6 @@ export class Constraint {
     return score > this.filterThreshold;
   }
 
-  /*
-  * Does the constraint apply to the given span?
-  * TODO I think we probably want to make this based on an opening not range
-  */
-  // applies(span) {
-  //   // return true;
-  //   if (this.span === null) {
-  //     return false;
-  //   }
-
-  //   let over = overlaps(this.span, span);
-  //   console.log("constraint: overlaps", this.span, span, over)
-  //   return over;
-  // }
 
   applies(opening) {
     // return true;
@@ -92,18 +78,6 @@ export class Constraint {
     return over;
   }
 
-  // static subsetByFeatures(constraints, features, span=null) { 
-  //   if (span !== null) {
-  //     constraints = constraints.filter((constraint) => {
-  //       return constraint.applies(span);
-  //     });
-  //   }
-    
-  //   return constraints.filter((constraint) => { // could also hard code the mapping for a speedup
-  //     return features.includes(constraint.feature);
-  //   });
-  // }
-
   static subsetByFeatures(constraints, features, opening=null) { 
     if (opening !== null) {
       constraints = constraints.filter((constraint) => {
@@ -115,7 +89,6 @@ export class Constraint {
       return features.includes(constraint.feature);
     });
   }
-
 }
 
 export class AlliterationConstraint extends Constraint {

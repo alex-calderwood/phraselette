@@ -115,13 +115,10 @@ export class RangeMap {
   }
 
   updateRanges(change) {
-    console.log(`range: updating ranges for change:`, change);
-  
     this.allRanges().forEach(range => {
       const originalRange = range.copy();
       let updateType = "unchanged";
-  
-      console.log("range:", 'change range', change.startIndex, change.endIndex, 'range range', range.start, range.end);
+      console.log("range:", 'change range at', change.startIndex, change.endIndex, 'range range', range.start, range.end);
   
       if (change.type === ChangeType.INSERT) {
         updateType = this._handleInsert(change, range);
@@ -139,12 +136,10 @@ export class RangeMap {
       }
     });
   
-    console.log(`testing: updated ranges:`, this.ranges);
   }
 
   _handleDelete(change, range) {
     const deleteLength = change.length;
-    console.log("hello:", 'delete length', deleteLength);
     let updateType = "unchanged";
   
     if (change.endIndex <= range.start) {
@@ -183,7 +178,6 @@ export class RangeMap {
   _handleInsert(change, range) {
     let updateType = "unchanged";
     let insertLength = change.length;
-    console.log("hello:", 'insert length', insertLength);
   
     if (change.startIndex <= range.start) {
       updateType = "shifted";

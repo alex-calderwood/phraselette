@@ -50,7 +50,6 @@ class App extends Component {
     this.tokenManager = new TokenManager(activePrisms);
     window.tokenManager = this.tokenManager; // for debugging
     let prismToHighlight = Prism.getByType(activePrisms, initialPrismType);
-    console.log("app: initial prism to highlight", prismToHighlight);
 
     this.text = null;
     this.state = {
@@ -86,7 +85,7 @@ class App extends Component {
       );
       let opening = this.state.openings.findRangeById(msg.opening);
       let doc = this._currentDocument().updateToOpening(opening);
-      console.log('thesaurus: handleThesResponse', {doc, thesaurus, constraints, opening});
+      // console.log('thesaurus: handleThesResponse', {doc, thesaurus, constraints, opening});
       thesaurus.onSearchResults(opening, { message: msg }, doc, constraints);
     }
 
@@ -98,7 +97,7 @@ class App extends Component {
       );
       let opening = this.state.openings.findRangeById(msg.opening);
       let doc = this._currentDocument().updateToOpening(opening);
-      console.log('reader: handleReaderResponse', {doc, reader, constraints, opening});
+      // console.log('reader: handleReaderResponse', {doc, reader, constraints, opening});
       reader.onSearchResults(opening, { message: msg }, doc, constraints);
     }
 
@@ -274,8 +273,6 @@ class App extends Component {
       const newOpenings = prevState.openings.copy();
       newOpenings.setById(opening.id, predictions);
 
-      console.log("reader: onSearchComplete", {'old': this.state.localResults, predictions, 'new filtered': filteredPredictions})
-      
       return { 
         openings: newOpenings,
         localResults: filteredPredictions
@@ -369,7 +366,7 @@ class App extends Component {
     // Retrieve the relevant tokens
     const oldTokens = this.state.start !== null ? this.tokenManager.tokensAt(prismType, this.state.start, this.state.end) : [];
   
-    console.log('app: handling top-level click', this.state.start, this.state.end, oldTokens, newSequence);
+    console.log('app: handling top-level click', {oldTokens, newSequence});
     
     // Call swapSequence with the retrieved tokens and the clicked sequence
     this.swapSequence(oldTokens, newSequence);
@@ -382,8 +379,6 @@ class App extends Component {
       changes.forEach(change => {
         newSearchResults.updateRanges(change);
       });
-
-      console.log('app: new openings after update', newSearchResults.allRanges());
 
       return { openings: newSearchResults };
     });
@@ -425,7 +420,7 @@ class App extends Component {
   };
 
   triggerSearch = () => {
-    console.log('openings: handle search selection range', this.state.start, this.state.end);
+    console.log('app: handle search selection range', this.state.start, this.state.end);
 
     if (this.state.start === null || this.state.end === null || this.state.start === this.state.end) {
       console.error("app: not supporting search with no selection or single letter");
@@ -436,7 +431,7 @@ class App extends Component {
     this.setState(prevState => {
       const newOpenings = prevState.openings.copy();
       opening = newOpenings.set(this.state.start, this.state.end, [], true); // create a new opening or reset what is there
-      console.log('openings: handle search reset results', newOpenings, 'prev results', prevState.openings);
+      console.log('app: handle search reset results', newOpenings, 'prev results', prevState.openings);
       return { openings: newOpenings };
     },
     () => { // After the state updates, trigger the search
@@ -445,7 +440,6 @@ class App extends Component {
   };
 
   handleTooltipUpdate = (newState) => {
-    console.log("tooltip, newState", newState)
     this.setState(
       {tooltipState: {
         content: newState?.content,
@@ -463,9 +457,6 @@ class App extends Component {
     const hasSelection = selectionText && selectionText.length > 0;
     const showSelection = debugMode && this.state.start !== null && this.state.end !== null;
 
-    // const document = this._currentDocument(); // TODO would be nice to not have to recompute this all the time... I'm not sure where it should go
-
-    const constraintSpan = {start, end};
     const activePrisms = Prism.getActive(this.state.prisms);
     window.activePrisms = activePrisms; // for debugging
 
@@ -535,8 +526,8 @@ class App extends Component {
                     this.state.constraints,
                     prism.features,
                     opening
-                  ) // TODO we need to finish this port
-                  console.log("app: rendering prism", prism.id, "with constraints", constraints, 'and span', constraintSpan, 'from all constraints', this.state.constraints);
+                  )
+
                   return (
                     <PrismView
                       key={prism.id}
@@ -561,7 +552,7 @@ class App extends Component {
 
             {/* End inspector */}
             <div className="lenses">
-              <PrismSelector 
+              <PrismSelector
                 prisms={this.state.prisms} 
                 activePrisms={this.state.activePrisms}
                 onAddPrism={this.handleAddPrism.bind(this)} 
