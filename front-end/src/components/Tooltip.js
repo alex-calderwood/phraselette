@@ -1,5 +1,3 @@
-import React, { useState, useRef, useEffect} from 'react';
-
 export const Tooltip = ({ content, position }) => {
   if (!content) return null;
 
