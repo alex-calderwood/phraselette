@@ -8,7 +8,7 @@ You will need a credential.json (move `credential.json` into `front-end/`)
 
     nvm use 22.2.0 
     cd front-end/
-    PYTHON_SERVER=http://10.128.1.24:5025 npm start
+    npm start
 
 # Start the backend
 
