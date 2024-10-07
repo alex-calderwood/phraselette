@@ -573,7 +573,9 @@ div.searching {
 .prism-selector {
   display: flex;
   overflow-x: auto;
+  
   padding: 10px;
+  /* position: relative; */
 }
 
 .prism-item {
@@ -599,15 +601,15 @@ div.searching {
 
 }
 
-.prism-tooltip {
+.tooltip {
   position: fixed;
-  background-color: var(--accent-color);
+  /* background-color: var(--accent-color); */
   color: var(--darker-text-color);
   padding: 5px 10px;
   border-radius: var(--radius);
-  font-size: 0.8em;
+  font-size: 0.5em;
   max-width: 200px;
-  z-index: 1000;
+  z-index: 9999;
   pointer-events: none;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }

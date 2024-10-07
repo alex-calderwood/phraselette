@@ -22,17 +22,17 @@ export class Prism {
     this.title = type;
     this.active = false;
     this.description = description;
-    this.editable = false;
 
     // some prisms should not be removed
-    this.undestroyable = this.type == Prism.MAIN_TYPE;
+    this.undestroyable = Prism.isWordType(this.type);
 
     // which tokens to look up in the tokenManager
     this.tokenType = tokenType ? tokenType : this.type;  
     
     this.features = features || [];
 
-    this.textFields = [];  // editable text properties used by some prisms; eg { 'description': {text: description, name: 'description'} }
+    this.duplicatable = false; // some prisms can be duplicated (have more than one of them because they will have different responses), such as any with textFields
+    this.textFields = [];      // editable text properties used by some prisms; eg { 'description': {text: description, name: 'description'} }
     this.insights = {};
 
     this.sortBy = 'total'; // default sorting // TODO take a look at this
@@ -137,6 +137,14 @@ export class Prism {
     for (let prism of activePrisms) {
       prism.setDoHighlight(false);  
     }
+  }
+
+  /*
+   * We treat one of the types as special in the UI, because it needs to be populated for some features to work and for
+   * other interactions to be sensible.
+  */
+  static isWordType(type) {
+    return type == Prism.MAIN_TYPE;
   }
 }
 

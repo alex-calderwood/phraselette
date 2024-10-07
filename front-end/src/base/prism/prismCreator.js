@@ -46,25 +46,25 @@ export function makePrism(type, callbacks) {
   switch(type) {
     case 'words':
       prism = new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true);
-      prism.description="View and constrain words based on their part of speech.";
+      prism.description="A tool to view and constrain word's part of speech.";
       break;
     case 'context':
       prism = new ContextPrism().setActive(true);
-      prism.description="View and constraint words based on the statistical probability they follow their context.";
+      prism.description="A tool to generate and constrain words based on the statistical probability they follow the previous words (based on GPT-2))";
       break;
     case 'reader':
       prism = new ReaderPrism(randomRole('reader')).setActive(false);
       prism.description="A computational reader model that will provide feedback and alternatives of your text based on their understanding of the text.";
-      prism.editable = true;
+      prism.duplicatable = true;
       break;
     case 'thesaurus':
       prism = new ThesaurusPrism(randomRole('thesaurus')).setActive(false);
-      prism.description="A stylized thesaurus that allows you to specify";
-      prism.editable = true;
+      prism.description="A stylistic thesaurus. Specify the type of thesaurus you would like in plain text ('a wizard's spellbook')";
+      prism.duplicatable = true;
       break;
     case 'sound':
       prism = new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words').setActive(false);
-      prism.description="A phonetic analyzer that allows you to view and constraint words based on their sound, rhyme scheme, and meter.";
+      prism.description="A phonetic tool that allows you to view and constraint words based on their sound, rhyme scheme, and meter.";
       break
     case 'basic':
       prism = new Prism('basic');

@@ -1,70 +1,48 @@
 import React, { useState, useRef, useEffect} from 'react';
 import { IoPrismOutline } from "react-icons/io5";
+import { Prism } from "../base/prism/Prism"
 
-const PrismSelector = ({ prisms, activePrisms, onAddPrism }) => {
-  const [hoveredPrism, setHoveredPrism] = useState(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const selectorRef = useRef(null);
-
-  const handleMouseEnter = (prismId, event) => {
-    setHoveredPrism(prismId);
-    setTooltipPosition({ x: event.clientX, y: event.clientY });
+export const PrismSelector = ({ prisms, activePrisms, onAddPrism, onTooltipUpdate }) => {
+  const handleMouseEnter = (prism, event) => {
+    onTooltipUpdate({
+      content: prism.description,
+      position: { x: event.clientX, y: event.clientY }
+    });
   };
 
-  const handleMouseLeave = () => {
-    setHoveredPrism(null);
+  const handleMouseLeave = (prism, event) => {
+    onTooltipUpdate(null);
   };
 
-  const handleMouseMove = (event) => {
-    setTooltipPosition({ x: event.clientX, y: event.clientY });
+  const handleMouseMove = (prism, event) => {
+    onTooltipUpdate({
+      content: prism.description,
+      position: { x: event.clientX + 4, y: event.clientY + 4}
+    });
   };
 
-  useEffect(() => {
-    const selector = selectorRef.current;
-    if (selector) {
-      const handleWheel = (e) => {
-        e.preventDefault();
-        selector.scrollLeft += e.deltaY + e.deltaX;
-      };
-      selector.addEventListener('wheel', handleWheel, { passive: false });
-      return () => selector.removeEventListener('wheel', handleWheel);
-    }
-  }, []);
-
-  const displayPrisms = Object.values(prisms).filter(prism => 
-    prism.editable || !activePrisms.includes(prism.type)
-  )
+  const displayPrisms = Object.values(prisms).filter(prism =>
+    (prism.duplicatable || !activePrisms.map(p => p.type).includes(prism.type))
+    && !Prism.isWordType(prism.type)
+  );
 
   return (
-    <div className="prism-selector" ref={selectorRef}>
+    <div className="prism-selector">
       {displayPrisms.map((prism) => (
-        <div 
-          key={prism.id} 
+        <div
+          key={prism.id}
           className="prism-item glass-pane"
-          onMouseEnter={(e) => handleMouseEnter(prism.id, e)}
-          onMouseLeave={handleMouseLeave}
-          onMouseMove={handleMouseMove}
+          onMouseEnter={(e) => handleMouseEnter(prism, e)}
+          onMouseLeave={(e) => handleMouseLeave(prism, e)}
+          onMouseMove={(e) => handleMouseMove(prism, e)}
         >
           <IoPrismOutline className="prism-icon" />
           <div className="prism-info">
             <div className="title">{prism.type}</div>
           </div>
           <button onClick={() => onAddPrism(prism.type)}>Add Prism</button>
-          {hoveredPrism === prism.id && (
-            <div 
-              className="prism-tooltip" 
-              style={{ 
-                left: `${tooltipPosition.x + 10}px`, 
-                top: `${tooltipPosition.y + 10}px` 
-              }}
-            >
-              {prism.description}
-            </div>
-          )}
         </div>
       ))}
     </div>
   );
 };
-
-export default PrismSelector;

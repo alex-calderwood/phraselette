@@ -12,7 +12,8 @@ import { PrismView } from "./components/PrismView";
 import { SearchResults } from "./components/SearchResults";
 import ControlButtons from "./components/ControlButtons";
 import InstructionsView from "./components/InstructionsView";
-import PrismSelector from "./components/PrismSelector";
+import { PrismSelector } from "./components/PrismSelector";
+import { Tooltip } from "./components/Tooltip";
 
 import { resolveConstraints } from "./scripts/resolution";
 import { assignSocket, registerHandlers } from "./scripts/socket";
@@ -130,7 +131,8 @@ class App extends Component {
       start: start,
       end: end,
       localResults: localResults,
-      opening: opening
+      opening: opening,
+      tooltipState: {}
     });
   }
 
@@ -442,6 +444,15 @@ class App extends Component {
     });
   };
 
+  handleTooltipUpdate = (newState) => {
+    console.log("tooltip, newState", newState)
+    this.setState(
+      {tooltipState: {
+        content: newState?.content,
+        position: newState?.position
+      }});
+  };
+
   render() {
     let [start, end] = [this.state.start, this.state.end];
     let selectionText = this.state.selectionText;
@@ -459,12 +470,15 @@ class App extends Component {
     window.activePrisms = activePrisms; // for debugging
 
     const renderData = {start, end, selectionText, localResults, opening}
-    console.log("app: render", renderData);
     window.renderData = renderData;
     window.state = this.state;
 
     return (
       <div className="context-container" ref={this.containerRef}>
+        <Tooltip
+          content={this.state.tooltipState?.content}
+          position={this.state.tooltipState?.position}
+        />
         <div className="editor-container rainbow">
           <div className="left">
             {/* The text editor */}
@@ -551,7 +565,8 @@ class App extends Component {
                 prisms={this.state.prisms} 
                 activePrisms={this.state.activePrisms}
                 onAddPrism={this.handleAddPrism.bind(this)} 
-              />
+                onTooltipUpdate={this.handleTooltipUpdate}
+                />
             </div>
           </div>
         </div>
