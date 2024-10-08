@@ -10,6 +10,8 @@ const roles = {
     "A Tralfamadorian dictionary. The Tralfamadorians are an alien species that abduct Billy Pilgrim, keep him prisoner, and teach him their philosophy on life. They are green and resemble toilet plungers with eyes. The Tralfamadorians are fatalists – they believe that everything is predestined and that nothing can be done to change the course of the universe. They can time travel and do not view time linearly: “All moments, past, present and future, always have existed, always will exist.” Because of this, they know how and when the universe will end, but they accept this, as their worldview dictates that they have no power to change future events.",
     "a precise academic/scientific thesaurus",
     "Deleuze and Guattari's thesaurus",
+    "Derrida's phrasebook",
+    "a romance novel phrasebook",
     "Emily Dickenson's playful lexicon (extremely playful Dickenson thesaurus)",
     "Jane Austen's country house 'free indirect discourse' or 'free indirect style' lexicon",
     "the thesaurus James Joyce used for Ulysses",
@@ -20,7 +22,7 @@ const roles = {
     "a Wizard's spellbook",
     "a Wizard's wacky spellbook",
     "a Wizard's misfiring spellbook",
-    "James Gleik's scientific thesaurus for popular science"
+    "James Gleick's scientific thesaurus for popular science",
   ],
   'reader': [
     "a thoughtful kind colleague open to constructively critiquing and red-teaming my ideas they are reticient to point out anything with any hostility but are very insightful and always provide answers I take",
