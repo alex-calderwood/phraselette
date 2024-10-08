@@ -35,7 +35,7 @@ import { ChangeType, TextChange } from "./base/TextChange";
 //         `-!'                       \\
 
 const initialPrismType = "words";
-const debugMode = true;
+const debugMode = false;
 
 class App extends Component {
   constructor(props) {
