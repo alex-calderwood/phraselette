@@ -1,6 +1,7 @@
 import React, { Component, createRef } from "react";
-import { getColor, zeroToOneColor, categoryToColor } from "../color";
-import { getUniqueUUID, scientific, debounce } from "../scripts/utils";
+import { getColor, zeroToOneColor, categoryToColor } from "../scripts/color";
+import { getUniqueID, scientific, debounce } from "../scripts/utils";
+import { humanLog } from "../scripts/utils";
 
 function tokenItemsToShow(tokenType) {
   let show = {
@@ -19,14 +20,18 @@ export class TokenRange extends Component {
   constructor(props) {
     super(props);
     this.tokenBarRef = createRef(); // Create a reference to the token bar div
-    this.id = getUniqueUUID();
+    this.id = getUniqueID();
     this.state = {
       overflowing: false,
       hoveredTokenId: null,
       hoverSequenceId: null,
     };
-    this.debouncedSetHoveredSequenceId = debounce(this.setHoveredSequenceId, 50);
-    this.debouncedSetHoveredTokenId = debounce(this.setHoveredTokenId, 50);
+    this.debouncedSetHoveredSequenceId = debounce(this.setHoveredSequenceId, 5);
+    this.debouncedSetHoveredTokenId = debounce(this.setHoveredTokenId, 5);
+
+    // let tokenType = this.props.tokenType;
+    // let tokens = this.props.tokens;
+    // console.log('tokenrange: constructor tokens for type', tokenType, tokens);
   }
 
   setHoveredSequenceId = (id) => {
@@ -40,12 +45,22 @@ export class TokenRange extends Component {
   componentDidMount() {
     this.checkOverflow();
     window.addEventListener('resize', this.checkOverflow); // Optionally handle window resize
+
+    const tokenBar = this.tokenBarRef.current;
+    if (tokenBar) {
+      tokenBar.addEventListener('wheel', this.handleWheel, { passive: false });
+    }
   }
 
   componentWillUnmount() {
     window.removeEventListener('resize', this.checkOverflow);
-  }
 
+    const tokenBar = this.tokenBarRef.current;
+    if (tokenBar) {
+      tokenBar.removeEventListener('wheel', this.handleWheel);
+    }
+  }
+  
   checkOverflow = () => {
     const node = this.tokenBarRef.current;
     if (node) {
@@ -54,11 +69,22 @@ export class TokenRange extends Component {
     }
   }
 
+
+  handleWheel = (e) => {
+    e.preventDefault();
+    const tokenBar = this.tokenBarRef.current;
+    if (tokenBar) {
+      tokenBar.scrollLeft += e.deltaY + e.deltaX;
+    }
+  }
+
+
   render() {
     let tokenType = this.props.tokenType;
     let overflowing = this.state.overflowing ? "overflowing" : "";
     let filterSpaces = this.props.filterSpaces || false;
     let forceExpand = this.props.expanded || false;
+    let verticalLayout = this.props.verticalLayout || false;
 
     // filter out ' ' and &nbsp;
     let isSpace = (text) => { return text === ' ' || text === '\u00A0' };
@@ -69,13 +95,12 @@ export class TokenRange extends Component {
     tokens = tokens.sort((a, b) => { return a.start - b.start });
 
     let wrap = this.props.wrap ? ' wrap' : ' nowrap';
+    let vertical = verticalLayout ? '  vertical' : '';
     let scoreLookup = tokenType === 'search' ? 'total' : tokenType;
-
-    console.log('TokenRange', tokenType, tokens);
 
     return (
       <div className={"token-range-parent " + overflowing} >
-          <div id={`tokenbar-${tokenType}-${this.id}`} className={`token-range` + wrap}>
+          <div id={`tokenbar-${tokenType}-${this.id}`} className={`token-range${wrap}${vertical}`} >
               {tokens && tokens.map((tokenOrSeq) => {
                 if (tokenOrSeq.span) {
                   let sequence = tokenOrSeq;
@@ -92,13 +117,10 @@ export class TokenRange extends Component {
     );
   }
 
-
   renderSequence(sequence, tokenType, expanded) {
-    let prob = sequence.getAttribute('probGeometricMean', null);
+    let prob = sequence.getAttribute('prob', null);
     let probColor = zeroToOneColor(prob);
     let id = `${this.id}-sequence-${sequence.id}`;
-    // let score = sequence?.scores[scoreLookup]?.value;
-    // let color = zeroToOneColor(score);
 
     let style = probColor ? { backgroundColor: probColor } : {};
     const simple = expanded ? '' : 'simple';
@@ -111,8 +133,11 @@ export class TokenRange extends Component {
         onMouseLeave={() => this.debouncedSetHoveredSequenceId(null)}
         style={style}
         onClick={() => { 
-          this.props.onClickSequence(sequence); 
+          if (this.props.onClickSequence) {
+            this.props.onClickSequence(sequence); 
+          }
         }}
+  
       >
         {/* Render tokens */}
         {sequence.span.map((token) => { return this.renderToken(tokenType, token, expanded); })}
@@ -122,7 +147,7 @@ export class TokenRange extends Component {
             {scientific(score)}
           </div> */}
         {expanded && prob ? <div className="item" style={{ backgroundColor: probColor }}>
-          {scientific(prob)}
+          {humanLog(prob)}
         </div> : ""}
     </div>;
   }
@@ -132,9 +157,9 @@ export class TokenRange extends Component {
     let space = token.getAttribute('isSpacySpace') === true ? 'space' : '';
     let fields = tokenItemsToShow(tokenType);
 
-    let prob = fields.includes('prob') ? token.getAttribute('probGeometricMean') : null;
+    let prob = fields.includes('prob') ? token.getAttribute('prob') : null;
     if (prob != null) {
-        prob = scientific(prob);
+        prob = humanLog(prob);
     }
 
     let sound = fields.includes('sound') ? token.getAttribute('phonemes', null)?.join(' ') : null;
@@ -143,7 +168,6 @@ export class TokenRange extends Component {
     let posColor = color;
     if (pos != null) { posColor = categoryToColor(pos); }
 
-    // let onClick = this.props.onTokenClick ? this.props.onTokenClick : () => { };
     let showCharRange = this.props.debugMode && token.start !== undefined && token.end !== undefined;
 
     const simple = expanded ? '' : 'simple';

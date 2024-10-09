@@ -6,38 +6,37 @@ import { Prism, setSequenceProb } from './Prism.js';
 export class ThesaurusPrism extends Prism {
   constructor(description) {
     super('thesaurus', []);
-    this.textFeatures = {
+    this.textFields = {
       'description': {text: description, name: 'description'}
     }
     this.title = description;
   }
 
-  updateTextFeature(featureName, value) {
-    this.textFeatures[featureName].text = value;
+  updateTextField(featureName, value) {
+    this.textFields.description.text = value;
     this.title = value;
   }
 
-  async search(document, constraints) {
-
-    this.onSearchTriggered();
-    let description = this.textFeatures.description.text;
-    console.log('searching with description', description)
+  async search(opening, document, constraints) {
+    this.onSearchTriggered(); // UI update
+    let description = this.textFields.description.text;
     sendMessage({
       type: "thesaurus",
-      word: document.selectionText,
+      selection: document.selectionText,
       description: description,
+      opening: opening.id,
       prism: this.id,
     });
   }
 
-  async onSearchResults(insights, document, constraints) {
+  async onSearchResults(opening, insights, document, constraints) {
     let message = insights.message;
     let words = message.revisions;
-    console.log('thesaurus got words', words)
+    console.log('thesaurus: thesaurus got words', words)
 
     let predictions = await ThesaurusPrism.processRevisions(words, document);
     
-    super.onSearchResults({predictions: predictions}, document, constraints);
+    super.onSearchResults(opening, {predictions: predictions}, document, constraints);
   }
 
   static async processRevisions(words, document) {
@@ -45,7 +44,7 @@ export class ThesaurusPrism extends Prism {
     for (let word of words) {
       let text = document.prefixText + word;
       let range = [document.prefixText.length, text.length]; // is this range correct?
-      let tokens = await gpt2Tokenize(text, { tokenizeRange: range }); // TODO debug why these are coming through with 0 prob
+      let tokens = await gpt2Tokenize(text, { tokenizeRange: range });
       let sequence = new Sequence(tokens);
       setSequenceProb(sequence);
       predictions.push(sequence);
@@ -53,7 +52,7 @@ export class ThesaurusPrism extends Prism {
 
     // get spacy scores
     for (let prediction of predictions) {
-      let words = await miscTokensToWordTokens(prediction.span, document);
+      let words = await miscTokensToWordTokens(prediction, document);
       prediction.span = words;
     }
     return predictions;

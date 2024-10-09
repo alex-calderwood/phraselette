@@ -1,13 +1,14 @@
 // mostly ported from infinite-canvas
-import { getUniqueUUID } from "./utils";
+import { getUniqueID } from "./utils";
 
 // This will hold our websocket connection to the server;
 // it's null to begin with but initialized after connect
 let socket = null;
+let globalHandlers = {};
 
 function sendMessage(message) {
   if(checkAndRefreshSocket()){return}
-  const requestId = getUniqueUUID();
+  const requestId = getUniqueID();
   message.requestId = requestId;
   console.log("req:" + message.type, message);
   socket.send(JSON.stringify(message));
@@ -15,8 +16,7 @@ function sendMessage(message) {
 }
 
 export async function* streamFromWebSocket(streamType, data) {
-  console.log(`Starting stream: ${streamType}`);
-  const requestId = getUniqueUUID();
+  const requestId = getUniqueID();
   const request = { 
     id: requestId, 
     type: 'stream',
@@ -26,7 +26,7 @@ export async function* streamFromWebSocket(streamType, data) {
 
   while (true) {
     if (checkAndRefreshSocket()) {
-      console.log("Socket refreshed, waiting before trying again");
+      console.log("ws: refresh, waiting 1s");
       await new Promise(resolve => setTimeout(resolve, 1000));
       continue;
     }
@@ -58,9 +58,7 @@ export async function* streamFromWebSocket(streamType, data) {
     };
 
     socket.addEventListener('message', messageHandler);
-
     socket.send(JSON.stringify(request));
-    console.log(`Request sent for ${streamType}`);
 
     try {
       while (!streamEnded) {
@@ -78,43 +76,44 @@ export async function* streamFromWebSocket(streamType, data) {
   }
 }
 
-function assignSocket(socketProtocol, host, extraHandlers){
+function assignSocket(socketProtocol, host){
   socket = new WebSocket(`${socketProtocol}://${host}`);
-  socket.addEventListener("open", (event) => {
-    // sendMessage({type: "chat", text: "meowdy server"});
-  });
   socket.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
-    if(msg.type != "stream") { console.log("ws:got", msg); }
+    if(msg.type != "stream" && msg.type != "stream_end") { console.log("ws:got", msg); }
     const handlers = {
-      // "stream": msg => streamFromWebSocket(msg.subtype, msg.data),
       "stream": () => {},
       "stream_end": () => {},
-      ...extraHandlers
+      "error": (msg) => {console.error("ws: server error:", event.data)},
+      ...globalHandlers
     };
 
     const handler = handlers[msg.type];
     if (!handler) {
-      console.error("ws:nohandler", event.data);
+      console.error("ws: nohandler event.data", event.data, 'handlers', handlers, 'type', msg.type, extraHandlers);
       return;
     }
     handler(msg);
   });
 }
 
-function checkAndRefreshSocket(){
+function checkAndRefreshSocket() {
   // check the socket state, and if it is not open, reassign the socket
   if(socket.readyState===3){
     console.log('socket closed. reassigning');
     const loc = window.location;
     const socketProtocol = {"http:": "ws", "https:": "wss"}[loc.protocol];
     assignSocket(socketProtocol, loc.host+'/'+loc.hash.replace('#', '?'));
-    return true
+    return true;
   }else if(socket.readyState===0 || socket.readyState===2){
     console.log('socket connecting or closing');
-    return true
+    return true;
   }
-  return false
+  return false;
 }
 
-export {socket, sendMessage, assignSocket, checkAndRefreshSocket};
+function registerHandlers(handlers) {
+  globalHandlers = Object.assign(globalHandlers, handlers);
+}
+
+export {socket, sendMessage, assignSocket, checkAndRefreshSocket, registerHandlers};

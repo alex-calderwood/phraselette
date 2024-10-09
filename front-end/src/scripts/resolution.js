@@ -6,7 +6,7 @@
  * c.) resolve them to words here
  * d.) ignore them if they are not words
 */
-export async function resolveConstraints(predictions, constraints, sort=true, comparator='total', sortByAttribute=false) {
+export async function resolveConstraints(predictions, constraints, opening, sort=true, comparator='total', sortByAttribute=false) {
     const postConstraints = constraints.filter((constraint) => { return !constraint.isPre; });
 
     let filtered = [];
@@ -14,7 +14,8 @@ export async function resolveConstraints(predictions, constraints, sort=true, co
         let sequenceTotal = 0;
         let reject = false;
         for (let constraint of postConstraints) {
-            if (constraint.applies(sequence)) {
+            // if (constraint.applies(sequence)) {
+            if (constraint.applies(opening)) {
                 const score = await constraint.getScore(sequence, document);
                 sequence.scores[constraint.name] = {'value': score, 'constraint': constraint};
                 sequenceTotal += score;

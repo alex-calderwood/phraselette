@@ -7,36 +7,36 @@ export class ReaderPrism extends Prism {
     // super('reader', ['prob']); // eventually... ahh ahh ahh ahhhhh
     super('reader', []);
 
-    this.textFeatures = {
+    this.textFields = {
       'description': {text: description, name: 'description'}
     }
     this.title = description;
   }
 
-  updateTextFeature(featureName, value) {
-    this.textFeatures[featureName].text = value;
+  updateTextField(featureName, value) {
+    this.textFields[featureName].text = value;
     this.title = value;
   }
 
-  async search(document, constraints) {
+  async search(opening, document, constraints) {
     this.onSearchTriggered();
-    let description = this.textFeatures.description.text;
+    let description = this.textFields.description.text;
     sendMessage({
       type: "reader",
       context: document.prefixText,
       selection: document.selectionText,
       description: description,
+      opening: opening.id,
       prism: this.id,
     });
   }
 
-  async onSearchResults(insights, document, constraints) {
+  async onSearchResults(opening, insights, document, constraints) {
     let message = insights.message;
     let revisions = message.revisions;
-    console.log('critic got words', revisions)
 
     let predictions = await ThesaurusPrism.processRevisions(revisions, document);
-    
-    super.onSearchResults({predictions: predictions, text: message.response}, document, constraints);
+
+    super.onSearchResults(opening, {predictions: predictions, text: message.response}, document, constraints);
   }
 }

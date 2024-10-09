@@ -1,4 +1,4 @@
-import { splitWordTokenize, gpt2Tokenize, spacyTokenize, getPhones} from '../scripts/smarts.js';
+import { splitWordTokenize, gpt2Tokenize, spacyTokenize} from '../scripts/smarts.js';
 
 export class TokenManager {
   constructor(activePrisms) {
@@ -82,15 +82,15 @@ export class TokenManager {
   }
 
   removeCharsFromToken(lense, beforeSelection, event) {
-    let startCharIndex = Math.min(beforeSelection.startIndex, beforeSelection.endIndex);
-    let endCharIndex = Math.max(beforeSelection.startIndex, beforeSelection.endIndex);
+    let startCharIndex = Math.min(beforeSelection.startTextIndex, beforeSelection.endTextIndex);
+    let endCharIndex = Math.max(beforeSelection.startTextIndex, beforeSelection.endTextIndex);
     let totalShift = endCharIndex - startCharIndex;
-    if(beforeSelection.startIndex == beforeSelection.endIndex) {
-      startCharIndex = beforeSelection.startIndex - 1;
+    if(beforeSelection.startTextIndex == beforeSelection.endTextIndex) {
+      startCharIndex = beforeSelection.startTextIndex - 1;
       totalShift = 1;
     }
 
-    let selectedTokens = this.tokensAt(lense, startCharIndex, endCharIndex - 1);
+    let selectedTokens = this.tokensAt(lense, startCharIndex, endCharIndex - 1); // TODO I don't think we have to - 1 any more (we were on the endCharIndex, I just removed it)
 
     if (selectedTokens.length === 0) {
       console.error("removeCharsFromToken called with no tokens at", startCharIndex);

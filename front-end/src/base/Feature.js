@@ -1,10 +1,11 @@
 export class Feature {
-    static Prob = { name: 'prob', dataType: 'number' };
-    static POS = { name: 'pos', dataType: 'category' };
-    static Rhyme = { name: 'rhyme', dataType: 'category' };
-    static Sound = { name: 'sound', dataType: 'category' };
-    static Stress = { name: 'stress', dataType: 'number' };
-    static Syllables = { name: 'syllables', dataType: 'category' };
-    static Length = { name: 'length', dataType: 'number' };
-    static Alliteration = { name: 'alliteration', dataType: 'category' };
+    static Prob =           { plain: 'prob',            attribute: 'prob',           dataType: 'number' };
+    static Tag =            { plain: 'tag',             attribute: 'tag',            dataType: 'category' };
+    static POS =            { plain: 'part of speech',  attribute: 'pos',            dataType: 'category' };
+    static Rhyme =          { plain: 'rhyme',           attribute: 'sound',          dataType: 'category' };
+    static Sound =          { plain: 'sound',           attribute: 'sound',          dataType: 'category' };
+    static Stress =         { plain: 'stress',          attribute: 'stress',         dataType: 'number' };
+    static Syllables =      { plain: 'syllables',       attribute: 'syllables',      dataType: 'category' };
+    static Length =         { plain: 'length',          attribute: 'length',         dataType: 'number' };
+    static Alliteration =   { plain: 'alliteration',    attribute: 'alliteration',   dataType: 'category' };
 }

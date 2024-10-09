@@ -1,11 +1,11 @@
-import { getUniqueUUID } from '../scripts/utils';
+import { getUniqueID } from '../scripts/utils';
 
 function mockAlternates () {
     let alternates = new Set();
     for (let i = 0; i < 5; i++) {
         alternates.add(new Token({
             type: 'token',
-            id: getUniqueUUID(),
+            id: getUniqueID(),
             text: "mock " + i,
         }, false));
     }
@@ -15,7 +15,7 @@ export class Token {
     constructor(rawToken, doMock=false) {
         const defaults = {
             type: 'token',
-            id: rawToken.id ? rawToken.id : getUniqueUUID(),
+            id: rawToken.id ? rawToken.id : getUniqueID(),
             text: "",
             start: undefined,
             end: undefined,

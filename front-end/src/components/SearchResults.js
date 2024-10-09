@@ -10,6 +10,7 @@ export class SearchResults extends Component {
 
   render() {
     let wrap = this.props.wrap !== false; // default to true
+    let vertical = this.props.verticalLayout === true; // default to false
 
     if (this.props.isSearching) {
       return <div className="search-results searching"></div>
@@ -20,10 +21,18 @@ export class SearchResults extends Component {
       return <div className='subtitle'>No results</div>
     }
     
-    console.log('SearchResults', results, this.tokenType)
+    console.log('search: results', results, this.tokenType)
     return <div className={"search-results"}>
-      {this.props.showLength && <div className="subtitle">{`${results.length} combined results`}</div>}
-      <TokenRange tokenType={this.tokenType} tokens={results} onClickSequence={this.props.onClickSequence} suppressPOS={true} wrap={wrap} />
+      {this.props.showLength && <div className="subtitle">{`${results.length} results`}</div>}
+      <TokenRange 
+        tokenType={this.tokenType} 
+        tokens={results} 
+        onClickSequence={this.props.onClickSequence} 
+        suppressPOS={true} 
+        wrap={wrap}
+        verticalLayout={vertical}
+      />
+
     </div> 
   }
 }

@@ -7,16 +7,19 @@ import { TokenManager } from "./base/TokenManager";
 import { Document } from "./base/Document";
 import { Constraint } from "./base/Constraint";
 
-import { WordView } from "./components/WordView";
 import { PrismEditor } from "./components/PrismEditor";
 import { PrismView } from "./components/PrismView";
 import { SearchResults } from "./components/SearchResults";
 import ControlButtons from "./components/ControlButtons";
 import InstructionsView from "./components/InstructionsView";
-import PrismSelector from "./components/PrismSelector";
+import { PrismSelector } from "./components/PrismSelector";
+import { Tooltip } from "./components/Tooltip";
 
 import { resolveConstraints } from "./scripts/resolution";
-import { assignSocket } from "./scripts/socket";
+import { assignSocket, registerHandlers } from "./scripts/socket";
+
+import { RangeMap } from "./base/RangeMap";
+import { ChangeType, TextChange } from "./base/TextChange";
 
 //         *-*.                                 //        /    /    /
 //      _-',^. `-_.                         //        /   /  /
@@ -47,7 +50,6 @@ class App extends Component {
     this.tokenManager = new TokenManager(activePrisms);
     window.tokenManager = this.tokenManager; // for debugging
     let prismToHighlight = Prism.getByType(activePrisms, initialPrismType);
-    console.log("initial prism to highlight", prismToHighlight);
 
     this.text = null;
     this.state = {
@@ -57,9 +59,16 @@ class App extends Component {
       tokens: Object.keys(this.tokenManager.tokens),
       selection: null,
       constraints: [],
-      isSearching: false,
+      openings: new RangeMap(),
+      isSearching: {},
       info: {},
+      start: 0,
+      end: 0,
+      localResults: [],
+      opening: undefined,
     };
+
+    window.state = this.state;
 
     this.editorRef = React.createRef();
     this.containerRef = React.createRef();
@@ -68,35 +77,38 @@ class App extends Component {
     const loc = window.location;
     const socketProtocol = { "http:": "ws", "https:": "wss" }[loc.protocol];
 
-    function handleDictResponse(msg) {
-      let doc = this._currentDocument();
-      let dictPrism = Prism.getByID(this.state.prisms, msg.prism);
+    function handleThesResponse(msg) {
+      let thesaurus = Prism.getByID(this.state.prisms, msg.prism);
       let constraints = Constraint.subsetByFeatures(
         this.state.constraints,
-        dictPrism.features
+        thesaurus.features
       );
-      dictPrism.onSearchResults({ message: msg }, doc, constraints);
+      let opening = this.state.openings.findRangeById(msg.opening);
+      let doc = this._currentDocument().updateToOpening(opening);
+      // console.log('thesaurus: handleThesResponse', {doc, thesaurus, constraints, opening});
+      thesaurus.onSearchResults(opening, { message: msg }, doc, constraints);
     }
 
     function handleReaderResponse(msg) {
-      let doc = this._currentDocument();
       let reader = Prism.getByID(this.state.prisms, msg.prism);
-      console.log("reader prism", reader, this.state.prisms, msg);
       let constraints = Constraint.subsetByFeatures(
         this.state.constraints,
         reader.features
       );
-      reader.onSearchResults({ message: msg }, doc, constraints);
+      let opening = this.state.openings.findRangeById(msg.opening);
+      let doc = this._currentDocument().updateToOpening(opening);
+      // console.log('reader: handleReaderResponse', {doc, reader, constraints, opening});
+      reader.onSearchResults(opening, { message: msg }, doc, constraints);
     }
 
-    let handlers = {
-      thesaurusResponse: handleDictResponse.bind(this),
+    registerHandlers({
+      thesaurusResponse: handleThesResponse.bind(this),
       readerResponse: handleReaderResponse.bind(this),
-    };
+    });
+
     assignSocket(
       socketProtocol,
-      loc.host + "/" + loc.hash.replace("#", "?"),
-      handlers
+      loc.host + "/" + loc.hash.replace("#", "?")
     );
   }
 
@@ -104,12 +116,29 @@ class App extends Component {
    * Called when the user selects new text.
    */
   setSelection(selection) {
-    console.log("app selection", selection);
-    this.setState({ selection: selection });
+    let [start, end] = [selection.startTextIndex, selection.endTextIndex];
+    let selectionText = this.state.selection ? this.state.selection.text : null;
+    let localResults = [];
+    let opening = null;
+    ({start, end, localResults, selectionText, opening} = this.expandToOpening(start, end, localResults, opening));
+
+    console.log("app: setting selection", selection, start, end, selectionText, localResults, opening);
+
+    this.setState({
+      selection: selection,
+      selectionText: selectionText,
+      start: start,
+      end: end,
+      localResults: localResults,
+      opening: opening,
+      tooltipState: {}
+    });
   }
 
-  setSearchingState(isSearching) {
-    this.setState({ isSearching: isSearching });
+  setSearchingState(openingID, isSearching) {
+    this.setState({
+      isSearching: { ...this.state.isSearching, [openingID]: isSearching },
+    });
   }
 
   setText(text) {
@@ -133,7 +162,7 @@ class App extends Component {
    */
   handleAddPrism(prismType) {
     const prism = makePrism(prismType, this.prismCallbacks);
-    console.log("making prism", prism);
+    console.log("app: making prism", prism);
 
     // tell the editor it is active and should be the current highlighted prism
     prism.setActive(true);
@@ -152,6 +181,20 @@ class App extends Component {
 
     // tokenize the text with the new lense
     this.attemptInitialTokenization();
+  }
+
+  handleRemovePrism(prism) {
+    // update the tokenManager
+    this.tokenManager.setActivePrism(prism, false);
+
+    // update the state
+    let prisms = this.state.prisms;
+    delete prisms[prism.id]
+    this.setState({
+      prisms: { ...prisms, },
+      activePrisms: Prism.getActive({ ...prisms, }),
+    });
+
   }
 
   // Initialize the uninitialized
@@ -187,52 +230,68 @@ class App extends Component {
     }
 
     // console.log('on highlight change', prismID, shouldHighlight, prisms, toHighlight);
-
     this.setState({ prismToHighlight: prismID });
   }
 
   /*
    * Saearch for alternate words using each prism.
    */
-  async searchPrisms(doc) {
-    this.setSearchingState(true); // UI update
+  async searchAllPrisms(opening, document) {
+    this.setSearchingState(opening.id, true); // UI update
 
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
 
+    if (opening == null) {
+      console.error("app: no opening found for search");
+      return;
+    }
+
     for (let prism of prisms) {
-      prism.search(doc, constraints);
-      // prism.search(doc, [])
+      prism.search(opening, document, constraints);
     }
   }
 
   /*
    * A callback that is triggered when a prism finishes its .search() operation
    */
-  async onSearchComplete() {
+  async onSearchComplete(opening) {
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
-    let predictions = prisms
-      .map((p) => p?.insights?.results)
-      .filter((r) => r && r.length > 0)
-      .flat();
+    let predictions = prisms.map(
+      (p) => p?.insights[opening.id]?.results
+    ).filter((r) => r && r.length > 0)
+    .flat();
+
     let filteredPredictions = await resolveConstraints(
       predictions,
-      constraints
+      constraints,
+      opening
     );
-    this.setState({ searchResults: filteredPredictions });
-    this.setSearchingState(false); // UI update
+
+    this.setState(prevState => {
+      const newOpenings = prevState.openings.copy();
+      newOpenings.setById(opening.id, predictions);
+
+      return { 
+        openings: newOpenings,
+        localResults: filteredPredictions
+      };
+    });
+
+    console.log('app: search complete', opening, 'search results', filteredPredictions);
+    this.setSearchingState(opening.id, false); // UI update
   }
 
   addConstraint(constraint) {
     this.setState({
       constraints: this.state.constraints.concat([constraint]),
     });
-    console.log("adding constraint", constraint);
+    console.log("app: adding constraint", constraint);
   }
 
   removeConstraint(constraint) {
-    console.log("removing constraint", constraint);
+    console.log("app: removing constraint", constraint);
     this.setState({
       constraints: this.state.constraints.filter((c) => {
         return c !== constraint;
@@ -244,43 +303,85 @@ class App extends Component {
    * Handle the swapping of tokens in the editor (as when the user selects a token replacement in the sidebar).
    * First, we want to swap the tokens in the tokenManager.
    * Then, we want to change the text in the editor for the new token text.
-   * TODO: this seems to break things.
    */
-  swapToken(originalToken, newToken) {
-    this.tokenManager.swapToken(originalToken, newToken);
-    this.editorRef.current.swapText(
-      originalToken.start,
-      originalToken.end,
-      newToken.text
-    );
-  }
-
   swapSequence(oldTokens, newSequence) {
-    // Calculate the start and end positions
     if (oldTokens.length === 0 || !newSequence) {
-      console.error("swapSequence called with", oldTokens, newSequence);
+      console.error("app: swapSequence called with old tokens", oldTokens, "new sequence", newSequence);
       return;
     }
 
     const start = oldTokens[0].start;
-    const end = oldTokens[oldTokens.length - 1].end;
+    const oldEnd = oldTokens[oldTokens.length - 1].end;
+    const newEnd = start + newSequence.textContent.length - 1;
     console.log(
-      "app swapSequence for",
+      "app: swapSequence to",
       newSequence,
       "from",
       oldTokens,
+      'start',
       start,
-      end
+      'newEnd',
+      newEnd,
+      'oldEnd',
+      oldEnd,
     );
 
     // Get the new text from the sequence
     const newText = newSequence.textContent;
 
-    // Update the tokenManager
+    // Update the tokenManager TODO should use the range logic...
     this.tokenManager.swapSequence(oldTokens, newSequence.span);
 
     // Update the editor text
-    this.editorRef.current.swapText(start, end, newText);
+    this.editorRef.current.swapText(start, oldEnd, newText);
+
+    this.updateOpeningsAfterSwap(start, oldEnd, newEnd, newText);
+  }
+
+  updateOpeningsAfterSwap(oldStart, oldEnd, newEnd, newText) {
+    const lengthDiff = newEnd - oldEnd;
+
+    this.setState(prevState => {
+      const newOpenings = prevState.openings.copy();
+      
+      newOpenings.allRanges().forEach(opening => {
+        if (opening.start > oldStart) {
+          // This range comes after the swap, shift it
+          newOpenings.updateRangeById(opening.id, opening.start + lengthDiff, opening.end + lengthDiff);
+        } else if (opening.start === oldStart && opening.end === oldEnd) {
+          // This is the swapped range, update its end
+          newOpenings.updateRangeById(opening.id, opening.start, newEnd);
+        }  // Ranges that end before oldStart are unaffected
+      });
+  
+      return { openings: newOpenings };
+    });
+  }
+
+  // Swap the highlighted text in the editor for a sequence in the suggestion set 
+  handleSequenceClick = (newSequence) => {
+    // Determine which prism type to use (e.g., 'words' or the first active prism)
+    const prismType = this.state.activePrisms[0]?.type || 'words';
+    
+    // Retrieve the relevant tokens
+    const oldTokens = this.state.start !== null ? this.tokenManager.tokensAt(prismType, this.state.start, this.state.end) : [];
+  
+    console.log('app: handling top-level click', {oldTokens, newSequence});
+    
+    // Call swapSequence with the retrieved tokens and the clicked sequence
+    this.swapSequence(oldTokens, newSequence);
+  }
+
+  updateOpenings = (changes) => {
+    this.setState(prevState => {
+      const newSearchResults = prevState.openings.copy();
+      
+      changes.forEach(change => {
+        newSearchResults.updateRanges(change);
+      });
+
+      return { openings: newSearchResults };
+    });
   }
 
   onKeyDown(event) {
@@ -289,73 +390,104 @@ class App extends Component {
     }
 
     if (event.metaKey && event.key === "'") {
-      return this.handleSearch();
+      return this.triggerSearch();
     }
   }
 
-  onConstraintUpdate(prism) {
-    let predictions = prism?.insights?.results || [];
-    let document = this._currentDocument(); // still don't love this
+  onConstraintUpdate(prism, opening) {
+    let predictions = prism?.insights[opening.id]?.results || [];
+    let document = this._currentDocument().updateToOpening(opening);
     let constraints = Constraint.subsetByFeatures(
       this.state.constraints,
       prism.features
     );
     console.log(
-      "updating constraints in app",
-      predictions,
-      document,
-      constraints
+      "app: updating constraints",
+      {
+        opening,
+        predictions,
+        document,
+        constraints,
+        prism,
+        insights: prism?.insights
+      }
     );
-    prism.onSearchResults({ predictions: predictions }, document, constraints);
+    prism.onSearchResults(opening, { predictions: predictions }, document, constraints);
   }
 
   handleRetokenize = () => {
     return this.editorRef.current?.manualRetokenizeAction();
   };
 
-  handleSearch = () => {
-    return this.editorRef.current?.manualSearchAction();
+  triggerSearch = () => {
+    console.log('app: handle search selection range', this.state.start, this.state.end);
+
+    if (this.state.start === null || this.state.end === null || this.state.start === this.state.end) {
+      console.error("app: not supporting search with no selection or single letter");
+      return;
+    }
+
+    let opening = null;
+    this.setState(prevState => {
+      const newOpenings = prevState.openings.copy();
+      opening = newOpenings.set(this.state.start, this.state.end, [], true); // create a new opening or reset what is there
+      console.log('app: handle search reset results', newOpenings, 'prev results', prevState.openings);
+      return { openings: newOpenings };
+    },
+    () => { // After the state updates, trigger the search
+      return this.editorRef.current?.manualSearchAction(opening);
+    });
+  };
+
+  handleTooltipUpdate = (newState) => {
+    this.setState(
+      {tooltipState: {
+        content: newState?.content,
+        position: newState?.position
+      }});
   };
 
   render() {
-    let startIndex = this.state.selection
-      ? this.state.selection.startIndex
-      : null;
-    let endIndex = this.state.selection ? this.state.selection.endIndex : null;
-    let selectionText = this.state.selection ? this.state.selection.text : null;
+    let [start, end] = [this.state.start, this.state.end];
+    let selectionText = this.state.selectionText;
+    let localResults = this.state.localResults;
+    let opening = this.state.opening;
+    let openings = this.state.openings;
 
     const hasSelection = selectionText && selectionText.length > 0;
-    let showSelection = debugMode && startIndex !== null && endIndex !== null;
+    const showSelection = debugMode && this.state.start !== null && this.state.end !== null;
 
-    let activePrisms = Prism.getActive(this.state.prisms);
+    const activePrisms = Prism.getActive(this.state.prisms);
     window.activePrisms = activePrisms; // for debugging
 
-    // get the prism that represents word breaks
-    let wordsPrism = Prism.firstByType(
-      this.state.prisms,
-      this.tokenManager.wordsPrism
-    );
-    let searchResults = this.state.searchResults
-      ? this.state.searchResults
-      : [];
+    const renderData = {start, end, selectionText, localResults, opening}
+    window.renderData = renderData;
+    window.state = this.state;
 
     return (
       <div className="context-container" ref={this.containerRef}>
-        <div className="editor-container">
+        <Tooltip
+          content={this.state.tooltipState?.content}
+          position={this.state.tooltipState?.position}
+        />
+        <div className="editor-container rainbow">
           <div className="left">
             {/* The text editor */}
             <PrismEditor
+              ref={this.editorRef}
               tokenManager={this.tokenManager}
-              setSelection={this.setSelection.bind(this)}
+              registerSelection={this.setSelection.bind(this)}
               setText={this.setText.bind(this)}
               prismToHighlight={this.state.prismToHighlight}
-              ref={this.editorRef}
-              doSearch={this.searchPrisms.bind(this)}
+              searchAllPrisms={this.searchAllPrisms.bind(this)}
+              updateOpenings={this.updateOpenings}
+              openings={openings}
+              // opening={opening} 
+              // document={document} // could send these in if needed
             />
           </div>
 
-          <div className="right">
-            {/* Everything on the right hand side of the screen */}
+          <div className="right">  {/* Everything on the right hand side of the screen */}
             {!hasSelection && (
               <div className={`inspector`}>
                 <InstructionsView />
@@ -364,59 +496,52 @@ class App extends Component {
             {hasSelection && (
               <div className={`inspector`}>
                 {selectionText && selectionText.length > 0 ? (
-                  <div className="selection-display">"{selectionText}"</div>
+                  <div className="selection-display glass-pane">{selectionText}</div>
                 ) : (
                   ""
                 )}
                 {showSelection ? (
                   <div className="selection-info">
-                    {startIndex} - {endIndex}
+                    {start} - {end}
                   </div>
                 ) : (
                   ""
                 )}
                 <ControlButtons
                   onRetokenize={this.handleRetokenize}
-                  onSearch={this.handleSearch}
+                  onSearch={this.triggerSearch}
                 />
-                {/* Display the selected span and some info about it */}
-                {/* <WordView
-                key={"wordslense"}
-                tokenManager={this.tokenManager} 
-                wordsPrism={wordsPrism}
-                startIndex={startIndex} endIndex={endIndex} 
-                onSwapToken={(originalToken, newToken) => { this.swapToken(originalToken, newToken)}}
-                debugMode={debugMode}
-              /> */}
                 {/* Constrained search results */}
                 <SearchResults
-                  results={searchResults}
-                  isSearching={this.state.isSearching}
+                  results={localResults}
+                  isSearching={this.state.isSearching[opening?.id]}
                   wrap={false}
+                  verticalLayout={true}
                   showLength={true}
-                  onClickSequence={(oldS, newS) => {
-                    this.swapSequence(oldS, newS);
-                  }}
+                  onClickSequence={this.handleSequenceClick}
                 />
-                {/* onClickSequence={this.onClickSequence.bind(this)} /> */}
                 {/* Display the active prisms */}
                 {activePrisms.map((prism) => {
-                  console.log("rendering", prism.id);
+                  let constraints = Constraint.subsetByFeatures(
+                    this.state.constraints,
+                    prism.features,
+                    opening
+                  )
+
                   return (
                     <PrismView
                       key={prism.id}
                       tokenManager={this.tokenManager}
                       prism={prism}
                       isSearching={prism.isSearching}
-                      startIndex={startIndex}
-                      endIndex={endIndex}
-                      onSwapSequence={this.swapSequence.bind(this)}
+                      startIndex={start}
+                      endIndex={end}
+                      opening={opening}
+                      onClickSequence={this.handleSequenceClick}
                       debugMode={debugMode}
-                      constraints={Constraint.subsetByFeatures(
-                        this.state.constraints,
-                        prism.features
-                      )}
+                      constraints={constraints}
                       addConstraint={this.addConstraint.bind(this)}
+                      onRemovePrism={() => this.handleRemovePrism(prism)}
                       removeConstraint={this.removeConstraint.bind(this)}
                       onConstraintUpdate={this.onConstraintUpdate.bind(this)}
                     />
@@ -424,20 +549,42 @@ class App extends Component {
                 })}
               </div>
             )}
+
             {/* End inspector */}
-
-
             <div className="lenses">
-              <PrismSelector 
+              <PrismSelector
                 prisms={this.state.prisms} 
                 activePrisms={this.state.activePrisms}
                 onAddPrism={this.handleAddPrism.bind(this)} 
-              />
+                onTooltipUpdate={this.handleTooltipUpdate}
+                />
             </div>
           </div>
         </div>
       </div>
     );
+  }
+
+  /*
+   * If the current selection is within a larger opening, use that opening.
+  */
+  expandToOpening(start, end, localResults, opening) {
+    if (start == end) {
+      opening = this.state.openings.findEnclosingRange(start);
+    } else {
+      opening = this.state.openings.findExactRange(start, end);
+    }
+
+    if (opening == undefined) {
+      localResults = [];
+    } else {
+      localResults = opening.value;
+      [start, end] = [opening.start, opening.end];
+    }
+
+    let selectionText = this.text.slice(start, end + 1);
+
+    return { start, end, localResults: localResults, selectionText, opening};
   }
 }
 

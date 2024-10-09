@@ -7,25 +7,25 @@ import { SearchResults } from "./SearchResults";
 import { TokenManager } from "../base/TokenManager";
 import { Prism } from "../base/prism/Prism";
 
-class PrismEditableTextFeature extends Component {
+class PrismEditableTextField extends Component {
   constructor(props) {
     super(props)
-    this.id = `text-feature-${this.props.feature.name}-${this.props.prism.id}`;
+    this.id = `text-field-${this.props.field.name}-${this.props.prism.id}`;
     this.state = {
-      text: this.props.feature.text,
+      text: this.props.field.text,
     };
   }
 
-  editTextFeature() {
+  editTextField() {
     let value = document.getElementById(this.id).value || '';
+    console.log("textfield: updating", value);
     this.setState({ text: value });
-    let featureName = this.props.feature.name;
-    this.props.prism.updateTextFeature(featureName, value);
+    this.props.prism.updateTextField(this.props.field.name, value);
   }
 
   render() {
-    return <div className={`text-feature`}>
-      <textarea id={this.id} value={this.state.text} onChange={this.editTextFeature.bind(this)}></textarea>
+    return <div className={`text-field`}>
+      <textarea id={this.id} value={this.state.text} onChange={this.editTextField.bind(this)}></textarea>
     </div>
   }
 }
@@ -52,6 +52,7 @@ export class PrismView extends Component {
     this.prism = this.props.prism;
     this.state = {
       constraints: [],
+      hasHistogramData: false,
     };
   }
 
@@ -65,19 +66,10 @@ export class PrismView extends Component {
     this.props.removeConstraint(constraint);
   }
 
-  prismHandleOnClick(sequence) {
-    let prism     = this.prism;
-    let startChar = this.props.startIndex;
-    let endChar   = this.props.endIndex - 1;
-  
-    let tokens = startChar !== null ? this.tokenManager.tokensAt(prism.tokenType, startChar, endChar) : [];
-    console.log('Handling click on sequence:', tokens, sequence);
-    this.props.onSwapSequence(tokens, sequence);
-  }
-
   prismHandleOnConstraintUpdate() {
-    console.log('updating ui on constraint' , this.prism);
-    this.props.onConstraintUpdate(this.prism);
+    this.props.onConstraintUpdate(this.prism, this.props.opening);
+    const hasHistogramData = !!this.prism?.insights[this.props.opening?.id]?.summary;
+    this.setState({ hasHistogramData: hasHistogramData});
     this.forceUpdate();
   }
 
@@ -117,17 +109,19 @@ export class PrismView extends Component {
     let prism = this.prism;
     let start = this.props.startIndex;
     let end = this.props.endIndex;
+    let opening = this.props.opening;
+    let onRemovePrism = this.props.onRemovePrism;
 
     let tokens = start !== null ? this.tokenManager.tokensAt(prism.tokenType, start, end) : [];
-    let results = prism?.insights?.results || [];
-
-    let text = prism?.insights?.text || null;
+    let results = prism?.insights[opening?.id]?.results || [];
+    let text = prism?.insights[opening?.id]?.text || null;
 
     let activeNotHidden = prism.active && !prism.hidden;
     let showTokenContent       = activeNotHidden && tokens.length > 0;
     let showResults     = activeNotHidden && (results.length > 0 || this.props.isSearching)
     let showtext        = activeNotHidden && text;
-    let displayingFull  = showTokenContent || showResults;
+    let displayingFull 
+     = showTokenContent || showResults;
 
     let rotated = activeNotHidden ? "rotated" : "";
     let border  = activeNotHidden ? "border"  : "";
@@ -139,13 +133,16 @@ export class PrismView extends Component {
     let textContent = showtext ? this.bulletedText(text) : "";
 
     return <div className={`prism`}>
-        <div className={`title ${rotated}`} onClick={this.toggleHidden.bind(this)}>
+        <div className={`prism-title ${rotated}`} onClick={this.toggleHidden.bind(this)}>
+          {/* Header stuff */}
           {prism.type} {title}
+          {/* Button to delete the prism */}
+          {prism.undestroyable ? "" :  <button className={`light-button`} onClick={() => onRemovePrism(prism)}>×</button> } 
         </div>
 
         <div className={`prism-content ${border} ${searching}`}>
-          {activeNotHidden ? Object.values(prism.textFeatures).map((feature) => {
-            return <PrismEditableTextFeature key={feature.text} feature={feature} prism={prism} />
+          {activeNotHidden ? Object.values(prism.textFields).map((field) => {
+            return <PrismEditableTextField key={field.text} field={field} prism={prism} />
           }) : ""}
 
           {textContent}
@@ -155,24 +152,30 @@ export class PrismView extends Component {
           {showTokenContent ? this.props.constraints.map((constraint) => {
             return <ConstraintRender 
               key={constraint.id} 
-              constraint={constraint} 
-              onDelete={this.props.removeConstraint}
+              constraint={constraint}
+              prism={prism}
+              startIndex={start}
+              endIndex={end}
+              opening={opening}
+              onDelete={this.props.removeConstraint} 
+              hasHistogramData={this.state.hasHistogramData}
               onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)}/>}) : ""
           }
 
           {showTokenContent ? <ConstraintCreator
             tokens={tokens}
-            startIndex={start} endIndex={end}
+            // startIndex={start} endIndex={end}
+            opening={opening}
             prism={prism}
             onAdd={this.props.addConstraint}
             onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)} /> : "" }
           
           {showResults ? <SearchResults
+                      showLength={true}
                       isSearching={this.props.isSearching} 
                       tokenType={prism.type}
-                      onClickSequence={this.prismHandleOnClick.bind(this)}
+                      onClickSequence={this.props.onClickSequence}
                       results={results} /> : ""}
-        
       </div>
     </div>;
   }

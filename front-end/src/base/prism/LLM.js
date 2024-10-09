@@ -20,7 +20,7 @@ export class ContextPrism extends Prism {
   /*
    * Given a document and a list of constraints, return a list of sequences that maximally satisfy the constraints.
   */
-  async search(document, constraints) {
+  async search(opening, document, constraints) {
     this.onSearchTriggered(); // UI
     let selectionWords = document.selectionText.split(' ').length; // TODO I suppose we should have the tokenized words to calculate this...
     let numWords = selectionWords;
@@ -34,31 +34,29 @@ export class ContextPrism extends Prism {
     constraints = Constraint.subsetByFeatures(constraints, this.features)
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
 
-    console.log('searching LLM', {preConstraints, selectionWords, numWords, numTokens})
+    console.log('searching LLM', {preConstraints, selectionWords, numWords, numTokens});
+
+    // TODO document that constraints might have been altererd in the meantime...
+    // should copy them if necessary - at least document?
     await searchForward(document, preConstraints, numTokens).then(
-      (predictions) => {
-        // TODO document that constraints might have been altererd in the meantime
-        // should copy them if necessary - at least document?
-        this.onSearchResults({predictions: predictions}, document, constraints, numWords)
-      }
+      ([predictions, summary]) => {return this.onSearchResults(opening, {predictions, summary}, document, constraints, numWords)}
     )
   }
 
-  async onSearchResults(insights, document, constraints, numWords) {
-    let predictions = insights.predictions
+  async onSearchResults(opening, insights, document, constraints, numWords) {
+    let predictions = insights.predictions;
 
     for (let prediction of predictions) {
-      let wordTokens = await miscTokensToWordTokens(prediction.span, document, numWords);
+      let wordTokens = await miscTokensToWordTokens(prediction, document, numWords);
       prediction.span = wordTokens;
       setSequenceProb(prediction)
     }
             
-    // deduplicate based on strippedTextContent
-    predictions = this.deduplicate(predictions);
-    // remove bad predicitons
-    predictions = predictions.filter((prediction) => { return !this.badPrediction(prediction) });
+    // remove bad predictions, duplicate predictions ('the' , 'the') -> ''the'
+    predictions = this.deduplicate(predictions);  
+    predictions = predictions.filter((prediction) => { return !this.badPrediction(prediction) }); 
 
-    super.onSearchResults({predictions: predictions}, document, constraints);
+    super.onSearchResults(opening, {...insights, predictions: predictions}, document, constraints);
   }
 
   badPrediction(prediction) {

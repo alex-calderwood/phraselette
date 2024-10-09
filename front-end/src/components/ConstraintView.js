@@ -1,56 +1,26 @@
 import React, { Component } from "react";
-import { Constraint, CategoricalConstraint, POSConstraint, 
-  RhymeConstraint, AlliterationConstraint} from "../base/Constraint";
-import { scientific } from "../scripts/utils";
+import { BetterRhymeConstraint, CategoricalConstraint } from "../base/Constraint";
+import { LogHistogram } from "./Histogram"
 
-class NumericalRangeConstraint extends Component {
+class HistogramRangeConstraintView extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-      targetMin: this.props.constraint.targetMin,
-      targetMax: this.props.constraint.targetMax,
-    };
   }
 
-  changeMin = (event) => {
-    const newValue = parseFloat(event.target.value);
-    this.setState({ targetMin: newValue });
-    this.props.constraint.updateTargetMin(newValue);
+  update = (newMin, newMax) => {
+    this.props.constraint.updateTargetMin(newMin);
+    this.props.constraint.updateTargetMax(newMax);
     this.props.onConstraintUpdate();
-  };
-
-  changeMax = (event) => {
-    const newValue = parseFloat(event.target.value);
-    this.setState({ targetMax: newValue });
-    this.props.constraint.updateTargetMax(newValue);
-    this.props.onConstraintUpdate();
-  };
+  }
 
   render() {
-    const { constraint } = this.props;
-    const { targetMin, targetMax } = this.state;
+    let { constraint, prism, hasHistogramData } = this.props;
+    const data = prism?.insights[this.props.opening?.id]?.summary || null;
+    hasHistogramData = hasHistogramData && data !== null;
 
     return (
       <ConstraintWrapper {...this.props} >
-        <div className="text"> 
-          Min: {scientific(constraint.targetMin)} Max: {scientific(constraint.targetMax)}
-        </div>
-        <input
-            type="range"
-            min={constraint.range[0]}
-            max={constraint.range[1]}
-            step="any"
-            value={targetMin}
-            onChange={this.changeMin}
-          />
-        <input
-            type="range"
-            min={constraint.range[0]}
-            max={constraint.range[1]}
-            step="any"
-            value={targetMax}
-            onChange={this.changeMax}
-          />
+        <LogHistogram data={data} onUpdate={this.update} hasData={hasHistogramData}/>
       </ConstraintWrapper>
     );
   }
@@ -95,20 +65,20 @@ class CategoricalConstraintView extends Component {
 
   render() {
     let constraint = this.props.constraint;
-    let featureName = constraint.feature.name;
+    let featureAttribute = constraint.feature.attribute;
     let possibleConstraintValues = constraint.range;
-    let constraintModes = CategoricalConstraint.modes;
+    let modes = Object.keys(constraint.modes);
     let target = this.state.target;
 
     return  <ConstraintWrapper {...this.props} >
       <select className="constraint-mode" key={constraint.id} value={constraint.mode} onChange={this.handleChangeMode}>
-          {constraintModes.map(mode => {
+          {modes.map(mode => {
             return <option key={mode} value={mode}>{mode}</option>
           })}
       </select>
       <div className="constraint-target">
         {target.map(tokenTarget => {
-          return <select className="constraint-select" id={`constraint-select-${constraint.id}-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[featureName]} onChange={this.handleChange}>
+          return <select className="constraint-select" id={`constraint-select-${constraint.id}-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[featureAttribute]} onChange={this.handleChange}>
             {possibleConstraintValues.map(value => {
               return <option key={value} value={value}>{value}</option>
             })}
@@ -145,8 +115,8 @@ const constraintViews = {
   POSConstraint: CategoricalConstraintView,
   SoundConstraint: CategoricalConstraintView,
   RhymeConsntraint: CategoricalConstraintView,
-  NumericalRangeConstraint: NumericalRangeConstraint,
-  AlliterationConstraint: null,
+  BetterRhymeConstraint: CategoricalConstraintView,
+  NumericalRangeConstraint: HistogramRangeConstraintView,
 };
 
 export class ConstraintRender extends React.Component {

@@ -114,3 +114,8 @@ Thumbs.db
 # Virtual environment
 venv/
 ENV/
+front-end/token.json
+front-end/token copy.json
+front-end/google_client copy.json
+front-end/credentials copy.json
+front-end/google_client.json

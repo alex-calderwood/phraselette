@@ -7,6 +7,7 @@ find . -type f \
     -not -path "*/node_modules/*" \
     -not -path "*/logs/*" \
     -not -path "*/.git/*" \
+    -not -path "*/dist/*" \
     -not -name "*.png" \
     -not -name "package.json" \
     -not -name "package-lock.json" \
@@ -25,6 +26,8 @@ find . -type f \
     -not -name ".DS_Store" \
     -not -path "*/frontend/*" \
     -not -name "project.txt" \
+    -not -name ".gitignore" \
+    -not -name "cat_files.sh" \
     -print0 | while IFS= read -r -d '' file; do
         echo "======== FILE: $file ========"
         cat "$file"

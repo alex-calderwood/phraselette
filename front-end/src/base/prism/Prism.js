@@ -1,30 +1,39 @@
 import { resolveConstraints, sortPredictions } from '../../scripts/resolution.js';
 import { Constraint } from '../Constraint.js';
-import { getUniqueUUID } from '../../scripts/utils.js';
+import { getUniqueID } from '../../scripts/utils.js';
+
+// insights = {
+//   [start, end]: {insights}
+// }
 
 export class Prism {
   static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'basic', 'probs'];
+  static MAIN_TYPE = Prism.TYPES[0]; // the type that is used for holding misc data
   /**
    * Create a Prism.
    * @param {string} type - The category of the prism
-   * @param {Array} [features=[]] - An array of features that this prism makes available to view or constrain. See Feature.js
+   * @param {Array} [features=[]]          - An array of features that this prism makes available to view or constrain. See Feature.js
    * @param {Object|null} [tokenType=null] - The name of the token that this Prism uses as its tokenization (in TokenManager).
    *                                           Defaults to {name}.
    */
   constructor(type, features=[], tokenType=null, description='') {
-    this.id = `${type}-${getUniqueUUID()}`;
+    this.id = `${type}-${getUniqueID()}`;
     this.type = type;
     this.title = type;
     this.active = false;
     this.description = description;
-    this.editable = false;
+
+    // some prisms should not be removed
+    this.undestroyable = Prism.isWordType(this.type);
 
     // which tokens to look up in the tokenManager
     this.tokenType = tokenType ? tokenType : this.type;  
     
     this.features = features || [];
-    this.textFeatures = [];
-    this.insights = null;
+
+    this.duplicatable = false; // some prisms can be duplicated (have more than one of them because they will have different responses), such as any with textFields
+    this.textFields = [];      // editable text properties used by some prisms; eg { 'description': {text: description, name: 'description'} }
+    this.insights = {};
 
     this.sortBy = 'total'; // default sorting // TODO take a look at this
 
@@ -54,25 +63,28 @@ export class Prism {
    * 
    * Insights might be in the form of token predictions or any other data that can be given to the user to comment 
    * on their text. 
-   * @param {object} insights - The things that the prism has learned about the text.
+   * @param {object} newInsights - The things that the prism has learned about the text.
    *                            Each search should return an insights thesaurus. 
    *                            Will contain a 'predictions' key when it is making alternate word predictions.
    * @param {Document} document - the working document in the editor. Should be taken with a small grain of salt as I haven't tested that it is up to date.
    * @param {Constraint[]} constraints - the constraints applicable to the current prism
   */
-  async onSearchResults(insights, document, constraints) {
-    let predictions = insights?.predictions || [];
+  async onSearchResults(opening, newInsights, document, constraints) {
+    let oldInsights = this.insights[opening.id];
+    let predictions = newInsights?.predictions || [];
+    let summary     = newInsights?.summary || oldInsights?.summary;
 
-    constraints = Constraint.subsetByFeatures(constraints, this.features)
-    const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
-    let results = await resolveConstraints(predictions, constraints, false);
+    constraints = Constraint.subsetByFeatures(constraints, this.features) // Do I need to do this? I also call it in onConstraintUpdate
+    // const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
+    let results = await resolveConstraints(predictions, constraints, opening, false);
     results = sortPredictions(results, this.sortBy, true);
 
-    console.log(`search results for ${this.type}:`, results);
-    this.insights = {results: results, ...insights};
+    let resolvedInsights = {...newInsights, results: results, summary: summary};
+    this.insights[opening.id] = resolvedInsights;
+    console.log("prism: resolved insights", resolvedInsights);
 
     this.isSearching = false;
-    this.onSearchComplete(this);
+    this.onSearchComplete(opening);
   }
 
   /* 
@@ -84,7 +96,7 @@ export class Prism {
   }
 
   // Search logic to be overriden
-  async search(document, constraints) {  return []; }
+  async search(opening, document, constraints) {  return []; }
 
   // Static methods
 
@@ -126,6 +138,14 @@ export class Prism {
       prism.setDoHighlight(false);  
     }
   }
+
+  /*
+   * We treat one of the types as special in the UI, because it needs to be populated for some features to work and for
+   * other interactions to be sensible.
+  */
+  static isWordType(type) {
+    return type == Prism.MAIN_TYPE;
+  }
 }
 
 // TODO put this somewhere better
@@ -136,6 +156,6 @@ export function setSequenceProb(sequence) {
 
   sequence.setAttribute('logProb', logProb);
   sequence.setAttribute('probGeometricMean', probGeometricMean);
-  sequence.setAttribute('prob', probGeometricMean); // used for scoring
+  sequence.setAttribute('prob', logProbMean); // used for scoring
   return sequence;
 }

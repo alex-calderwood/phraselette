@@ -7,6 +7,7 @@ const path = require("path");
 const http = require("http");
 const ws = require("ws");
 const axios = require("axios");
+const { makeID } = require("./src/server/utils.js");
 
 const { handleThesaurus, queryReader } = require("./src/server/queries.js");
 
@@ -68,11 +69,13 @@ app.get("*", (req, res) => {
 
 // WebSocket connection handling
 wss.on("connection", (clientSocket, req) => {
-  console.log("New WebSocket connection");
+  const clientID = makeID("user");
+
+  console.log("server: connect", clientID);
 
   clientSocket.on("message", async (data) => {
     const message = JSON.parse(data.toString());
-    console.log("on-msg:", message);
+    console.log("server: on-msg:", message);
 
     const handlers = {
       thesaurus: (message) => handleThesaurus(message, clientSocket),
@@ -82,20 +85,21 @@ wss.on("connection", (clientSocket, req) => {
 
     const handler = handlers[message.type];
     if (!handler) {
-      console.error("No handler for message type:", message.type);
+      console.error("server: No handler for message type:", message.type);
       return;
     }
 
     try {
       await handler(message);
     } catch (err) {
-      console.error("Handler error:", err);
+      console.error("server: Handler error:", err);
       clientSocket.send(JSON.stringify({ type: "error", error: err.message }));
     }
   });
 
   clientSocket.on("close", () => {
-    console.log("WebSocket connection closed");
+    console.log("server: ws: close", clientID);
+    // broadcast({type: "leave", clientID: clientID});
   });
 });
 
@@ -112,23 +116,27 @@ async function handleStream(message, clientSocket) {
   }
 
   if (message.type === 'stream') {
-    for await (const chunk of makeRequest(message)) {
+    let count = 0;
+    for await (const chunk of makePythonRequest(message)) {
       clientSocket.send(JSON.stringify({ 
         id: message.id, 
         type: 'stream',
         subtype: message.subtype,
         data: chunk
       }));
+      count ++;
     }
-    clientSocket.send(JSON.stringify({ 
+    clientSocket.send(JSON.stringify({
       id: message.id, 
       type: 'stream_end',
       subtype: message.subtype,
     }));
+
+    console.log(`sent stream_end to client after ${count} chunks for message ${message.id}`);
   }
 }
 
-async function* makeRequest(message) {
+async function* makePythonRequest(message) {
   const { subtype, data } = message;
   const endpoint = `${flaskHost}:${flaskPort}/${subtype}`;
 
@@ -144,7 +152,6 @@ async function* makeRequest(message) {
     });
 
     let buffer = '';
-
     for await (const chunk of response.data) {
       buffer += chunk.toString();
       const lines = buffer.split(breakToken);

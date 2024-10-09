@@ -60,18 +60,18 @@ export async function spacyTokenize(text, data = {}) {
 
 function makeWordToken(rawToken) {
   let tokenData = {
-    'start':        rawToken.start,     // inclusive
-    'end':          rawToken.end,       // inclusive
-    "text":         rawToken.text,
-    "pos":          rawToken.tag,
-    "isSpacySpace": rawToken.is_space,
     "type":         "words",
+    'start':        rawToken.start, // inclusive
+    'end':          rawToken.end,   // inclusive
+    "text":         rawToken.text,
+    "pos":          rawToken.pos,
+    "isSpacySpace": rawToken.is_space,
     "isWord":       true,
     "extra":        rawToken.extra,
+    "generic":      rawToken.generic,
   }
 
   let token = new Token(tokenData);
-
   return token;
 }
 
@@ -194,33 +194,38 @@ async function* callSpacy(context, tokenizeRange, additionalRequests) {
 
   returns: [Token] - a list of tokens spans that satisfy the constraints (each token span is a list of tokens)
 */
-export async function searchForward(document, constraints, depth, top_k=150) {
+export async function searchForward(document, constraints, depth, top_k=50) {
   if (document.prefixText.length === 0) {
-    return [];
+    return [[], null];
   }
 
   if (!depth || depth < 1) {
     console.error("searchForward called with invalid depth", depth);
-    return [];
+    return [[], null];
   }
-  let tokenGenerator = callSearch(document.prefixText, top_k, depth);
+  let sequenceGenerator = callSearch(document.prefixText, top_k, depth);
 
-  let promise = await tokenGenerator.next();
-  let predictedSequence = [];
+  let promise = await sequenceGenerator.next();
+  let summary = null;
+  let predictedSequences = [];
   while (!promise.done) {
     let rawSequence = promise.value;
 
-    let sequence = rawSequence.map((alt) => { 
-      let token = makeProbToken(alt, true); 
-      token.type = "alternate";
-      return token;
-    });
+    if (rawSequence.thing != null && rawSequence.thing == 'summary') {
+      summary = rawSequence.summary;
+    } else {
+      let sequence = rawSequence.map((alt) => { 
+        let token = makeProbToken(alt, true); 
+        token.type = "alternate";
+        return token;
+      });
+      predictedSequences.push(new Sequence(sequence));
+    }
 
-    predictedSequence.push(new Sequence(sequence));
-    promise = await tokenGenerator.next();
+    promise = await sequenceGenerator.next();
   }
 
-  return predictedSequence;
+  return [predictedSequences, summary];
 }
 
 async function* callSearch(prefix, top_k, depth) {
@@ -230,29 +235,7 @@ async function* callSearch(prefix, top_k, depth) {
     depth: depth,
   };
 
-  await (yield* streamFromWebSocket('search', data)); // TODO I'm not sure if this await is going to batch everything?
-}
-
-export async function getPhones(words) {
-  let tokenGenerator = streamFromWebSocket('phones', {text: words})
-
-  let tokens = [];
-  let rawTokenPromise = await tokenGenerator.next();
-  while (!rawTokenPromise.done) {
-    let rawToken = rawTokenPromise.value;
-    let token = new Token({
-      'start': rawToken.start,     // inclusive
-      'end':   rawToken.end,       // inclusive from server
-      "text":  rawToken.text,
-      "pos":   rawToken.tag,       // Todo looks like there is also a '.pos'
-      "raw":   rawToken,
-      "type":  "phone",
-    });
-    tokens.push(token);
-    rawTokenPromise = await tokenGenerator.next();
-  }
-
-  return tokens;
+  await (yield* streamFromWebSocket('search', data));
 }
 
 /*
@@ -263,8 +246,13 @@ export async function getPhones(words) {
  * but for now let's just retokenize
  * 
 */
-export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null) {
+export async function miscTokensToWordTokens(sequence, document, maxWords=null) {
+  let tokenSpan = sequence.span;
+
   if (tokenSpan.length === 0 || maxWords === 0) { return []; }
+
+  // let sequenceCopy = JSON.parse(JSON.stringify(sequence));
+  // console.log('smarts: miscTokensToWordTokens', tokenSpan, document, sequenceCopy, document.prefixText, sequenceCopy.textContent);
 
   // compute the text that results from adding the span we are evaluating to the rest of the prefix
   let newText = document.prefixText + tokenSpan.reduce(
@@ -342,9 +330,10 @@ export async function miscTokensToWordTokens(tokenSpan, document, maxWords=null)
       // Store the arithmetic mean of the log probabilities
       let logProbMean = logProb / tokenCount;
       wordToken.setAttribute('logProbMean', logProbMean);
+      wordToken.setAttribute('prob', logProbMean);
+
       
       // If you need the actual probabilities, exponentiate:
-      wordToken.setAttribute('prob', Math.exp(logProb));
       wordToken.setAttribute('probGeometricMean', Math.exp(logProbMean));
     }
   }
