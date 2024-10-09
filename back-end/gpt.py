@@ -258,11 +258,12 @@ def fix_infinity(d):
 #     print('constraint tokens', tokens)
 #     constraints.append(DisjunctiveConstraint(tokens))
 
-pos_checker = POSChecker(['DET', 'NOUN', 'VERB'], tokenizer)
+pos_checker = POSChecker(['DET'], tokenizer)
 
 # Create a ClassifiableConstraint with 'contains' mode
 constraint = ClassifiableConstraint(pos_checker, 'contains', tokenizer)
 constraints = [constraint]
+# constraints = []
     
 # A function that generates the probabilities of each token in the phrase
 # it also tokenizes strings using the GPT-2 tokenizer
@@ -378,7 +379,7 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
     num_beams = (num_beams // num_beam_groups) * num_beam_groups # Ensure num_beams is divisible by num_beam_groups
     num_beam_groups = min(num_beam_groups, num_beams)
 
-    # print(f'forward |{text}|', 'k', top_k, 'depth', depth,'beams', num_beams, 'beam groups', num_beam_groups, 'ends space', ends_with_space)
+    print(f'gpt: forward request text: |{text}|', 'k', top_k, 'depth', depth,'beams', num_beams, 'beam groups', num_beam_groups, 'logits', logits_processor, 'consraints', constraints) # 'ends space' ends_with_space)
 
     encoding = tokenizer.encode_plus(
         text,
@@ -399,6 +400,8 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
     # space_aware_processor.set_ends_with_space(ends_with_space)
     # space_aware_processor.set_input_len(input_len)
 
+
+    print(f'gpt: generating with num_beams {num_beams} num_return_sequences {num_beams} num_beam_groups {num_beam_groups} max len {max_length}')
     beam_output = model.generate(
         input_ids,
         max_length=max_length,
@@ -408,11 +411,11 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
         return_dict_in_generate=True,
         output_attentions=True,
         output_hidden_states=True,
-        # diversity_penalty=0.4,
-        # num_beam_groups=num_beam_groups,
-        no_repeat_ngram_size=3,
+        diversity_penalty=0.2,
+        num_beam_groups=num_beam_groups,
+        # no_repeat_ngram_size=3,
         # logits_processor=logits_processor,
-        constraints=constraints
+        # constraints=constraints
     )
 
     # Add these lines to check the overall shape of beam_token_scores
@@ -423,7 +426,6 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
         # current_end = offsets[-1, -1, 1].numpy().item() + (1 if ends_with_space else 0)
         current_end = offsets[-1, -1, 1].cpu().numpy().item() # + (1 if ends_with_space else 0)
 
-    
         beam_tokens = beam_output.sequences[beam_idx, len(input_ids[0]):]
         beam_token_scores = beam_output.scores
         for token_idx, token_id in enumerate(beam_tokens):
@@ -481,8 +483,8 @@ if __name__ == "__main__":
     #     print(token)
     #     print(json.dumps(token))
 
-    input = "I like"
-    output = forward_search(input, top_k=10, depth=10, 
+    input = "The color of the earth is brown the sky is"
+    output = forward_search(input, top_k=4, depth=5,
                             # logits_processor=logits_processor, 
                             constraints=constraints
                             )

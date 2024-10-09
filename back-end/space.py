@@ -86,7 +86,7 @@ GENERIC_MAPPINGS = js_file_to_python_dict('../front-end/data/pos.js')
 def stream_parse(text, extra_context, requests):
     doc = nlp(text)
     for token in doc:
-        print(f"Token: {token.text}, POS: {token.pos_}, Tag: {token.tag_}, Dep: {token.dep_}")
+        # print(f"space: Token: {token.text}, POS: {token.pos_}, Tag: {token.tag_}, Dep: {token.dep_}")
         token_data = {
             'text': token.text,
             'lemma': token.lemma_,
@@ -105,7 +105,7 @@ def stream_parse(text, extra_context, requests):
         add_extra_request_data(requests, token_data)
 
         response = json.dumps(token_data) + BREAK_TOKEN
-        print('spacy response', response)
+        # print('spacy: response', response)
         yield response
 
         # If there's whitespace following the token, create a separate token for it
@@ -128,7 +128,7 @@ def stream_parse(text, extra_context, requests):
 
             # Yield the whitespace token
             response = json.dumps(whitespace_data) + BREAK_TOKEN
-            print('spacy response', response)
+            # print('spacy: response', response)
             yield response
 
 def add_extra_request_data(requests, token_data):

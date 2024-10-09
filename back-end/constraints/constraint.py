@@ -135,6 +135,7 @@ class POSChecker(Checker):
             if lower_token in words:
                 return pos
         return 'NOUN'  # Default to NOUN if not found
+    
 # Example usage:
 if __name__ == "__main__":
     from transformers import AutoTokenizer
@@ -154,7 +155,7 @@ if __name__ == "__main__":
     
     for token_id in token_ids:
         stepped, completed, reset = constraint.update(token_id)
-        print(f"Token: {tokenizer.decode([token_id])}, Stepped: {stepped}, Completed: {completed}, Reset: {reset}")
+        # print(f"space: Token: {tokenizer.decode([token_id])}, Stepped: {stepped}, Completed: {completed}, Reset: {reset}")
         if completed:
             print("Constraint satisfied!")
             break

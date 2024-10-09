@@ -575,7 +575,9 @@ div.searching {
   overflow-x: auto;
   
   padding: 10px;
-  /* position: relative; */
+  position: relative;
+  /* not sure if we want this */
+  /* scroll-behavior: smooth;  */
 }
 
 .prism-item {
