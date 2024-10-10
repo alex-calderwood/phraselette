@@ -73,7 +73,7 @@ export function humanLog(logProb) {
   }
 }
 
-// Deduplication function
+// Deduplication an array of objects based on a key's value
 export function deduplicateByKey(arr, key) {
   const seen = new Set();
   return arr.filter(item => {
