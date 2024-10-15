@@ -3,8 +3,8 @@
 import torch
 import torch.nn.functional as F
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from logits import SpaceAwareLogitsProcessor, EndlessLogitsProcessor
+from transformers import AutoModelForCausalLM, AutoTokenizer, LogitsProcessorList
+from logits import SpaceAwareLogitsProcessor #, EndlessLogitsProcessor
 import traceback
 from tqdm import tqdm
 from pprint import pprint
@@ -93,13 +93,18 @@ def fix_infinity(d):
 
 # TODO uncomment?
 # with tf.device('/GPU:1'):
-# Create the LogitsProcessors
-# space_aware_processor = SpaceAwareLogitsProcessor(tokenizer);
-# endless_processor = EndlessLogitsProcessor(tokenizer)
-# logits_processor = TFLogitsProcessorList([
-#     space_aware_processor, 
-#     endless_processor,
-# ])
+#     # Create the LogitsProcessors
+#     space_aware_processor = SpaceAwareLogitsProcessor(tokenizer);
+#     endless_processor = EndlessLogitsProcessor(tokenizer)
+#     logits_processor = TFLogitsProcessorList([
+#         space_aware_processor, 
+#         endless_processor,
+#     ])
+
+space_aware_processor = SpaceAwareLogitsProcessor(tokenizer);
+logits_processor = LogitsProcessorList([
+    space_aware_processor, 
+])
 
 # force_words = [" mountains", " rivers", " wandering", " stuff", " being"]
 # constraints = []
@@ -224,11 +229,132 @@ def calculate_offset(offset, extra_context, start_token_offset):
     offset[1] = len(extra_context) + offset[1] - start_token_offset
     return offset
 
-def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos_token, logits_processor=[], constraints=[]):
+# to exist while we dev on the constraints version
+def forward_search_without_constraints(text, top_k=2, depth=5, num_beam_groups=2, eos=tokenizer.eos_token, logits_processor=logits_processor):
     text = text.replace('\xa0', ' ') # get rid of non-breaking space characters which seem to mess things up
-    # ends_with_space = text.endswith(' ')
-    # if ends_with_space:
-    #     text = text[:-1]
+    ends_with_space = text.endswith(' ')
+    if ends_with_space:
+        text = text[:-1]
+
+    num_beams = top_k
+    num_beams = (num_beams // num_beam_groups) * num_beam_groups # Ensure num_beams is divisible by num_beam_groups
+    num_beam_groups = min(num_beam_groups, num_beams)
+
+    print(f'gpt: without constraints text: |{text}|', 'k', top_k, 'depth', depth,
+          'beams', num_beams, 'beam groups', num_beam_groups, 'logits', logits_processor,'ends space', ends_with_space)
+
+    encoding = tokenizer.encode_plus(
+        text,
+        return_offsets_mapping=True,
+        return_tensors='pt'
+    )
+
+    print(encoding)
+
+    attention_mask = encoding["attention_mask"]
+    print("Attention mask", attention_mask)
+
+    # input_ids = encoding['input_ids']
+    # offsets = encoding['offset_mapping']
+    input_ids = encoding['input_ids'].to(device)
+    offsets = encoding['offset_mapping'].to(device)
+    input_len = len(input_ids[0])
+    max_length = input_len + depth
+
+    print('ends with space', ends_with_space, 'input_len', input_len, 'max_length', max_length)
+    space_aware_processor.set_ends_with_space(ends_with_space)
+    space_aware_processor.set_input_len(input_len)
+
+    print(f"""gpt: generating with num_beams {num_beams} num_return_sequences {num_beams}
+          num_beam_groups {num_beam_groups} max len {max_length} new tokens {depth}""")
+
+    # diversity_penalty=0.4,
+    # # num_beam_groups=num_beam_groups,
+    # no_repeat_ngram_size=3,
+    # # logits_processor=logits_processor,
+    # constraints=constraints
+    # beam_output = model.generate(
+    #     input_ids,
+    #     max_length=max_length,
+    #     num_beams=num_beams,
+    #     num_return_sequences=num_beams,
+    #     output_scores=True,
+    #     return_dict_in_generate=True,
+    #     output_attentions=False,
+    #     output_hidden_states=False,
+    #     attention_mask=attention_mask,
+    #     temperature=0.9,
+    #     diversity_penalty=1000000.0,            # can't use with constraints
+    #     num_beam_groups=num_beam_groups,  # can't use with constraints
+    #     # no_repeat_ngram_size=2,
+    #     logits_processor=logits_processor,
+    # )
+
+    beam_output = model.generate(
+        input_ids,
+        max_length=max_length,
+        num_beams=num_beams,
+        num_return_sequences=num_beams,
+        output_scores=True,
+        return_dict_in_generate=True,
+        output_attentions=False,
+        output_hidden_states=False,
+        attention_mask=attention_mask,
+        diversity_penalty=0.99,            # can't use with constraints
+        num_beam_groups=num_beam_groups,  # can't use with constraints
+        no_repeat_ngram_size=2,
+        logits_processor=logits_processor,
+    )
+
+    # Add these lines to check the overall shape of beam_token_scores
+    print("Shape of beam_token_scores:", [s.shape for s in beam_output.scores])
+
+    for beam_idx in range(num_beams):
+        sequence = []
+        # current_end = offsets[-1, -1, 1].numpy().item() + (1 if ends_with_space else 0)
+        current_end = offsets[-1, -1, 1].cpu().numpy().item() + (1 if ends_with_space else 0)
+
+        beam_tokens = beam_output.sequences[beam_idx, len(input_ids[0]):]
+        beam_token_scores = beam_output.scores
+        for token_idx, token_id in enumerate(beam_tokens):
+            # token_text = tokenizer.decode(token_id, skip_special_tokens=True) # eventually it would be nice to use this but we would have to deal with "" tokens
+            token_text = tokenizer.decode(token_id)
+
+            # If it is the first token we generate, remove the prefix space
+            if token_idx == 0:
+                if token_text.startswith(' '):
+                    token_text = token_text[1:]
+                else:   
+                    print('WARNING, token does not start with space:', token_text)
+                    
+            # Calculate offset
+            token_length = len(token_text)
+            offset_end = current_end + token_length - 1
+            
+            offset = [current_end, offset_end]
+            current_end = offset_end + 1
+
+            # Calculate token probability
+            token_logits = beam_token_scores[token_idx][beam_idx]
+            token_probs = F.softmax(token_logits, dim=-1)
+            token_prob = float(token_probs[token_id].item())
+            log_prob = float(token_logits[token_id].item())
+
+            token = {
+                'token': token_text,
+                'prob': token_prob,
+                'log_prob': log_prob,
+                'span': offset,
+            }
+            sequence.append(token)
+
+        yield fix_infinity(sequence)
+
+def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos_token, logits_processor=logits_processor, constraints=[]):
+    text = text.replace('\xa0', ' ') # get rid of non-breaking space characters which seem to mess things up
+    ends_with_space = text.endswith(' ')
+    if ends_with_space:
+        text = text[:-1]
 
     num_beams = top_k
     num_beams = (num_beams // num_beam_groups) * num_beam_groups # Ensure num_beams is divisible by num_beam_groups
@@ -254,11 +380,9 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
     input_len = len(input_ids[0])
     max_length = input_len + depth
 
-    # print('ends with space', ends_with_space, 'input_len', input_len, 'max_length', max_length)
-    # space_aware_processor.set_ends_with_space(ends_with_space)
-    # space_aware_processor.set_input_len(input_len)
-
-
+    print('ends with space', ends_with_space, 'input_len', input_len, 'max_length', max_length)
+    space_aware_processor.set_ends_with_space(ends_with_space)
+    space_aware_processor.set_input_len(input_len)
 
     print(f'gpt: generating with num_beams {num_beams} num_return_sequences {num_beams} num_beam_groups {num_beam_groups} max len {max_length}')
     beam_output = model.generate(
@@ -275,7 +399,7 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
         # diversity_penalty=0.2, # can't use with constraints
         # num_beam_groups=num_beam_groups,  # can't use with constraints
         # no_repeat_ngram_size=3,
-        # logits_processor=logits_processor,
+        logits_processor=logits_processor,
         constraints=constraints
     )
 
@@ -294,11 +418,11 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
             token_text = tokenizer.decode(token_id)
 
             # If it is the first token we generate, remove the prefix space
-            # if token_idx == 0:
-            #     if token_text.startswith(' '):
-            #         token_text = token_text[1:]
-            #     else:   
-            #         print('WARNING, token does not start with space:', token_text)
+            if token_idx == 0:
+                if token_text.startswith(' '):
+                    token_text = token_text[1:]
+                else:   
+                    print('WARNING, token does not start with space:', token_text)
                     
             # Calculate offset
             token_length = len(token_text)
@@ -308,11 +432,6 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
             current_end = offset_end + 1
 
             # Calculate token probability
-            # token_logits = beam_token_scores[token_idx][beam_idx]
-            # token_probs = tf.nn.softmax(token_logits)
-            # token_prob = float(token_probs[token_id])
-            # log_prob = float(token_logits[token_id])
-
             token_logits = beam_token_scores[token_idx][beam_idx]
             token_probs = F.softmax(token_logits, dim=-1)
             token_prob = float(token_probs[token_id].item())

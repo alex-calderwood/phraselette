@@ -5,7 +5,7 @@ from tqdm import tqdm
 from queue import Queue
 from threading import Thread, Event
 
-from gpt import pluck_probs, tokenizer, forward_search
+from gpt import pluck_probs, tokenizer, forward_search, forward_search_without_constraints
 from space import stream_parse
 from phones import sound_out
 from network import BREAK_TOKEN
@@ -60,12 +60,18 @@ def search():
     text = data["text"]
     top_k = int(data.get("top_k", 0) or 0)
     depth = int(data.get("depth", 1) or 1)
+    constraints = data.get("constraints", [])
 
-    def stream_search(text, top_k, depth):
-        for span in forward_search(text, top_k, depth):
-            yield json.dumps(span) + BREAK_TOKEN
+    def stream_search(text, top_k, depth, constraints):
+        if constraints and len(constraints) == 0: 
+            for span in forward_search(text, top_k, depth, constraints):
+                yield json.dumps(span) + BREAK_TOKEN
+        else: 
+            for span in forward_search_without_constraints(text, top_k, depth):
+                yield json.dumps(span) + BREAK_TOKEN
+        
 
-    return Response(stream_search(text, top_k, depth), content_type='application/json', headers={'X-Accel-Buffering': 'no'})
+    return Response(stream_search(text, top_k, depth, constraints), content_type='application/json', headers={'X-Accel-Buffering': 'no'})
 
 @app.route("/spacy", methods=["POST"])
 def spacy():

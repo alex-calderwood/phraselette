@@ -1,7 +1,8 @@
 import tensorflow as tf
-from transformers import TFGPT2LMHeadModel, GPT2TokenizerFast, TFLogitsProcessor, TFLogitsProcessorList
+import torch
+from transformers import TFLogitsProcessor, LogitsProcessor
 
-class SpaceAwareLogitsProcessor(TFLogitsProcessor):
+class TFSpaceAwareLogitsProcessor(TFLogitsProcessor):
     r"""
     [`TFLogitsProcessor`] that adjusts token generation based on the presence of a trailing space in the input sequence.
 
@@ -31,6 +32,39 @@ class SpaceAwareLogitsProcessor(TFLogitsProcessor):
 
     def set_input_len(self, input_len: int):
         self.input_len = input_len
+
+class SpaceAwareLogitsProcessor(LogitsProcessor):
+    r"""
+    [`LogitsProcessor`] that adjusts token generation based on the presence of a trailing space in the input sequence.
+
+    This processor ensures that if the input sequence ends with a space, the next token generated must also start with a space. 
+    It modifies the token generation scores to enforce this constraint at the start of the output generation.
+
+    Attributes:
+        space_tokens (torch.Tensor): A boolean tensor indicating which tokens in the vocabulary start with a space.
+    """
+
+    def __init__(self, tokenizer):
+        self.ends_with_space = False
+        self.input_len = 0
+        self.space_tokens = torch.tensor(
+            [tokenizer.decode([i]).startswith(' ') for i in range(tokenizer.vocab_size)],
+            dtype=torch.bool
+        )
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
+        batch_size, num_tokens = scores.shape
+        if self.ends_with_space and input_ids.shape[1] == self.input_len:
+            non_space_mask = ~self.space_tokens
+            scores[:, non_space_mask] = float('-inf')
+        return scores
+
+    def set_ends_with_space(self, ends_with_space: bool):
+        self.ends_with_space = ends_with_space
+
+    def set_input_len(self, input_len: int):
+        self.input_len = input_len
+
 
 class EndlessLogitsProcessor(TFLogitsProcessor):
     r"""

@@ -13,7 +13,6 @@ export class ContextPrism extends Prism {
 
   constructor() {
     super('context', [Feature.Prob], 'words');
-   
     this.sortBy = 'probGeometricMean'; // default sorting
   }
 
@@ -23,7 +22,7 @@ export class ContextPrism extends Prism {
   async search(opening, document, constraints) {
     this.onSearchTriggered(); // UI
     let selectionWords = document.selectionText.split(' ').length; // TODO I suppose we should have the tokenized words to calculate this...
-    console.log(`llm: opening text ${opening}`, opening, document)
+    console.log(`llm: opening text ${opening}`, opening, document);
     let numWords = selectionWords;
     numWords = Math.max(numWords, 1);
 
@@ -35,7 +34,7 @@ export class ContextPrism extends Prism {
     constraints = Constraint.subsetByFeatures(constraints, this.features)
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
 
-    console.log('searching LLM', {preConstraints, selectionWords, numWords, numTokens});
+    console.log('llm: searching', {preConstraints, selectionWords, numWords, numTokens});
 
     // TODO document that constraints might have been altererd in the meantime...
     // should copy them if necessary - at least document?
@@ -48,11 +47,13 @@ export class ContextPrism extends Prism {
     let predictions = insights.predictions;
 
     for (let prediction of predictions) {
-      let wordTokens = await miscTokensToWordTokens(prediction, document, numWords);
+      // let wordTokens = await miscTokensToWordTokens(prediction, document, numWords);
+      console.warn("llm: WARNING I AM DISABLING NUMWORDS");
+      let wordTokens = await miscTokensToWordTokens(prediction, document);
       prediction.span = wordTokens;
-      setSequenceProb(prediction)
+      setSequenceProb(prediction);
     }
-            
+
     // remove bad predictions, duplicate predictions ('the' , 'the') -> ''the'
     predictions = this.deduplicate(predictions);  
     predictions = predictions.filter((prediction) => { return !this.badPrediction(prediction) }); 
