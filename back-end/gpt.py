@@ -409,7 +409,7 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
     for beam_idx in range(num_beams):
         sequence = []
         # current_end = offsets[-1, -1, 1].numpy().item() + (1 if ends_with_space else 0)
-        current_end = offsets[-1, -1, 1].cpu().numpy().item() # + (1 if ends_with_space else 0)
+        current_end = offsets[-1, -1, 1].cpu().numpy().item() + (1 if ends_with_space else 0)
 
         beam_tokens = beam_output.sequences[beam_idx, len(input_ids[0]):]
         beam_token_scores = beam_output.scores
@@ -418,7 +418,7 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
             token_text = tokenizer.decode(token_id)
 
             # If it is the first token we generate, remove the prefix space
-            if token_idx == 0:
+            if ends_with_space and token_idx == 0:
                 if token_text.startswith(' '):
                     token_text = token_text[1:]
                 else:   
