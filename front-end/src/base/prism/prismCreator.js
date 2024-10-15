@@ -19,14 +19,10 @@ const roles = {
     "Alfred Jarry's inverted dictionary of pataphysics",
     "William Carlos Williams' observations",
     "the collected works of George R. R. Martin",
-    "a Wizard's spellbook",
     "a Wizard's wacky spellbook",
-    "a Wizard's misfiring spellbook",
     "James Gleick's scientific thesaurus for popular science",
   ],
   'reader': [
-    "a thoughtful kind colleague open to constructively critiquing and red-teaming my ideas they are reticient to point out anything with any hostility but are very insightful and always provide answers I take",
-    "a group of friends who are all writers and editors and know what it's like to dish some criticism out",
     "a surrealist in the mold of Max Ernst, Marcel Duchamp, and Andre Breton",
     "Tristan Tzara, the Dadaist poet",
     "Trotsky, the Russian revolutionary, during his academic years",
@@ -71,7 +67,7 @@ export function makePrism(type, callbacks) {
       break;
     case 'reader':
       prism = new ReaderPrism(randomRole('reader')).setActive(false);
-      prism.description="A computational reader model that will provide feedback and alternatives of your text based on their understanding of the text.";
+      prism.description="A computational reader model that will provide feedback and alternatives to your text based on its understanding of the text.";
       prism.duplicatable = true;
       break;
     case 'thesaurus':

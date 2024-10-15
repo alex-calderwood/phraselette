@@ -39,10 +39,17 @@ export class ThesaurusPrism extends Prism {
     super.onSearchResults(opening, {predictions: predictions}, document, constraints);
   }
 
-  static async processRevisions(words, document) {
+  static async processRevisions(revisions, document) {
     let predictions = [];
-    for (let word of words) {
-      let text = document.prefixText + word;
+    for (let revision of revisions) {
+
+      // Add a space to the revision if the original version had a space (the llm gets confused and loses this space)
+      if (document.selectionText.startsWith(" ") && !revision.startsWith(" ")) {
+        revision = " " + revision
+      }
+
+      let text = document.prefixText + revision;
+
       let range = [document.prefixText.length, text.length]; // is this range correct?
       let tokens = await gpt2Tokenize(text, { tokenizeRange: range });
       let sequence = new Sequence(tokens);

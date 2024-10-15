@@ -132,19 +132,17 @@ logits_processor = LogitsProcessorList([
 #    span: [int, int],  # the start and end character offset of the token in the phrase
 #    prob: float  # the probability of the token
 # }
-def pluck_probs(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): # TODO need to imnplement depth!
+def pluck_probs(phrase, extra_context=tokenizer.eos_token, top_k=0, depth=1):
     try:
         start_token_offset = 0
-        # start_token_offset = 13
-        # Add the EOS token as the prefix to the phrase
         if not extra_context.startswith(tokenizer.eos_token):
             extra_context = tokenizer.eos_token + extra_context
             start_token_offset = 13
 
         context_encoding = tokenizer.encode_plus(
             extra_context,
-            return_offsets_mapping=True,  # This will return the token offsets
-            return_tensors='tf'
+            return_offsets_mapping=True,
+            return_tensors='pt'
         )
 
         context_input_ids = context_encoding['input_ids']
@@ -152,49 +150,37 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): 
 
         encoding = tokenizer.encode_plus(
             phrase,
-            return_offsets_mapping=True,  # This will return the token offsets
-            return_tensors='tf',
+            return_offsets_mapping=True,
+            return_tensors='pt',
         )
 
-        # Extract input_ids and offsets
         input_ids = encoding['input_ids']
         offsets = encoding['offset_mapping']
-
         attention_mask = encoding["attention_mask"]
-        print("Attention mask", attention_mask, encoding["pad_token_id"])
 
-        # merge extra context with the input
-        # all_ids = tf.concat([context_input_ids, input_ids], axis=1)
         all_ids = torch.cat([context_input_ids, input_ids], dim=1)
 
-        context_len = len(context_input_ids[0])
-        input_len = len(input_ids[0])
-        total_len = len(all_ids[0])
+        context_len = context_input_ids.size(1)
+        input_len = input_ids.size(1)
+        total_len = all_ids.size(1)
 
         for i in tqdm(range(context_len, total_len)):
             original_word_id = all_ids[0][i]
-            max_length = len(all_ids[0][:i]) + 1
-            # print('i', i, 'original_word', original_word, 'max_length', max_length, 'input', input_ids[:, :i])
+            max_length = all_ids[0][:i].size(0) + 1
 
             greedy_output_dict = model.generate(
-                all_ids[:, :i], max_length=max_length, output_scores=True, return_dict_in_generate=True, attention_mask=attention_mask
+                all_ids[:, :i], max_length=max_length, output_scores=True, return_dict_in_generate=True
             )
-            # token_probs = tf.nn.softmax(greedy_output_dict.scores[0])[0]
             token_probs = F.softmax(greedy_output_dict.scores[0], dim=-1)[0]
 
             token_logits = greedy_output_dict.scores[0][0]
-            # original_prob = token_probs[original_word_id].numpy()
-            # original_log_prob = token_logits[original_word_id].numpy()
-            original_prob = token_probs[original_word_id].cpu().numpy()
-            original_log_prob = token_logits[original_word_id].cpu().numpy()
+            original_prob = token_probs[original_word_id].item()
+            original_log_prob = token_logits[original_word_id].item()
             
-            # calculate the character offset from the start of the phrase (not counting the extra context)
             offset = calculate_offset(offsets[:, i - context_len, :], extra_context, start_token_offset)
 
-            # Determine the top k alternate words for each token
             alternates = []
             if top_k > 0:
-                # top_k_values, top_k_indices = tf.math.top_k(token_probs, k=top_k)
                 top_k_values, top_k_indices = torch.topk(token_probs, k=top_k)
 
                 for index, prob in zip(top_k_indices, top_k_values):
@@ -210,12 +196,12 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): 
             result = {
                 'token': tokenizer.decode(original_word_id),
                 'span': offset,
-                'prob': float(original_prob), # needs to be a float to serialize to JSON|
+                'prob': float(original_prob),
                 'log_prob': float(original_log_prob),
-                'alternates': alternates,     # top k alternates
+                'alternates': alternates,
             }
 
-            yield result
+            yield fix_infinity(result)
 
     except Exception as e:
         print('Error:', e)
@@ -223,7 +209,7 @@ def pluck_probs(phrase, extra_context = tokenizer.eos_token, top_k=0, depth=1): 
         traceback.print_exc()
 
 def calculate_offset(offset, extra_context, start_token_offset):
-    offset = offset.numpy()
+    offset = offset.cpu().numpy()
     offset = offset.tolist()[0]
     offset[0] = len(extra_context) + offset[0] - start_token_offset
     offset[1] = len(extra_context) + offset[1] - start_token_offset
