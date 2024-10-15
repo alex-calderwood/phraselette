@@ -321,7 +321,7 @@ def forward_search_without_constraints(text, top_k=2, depth=5, num_beam_groups=2
             token_text = tokenizer.decode(token_id)
 
             # If it is the first token we generate, remove the prefix space
-            if token_idx == 0:
+            if ends_with_space and token_idx == 0:
                 if token_text.startswith(' '):
                     token_text = token_text[1:]
                 else:   
