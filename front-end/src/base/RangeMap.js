@@ -77,6 +77,15 @@ export class RangeMap {
     return null;
   }
 
+  deleteById(id) {
+    if (this.ranges[id]) {
+      delete this.ranges[id];
+      return true;
+    }
+    console.warn(`range: deleteById could not find range with id:`, id);
+    return false;
+  }
+
   findExactRange(start, end) {
     return Object.values(this.ranges).find(
       (r) => r.start === start && r.end === end

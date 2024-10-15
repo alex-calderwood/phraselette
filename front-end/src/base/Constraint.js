@@ -5,7 +5,10 @@ import { overlaps } from '../scripts/utils.js';
 
 // feature -> constraint mapping
 export function makeConstraint(feature, target, opening) {
-  console.log("cc: making constraint with opening", opening);
+  console.log("constraint: making constraint", {feature, target, opening});
+  if (opening == null) {
+    console.warn("constraint: Warning, making a constraint with no opening");
+  }
   let attribute = feature.attribute;
   let dataType = feature.dataType;
   switch (attribute) {
@@ -68,8 +71,8 @@ export class Constraint {
 
 
   applies(opening) {
-    // return true;
-    if (this.opening === null) {
+    if (this.opening == null) {
+      console.warn("constraint: opening is null", this, this.opening)
       return false;
     }
 

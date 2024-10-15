@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { TokenRange } from "./TokenRange";
 import { TokenAlternates } from "./Alternates";
 import { ConstraintRender } from "./ConstraintView";
-import { ConstraintCreator } from "./ConstraintCreator";
+import { PrismControls } from "./ConstraintCreator";
 import { SearchResults } from "./SearchResults";
 import { TokenManager } from "../base/TokenManager";
 import { Prism } from "../base/prism/Prism";
@@ -134,10 +134,10 @@ export class PrismView extends Component {
 
     return <div className={`prism`}>
         <div className={`prism-title ${rotated}`} onClick={this.toggleHidden.bind(this)}>
+          {prism.undestroyable ? <div></div>:  <button className={`light-button`} onClick={() => onRemovePrism(prism)}>×</button> } 
           {/* Header stuff */}
           {prism.type} {title}
           {/* Button to delete the prism */}
-          {prism.undestroyable ? "" :  <button className={`light-button`} onClick={() => onRemovePrism(prism)}>×</button> } 
         </div>
 
         <div className={`prism-content ${border} ${searching}`}>
@@ -162,7 +162,7 @@ export class PrismView extends Component {
               onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)}/>}) : ""
           }
 
-          {showTokenContent ? <ConstraintCreator
+          {showTokenContent ? <PrismControls
             tokens={tokens}
             // startIndex={start} endIndex={end}
             opening={opening}

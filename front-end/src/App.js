@@ -122,7 +122,7 @@ class App extends Component {
     let opening = null;
     ({start, end, localResults, selectionText, opening} = this.expandToOpening(start, end, localResults, opening));
 
-    console.log("app: setting selection", selection, start, end, selectionText, localResults, opening);
+    console.log("app: setting selection", {selection, start, end, selectionText, localResults, opening});
 
     this.setState({
       selection: selection,
@@ -432,12 +432,34 @@ class App extends Component {
       const newOpenings = prevState.openings.copy();
       opening = newOpenings.set(this.state.start, this.state.end, [], true); // create a new opening or reset what is there
       console.log('app: handle search reset results', newOpenings, 'prev results', prevState.openings);
-      return { openings: newOpenings };
+      return {
+        opening: opening,
+        openings: newOpenings 
+      };
     },
     () => { // After the state updates, trigger the search
       return this.editorRef.current?.manualSearchAction(opening);
     });
   };
+
+  deleteOpening = () => {
+    let toDelete = this.state.opening?.id;
+
+    if (toDelete == null) {
+      console.warn("app: no opening to delete");
+      return;
+    }
+
+    this.setState(prevState => {
+      const newOpenings = prevState.openings.copy();
+      newOpenings.deleteById(toDelete)
+      return {
+        opening: undefined,
+        openings: newOpenings
+      }
+    })
+  }
+
 
   handleTooltipUpdate = (newState) => {
     this.setState(
@@ -510,6 +532,8 @@ class App extends Component {
                 <ControlButtons
                   onRetokenize={this.handleRetokenize}
                   onSearch={this.triggerSearch}
+                  onDelete={this.deleteOpening}
+                  opening={opening}
                 />
                 {/* Constrained search results */}
                 <SearchResults
