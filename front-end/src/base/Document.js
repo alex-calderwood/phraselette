@@ -63,6 +63,8 @@ export class Document {
             ...this.selection,
             startTextIndex: opening.start,
             endTextIndex: opening.end,
+            startDocumentSpanIndex: undefined, // these would have to be reconstructed somehow
+            endDocumentSpanIndex: undefined,
             text: this.text.slice(opening.start, opening.end + 1),
             note: 'Document modified by Document.updateToOpening - not all data aligns'
         }

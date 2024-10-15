@@ -23,6 +23,7 @@ export class ContextPrism extends Prism {
   async search(opening, document, constraints) {
     this.onSearchTriggered(); // UI
     let selectionWords = document.selectionText.split(' ').length; // TODO I suppose we should have the tokenized words to calculate this...
+    console.log(`llm: opening text ${opening}`, opening, document)
     let numWords = selectionWords;
     numWords = Math.max(numWords, 1);
 

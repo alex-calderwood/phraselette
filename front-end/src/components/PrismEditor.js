@@ -489,7 +489,7 @@ export class PrismEditor extends Component {
       getTextWithWhitespace(this.contentRef.current),
       this.keyDownSelection,
       this.tokenManager
-    );
+    ).updateToOpening(opening);
 
     console.log('editor: manually searching text', document.selectionText);
     this.props.searchAllPrisms(opening, document);
