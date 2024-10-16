@@ -33,16 +33,20 @@ export class PrismEditor extends Component {
     this.changeTracker = new TextChangeTracker();
 
     this.lastText = ''; // Store the last known text content
+    // this.lastValidContent = null; // to move to managed state
+    
   }
 
   componentDidMount() {
     this.editorNode = this.contentRef.current;
+    this.lastValidContent = this.contentRef.current.cloneNode(true);
 
     this.editorNode.addEventListener('input', this.onInput);
+    // this.editorNode.addEventListener('beforeinput', this.onBeforeInput);
     this.editorNode.addEventListener('click', this.onClick);
     this.editorNode.addEventListener('keydown', this.onKeyDown.bind(this));
     this.editorNode.addEventListener('keyup', this.onKeyUp.bind(this));
-    this.editorNode.addEventListener('paste', this.handlePaste);
+    this.editorNode.addEventListener('paste', this.handlePaste); // intercepting these and turning them into insertText
     this.editorNode.addEventListener('blur', this.handleBlur);
     this.editorNode.addEventListener('focus', this.handleFocus);
     this.editorNode.addEventListener('dblclick', this.onDoubleClick.bind(this));
@@ -82,11 +86,11 @@ export class PrismEditor extends Component {
 
     window.editorNode = this.editorNode;
     window.currentSelection = this.currentSelection.bind(this);
-
-  } // didMount
+  }
 
   componentWillUnmount() {
     this.editorNode.removeEventListener('input', this.onInput);
+    // this.editorNode.removeEventListener('beforeinput', this.onBeforeInput);
     this.editorNode.removeEventListener('click', this.onClick);
     this.editorNode.removeEventListener('keydown', this.onKeyDown);
     this.editorNode.removeEventListener('keyup', this.onKeyUp);
@@ -129,39 +133,72 @@ export class PrismEditor extends Component {
     return this.contentRef.current.textContent || '';
   }
 
+  onBeforeInput = (event) => {
+    console.log('before input')
+    
+  };
+
   /*
    * Triggered when user types something, pastes, or deletes.
    * TODO Bugs:
    *        - spaces aren't being saved correctly on firefox (works on Chrome)
   */
   onInput = (event) => {
+    console.log('input')
     const selection = this.currentSelection();
     const newText = getTextWithWhitespace(this.contentRef.current);
-    const changes = this.calculateChanges(event, this.keyDownSelection, selection);
+    let changes;
 
-    changes.forEach(change => {
-      this.changeTracker.addChange(change);
-    });
+    try {
+      changes = this.calculateChanges(event, this.keyDownSelection, selection);
+    } catch (error)  {
+      console.warn(`Error with change ${error}`);
 
-    this.updateOpenings();
-    this.changeTracker.clear();
+      // doesn't work
+      // event.preventDefault();
+      // this.editorNode.innerHTML = this.lastText; // Revert to previous content
+      // console.log("restoring to ", this.lastText);
+      // this.restoreSelection(this.keyDownSelection);
+      return;
+    }
 
-    // Update lastText
+    this.processChanges(changes);
+
+    // // Update lastText
     this.lastText = newText;
 
-    // give the new text to the parent component
+    // // give the new text to the parent component
     if (this.props.setText) { this.props.setText(newText); }
     
     // // update each modified token (currently broken)
     // this.tokenManager.synchronizeTokens(this.keyDownSelection, this.keyDownSelection, event);
   };
+  
+  processChanges(changes) {
+    changes.forEach(change => {
+        this.changeTracker.addChange(change);
+      });
+    
+      this.updateOpenings();
+      this.changeTracker.clear();
+    
+      // Update lastText
+      // this.lastText = newText;
+  }
 
   calculateChanges(event, preChangeSelection, postChangeSelection) {
     const changes = [];
-    
+    // useful schema https://w3c.github.io/input-events/#overview
     switch (event.inputType) {
       case 'insertText':
       case 'insertCompositionText':
+        // hacky solution for pasting. we are turning pastes into insertTexts because I can't figure out
+        // how to get the paste contents within onInput, when we don intercept, it turns multiline pastes
+        // into a series of insertText commands, some of which have null text instead of newlines
+        let newText = event.data;
+        if (event.data == null) {
+          newText = "\n";
+        }
         if (preChangeSelection.startTextIndex !== preChangeSelection.endTextIndex) {
           changes.push(new TextChange(
             ChangeType.DELETE,
@@ -174,9 +211,9 @@ export class PrismEditor extends Component {
         changes.push(new TextChange(
           ChangeType.INSERT,
           preChangeSelection.startTextIndex,
-          preChangeSelection.startTextIndex + event.data.length - 1,
-          event.data,
-          event.data.length
+          preChangeSelection.startTextIndex + newText.length - 1,
+          newText,
+          newText.length
         ));
         break;
       case 'insertLineBreak':
@@ -205,7 +242,6 @@ export class PrismEditor extends Component {
         if (Number.isNaN(preChangeSelection.startTextIndex) || Number.isNaN(preChangeSelection.startTextIndex) || preChangeSelection.startTextIndex === 0) {
           break;
         }
-
         if (preChangeSelection.startTextIndex !== preChangeSelection.endTextIndex) {
           changes.push(new TextChange(
             ChangeType.DELETE,
@@ -225,28 +261,31 @@ export class PrismEditor extends Component {
         }
         break;
       case 'insertFromPaste':
-        const pastedText = event.clipboardData.getData('text/plain');
-        if (preChangeSelection.startTextIndex !== preChangeSelection.endTextIndex) {
-          changes.push(new TextChange(
-            ChangeType.REPLACE,
-            preChangeSelection.startTextIndex,
-            preChangeSelection.endTextIndex,
-            pastedText,
-            pastedText.length
-          ));
-        } else {
-          changes.push(new TextChange(
-            ChangeType.INSERT,
-            preChangeSelection.startTextIndex,
-            preChangeSelection.startTextIndex + pastedText.length - 1,
-            pastedText,
-            pastedText.length
-          ));
-        }
+        // const pastedText = ''; // event.clipboardData.getData('text/plain');
+        // console.log('insertFromPaste', event, event?.clipboardData, event?.originalEvent, event?.clipboardData?.getData('text/plain'), event?.originalEven?.clipboardData?.getData('text/plain'))
+        // // let pastedText = (e.originalEvent || e).clipboardData.getData('text/plain');
+        // window.event = event;
+        // if (preChangeSelection.startTextIndex !== preChangeSelection.endTextIndex) {
+        //   changes.push(new TextChange(
+        //     ChangeType.REPLACE,
+        //     preChangeSelection.startTextIndex,
+        //     preChangeSelection.endTextIndex,
+        //     pastedText,
+        //     pastedText.length
+        //   ));
+        // } else {
+        //   changes.push(new TextChange(
+        //     ChangeType.INSERT,
+        //     preChangeSelection.startTextIndex,
+        //     preChangeSelection.startTextIndex + pastedText.length - 1,
+        //     pastedText,
+        //     pastedText.length
+        //   ));
+        // }
         break;
   
       default:
-        console.warn(`Unhandled input type: ${event.inputType}`);
+        throw new Error(`Unhandled input type: ${event.inputType}`); 
     }
 
     return changes;
@@ -528,6 +567,8 @@ export class PrismEditor extends Component {
     this.updateSelection();
   };
 
+  // Intercept the paste event and turn it into a series of insertText
+  // if there are new lines, it will turn those into null text input events
   handlePaste = (event) => {
     event.preventDefault();
     const text = (event.clipboardData || window.clipboardData).getData('text/plain');
@@ -869,16 +910,21 @@ export class PrismEditor extends Component {
   }
 
   render() {
-    // this.colorAllCharactersByProb(); // TODO this shouldn't called here
+    // this.colorAllCharactersByProb(); // TODO move this somewhere else
     return (
       <div
         className="editor"
         ref={this.contentRef}
         contentEditable="plaintext-only"
-        dangerouslySetInnerHTML={{ __html: this.state.content }}
-        // onFocus={this.handleFocus}
-        // onDoubleClick={this.onDoubleClick}
-      ></div>
+        // dangerouslySetInnerHTML={{ __html: this.state.content }}
+    />
+    //  eventual full managed state?
+    // <div
+    //     className="editor"
+    //     ref={this.contentRef}
+    //     contentEditable="plaintext-only"
+    //     onInput={this.onInput}
+    //   />
     );
   }
 }
