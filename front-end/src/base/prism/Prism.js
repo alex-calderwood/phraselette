@@ -8,6 +8,7 @@ import { getUniqueID } from '../../scripts/utils.js';
 
 export class Prism {
   static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'basic', 'probs'];
+  static SEARCH_TYPES = new Set(['context', 'reader', 'thesaurus']);
   static MAIN_TYPE = Prism.TYPES[0]; // the type that is used for holding misc data
   /**
    * Create a Prism.
@@ -23,8 +24,11 @@ export class Prism {
     this.active = false;
     this.description = description;
 
+
     // some prisms should not be removed
     this.undestroyable = Prism.isWordType(this.type);
+
+    this.canSearch = Prism.SEARCH_TYPES.has(this.type);
 
     // which tokens to look up in the tokenManager
     this.tokenType = tokenType ? tokenType : this.type;  

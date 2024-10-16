@@ -475,12 +475,9 @@ export class PrismEditor extends Component {
     console.log('editor: manually tokenizing');
     this.forceTokenize();
     this.styleContent();
-    // setTimeout(() => {
-    //   this.restoreSelecdtion();
-    // }, 0);
   }
 
-  manualSearchAction(opening) {
+  manualSearchAction(prisms, opening) {
     this.onKeyDown();
     this.manualRetokenizeAction();
 
@@ -492,10 +489,7 @@ export class PrismEditor extends Component {
     ).updateToOpening(opening);
 
     console.log('editor: manually searching text', document.selectionText);
-    this.props.searchAllPrisms(opening, document);
-    // setTimeout(() => {
-    //   this.restoreSelection();
-    // }, 0);
+    this.props.searchPrisms(prisms, opening, document);
   }
 
   /*

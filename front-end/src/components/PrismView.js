@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { TokenRange } from "./TokenRange";
 import { TokenAlternates } from "./Alternates";
 import { ConstraintRender } from "./ConstraintView";
-import { PrismControls } from "./ConstraintCreator";
+import { PrismControls } from "./PrismControls";
 import { SearchResults } from "./SearchResults";
 import { TokenManager } from "../base/TokenManager";
 import { Prism } from "../base/prism/Prism";
@@ -116,10 +116,11 @@ export class PrismView extends Component {
     let results = prism?.insights[opening?.id]?.results || [];
     let text = prism?.insights[opening?.id]?.text || null;
 
-    let activeNotHidden = prism.active && !prism.hidden;
-    let showTokenContent       = activeNotHidden && tokens.length > 0;
-    let showResults     = activeNotHidden && (results.length > 0 || this.props.isSearching)
-    let showtext        = activeNotHidden && text;
+    let activeNotHidden  = prism.active && !prism.hidden;
+    let showTokenContent = activeNotHidden && tokens.length > 0;
+    let showOpeningElements = opening != null;
+    let showResults      = activeNotHidden && (results.length > 0 || this.props.isSearching)
+    let showtext         = activeNotHidden && text;
     let displayingFull 
      = showTokenContent || showResults;
 
@@ -162,10 +163,11 @@ export class PrismView extends Component {
               onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)}/>}) : ""
           }
 
-          {showTokenContent ? <PrismControls
+          {showOpeningElements ? <PrismControls
             tokens={tokens}
             // startIndex={start} endIndex={end}
             opening={opening}
+            onSearch={this.props.onSearch}
             prism={prism}
             onAdd={this.props.addConstraint}
             onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)} /> : "" }

@@ -236,11 +236,9 @@ class App extends Component {
   /*
    * Saearch for alternate words using each prism.
    */
-  async searchAllPrisms(opening, document) {
+  async searchPrisms(prisms, opening, document) {
     this.setSearchingState(opening.id, true); // UI update
-
     let constraints = this.state.constraints;
-    let prisms = Prism.getActive(this.state.prisms);
 
     if (opening == null) {
       console.error("app: no opening found for search");
@@ -251,6 +249,12 @@ class App extends Component {
       prism.search(opening, document, constraints);
     }
   }
+
+  // async searchOnePrism(prism, opening, document) {
+  //   this.setSearchingState(opening.id, true); // UI update
+  //   let constraints = this.state.constraints;
+  //   prism.search(opening, document, constraints);
+  // }
 
   /*
    * A callback that is triggered when a prism finishes its .search() operation
@@ -271,7 +275,7 @@ class App extends Component {
 
     this.setState(prevState => {
       const newOpenings = prevState.openings.copy();
-      newOpenings.setById(opening.id, predictions);
+      newOpenings.setById(opening.id, filteredPredictions); // Don't I want this to be the filtered ones?
 
       return { 
         openings: newOpenings,
@@ -390,7 +394,7 @@ class App extends Component {
     }
 
     if (event.metaKey && event.key === "'") {
-      return this.triggerSearch();
+      return this.triggerSearchAll();
     }
   }
 
@@ -419,7 +423,7 @@ class App extends Component {
     return this.editorRef.current?.manualRetokenizeAction();
   };
 
-  triggerSearch = () => {
+  triggerSearch = (prisms, doReset) => {
     console.log('app: handle search selection range', this.state.start, this.state.end);
 
     if (this.state.start === null || this.state.end === null || this.state.start === this.state.end) {
@@ -430,7 +434,14 @@ class App extends Component {
     let opening = null;
     this.setState(prevState => {
       const newOpenings = prevState.openings.copy();
-      opening = newOpenings.set(this.state.start, this.state.end, [], true); // create a new opening or reset what is there
+
+      let resetTo = [];
+      if (!doReset) {
+        let oldResult = newOpenings.get(this.state.start, this.state.end);
+        resetTo = oldResult != null ? oldResult : [];
+      }
+
+      opening = newOpenings.set(this.state.start, this.state.end, resetTo, true); // create a new opening or reset what is there
       console.log('app: handle search reset results', newOpenings, 'prev results', prevState.openings);
       return {
         opening: opening,
@@ -438,9 +449,18 @@ class App extends Component {
       };
     },
     () => { // After the state updates, trigger the search
-      return this.editorRef.current?.manualSearchAction(opening);
+      return this.editorRef.current?.manualSearchAction(prisms, opening);
     });
   };
+
+  triggerSearchAll = () => {
+    let prisms = Prism.getActive(this.state.prisms);
+    this.triggerSearch(prisms, true);
+  }
+
+  triggerSingleSearch = (prism) => {
+    this.triggerSearch([prism], false);
+  }
 
   deleteOpening = () => {
     let toDelete = this.state.opening?.id;
@@ -501,7 +521,7 @@ class App extends Component {
               registerSelection={this.setSelection.bind(this)}
               setText={this.setText.bind(this)}
               prismToHighlight={this.state.prismToHighlight}
-              searchAllPrisms={this.searchAllPrisms.bind(this)}
+              searchPrisms={this.searchPrisms.bind(this)}
               updateOpenings={this.updateOpenings}
               openings={openings}
               // opening={opening} 
@@ -531,7 +551,7 @@ class App extends Component {
                 )}
                 <ControlButtons
                   onRetokenize={this.handleRetokenize}
-                  onSearch={this.triggerSearch}
+                  onSearch={this.triggerSearchAll}
                   onDelete={this.deleteOpening}
                   opening={opening}
                 />
@@ -561,13 +581,14 @@ class App extends Component {
                       startIndex={start}
                       endIndex={end}
                       opening={opening}
-                      onClickSequence={this.handleSequenceClick}
-                      debugMode={debugMode}
                       constraints={constraints}
-                      addConstraint={this.addConstraint.bind(this)}
-                      onRemovePrism={() => this.handleRemovePrism(prism)}
-                      removeConstraint={this.removeConstraint.bind(this)}
+                      onSearch={() => this.triggerSingleSearch(prism)}
+                      onClickSequence={this.handleSequenceClick}
                       onConstraintUpdate={this.onConstraintUpdate.bind(this)}
+                      onRemovePrism={() => this.handleRemovePrism(prism)}
+                      addConstraint={this.addConstraint.bind(this)}
+                      removeConstraint={this.removeConstraint.bind(this)}
+                      debugMode={debugMode}
                     />
                   );
                 })}

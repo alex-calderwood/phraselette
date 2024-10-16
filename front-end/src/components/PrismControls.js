@@ -25,8 +25,8 @@ export class PrismControls extends Component {
   render() {
     let prism = this.props.prism;
     let opening = this.props.opening;
+    let onSearch = this.props.onSearch;
 
-    // let showConstraintButtons = !this.state.showFullCreator && this.props.prism.features.length > 0;
     let showConstraintButtons = opening != null;
     console.log('constraint:', prism, opening, showConstraintButtons)
 
@@ -36,21 +36,12 @@ export class PrismControls extends Component {
         onMouseLeave={this.handleMouseLeave}
       >
 
-      {/* {!this.state.showFullCreator && this.props.prism.features.length > 0 && <div className="add-constraint major-text"> add constraint </div>} */}
-
-      {/* {this.state.showFullCreator && <div className="constraint-buttons"> */}
-        {/* {prism.features.map((feature) => {
-          return <div key={feature.plain}>
-            <button key={feature.plain} onClick={() => this.addConstraint(feature, opening)}> add {feature.plain} constraint </button>
-          </div>
-        })}
-      </div>} */}
 
       <div className="constraint-buttons"> 
         {showConstraintButtons && prism.features.map((feature) => {
           return <button key={feature.plain} onClick={() => this.addConstraint(feature, opening)}> add {feature.plain} constraint </button>;
         })}
-        <button>▶</button>
+        {prism.canSearch && <button onClick={onSearch}>▶</button>}
       </div>
 
     </div>
