@@ -118,9 +118,9 @@ export class PrismView extends Component {
 
     let activeNotHidden  = prism.active && !prism.hidden;
     let showTokenContent = activeNotHidden && tokens.length > 0;
-    let showOpeningElements = opening != null;
-    let showResults      = activeNotHidden && (results.length > 0 || this.props.isSearching)
     let showtext         = activeNotHidden && text;
+    let showOpeningElements = opening != null;
+    let showResults      = showOpeningElements && activeNotHidden && (results.length > 0 || this.props.isSearching)
     let displayingFull 
      = showTokenContent || showResults;
 

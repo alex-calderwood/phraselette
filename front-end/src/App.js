@@ -475,7 +475,8 @@ class App extends Component {
       newOpenings.deleteById(toDelete)
       return {
         opening: undefined,
-        openings: newOpenings
+        openings: newOpenings,
+        localResults: [],
       }
     })
   }
