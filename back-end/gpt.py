@@ -16,7 +16,7 @@ import numpy as np
 
 gpu = True
 # ZERO_PROB = -3.4028235931503486e+35 # threshold at which we consider something infinitely unlikely
-# ZERO_LOG_PROB = np.log(1e-12)
+ZERO_LOG_PROB = np.log(1e-12)
 NEG_INF = -1e300
 
 
@@ -52,16 +52,14 @@ NEG_INF = -1e300
 #     print("summary", summary)
 #     return summary
 
+# import torch
+# import torch.nn.functional as F
+
+
 
 
 # Set the environment variable to use GPU 1
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-
-# Verify that TensorFlow is using the GPU
-# if gpu: 
-#     print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-#     print("Is GPU available: ", tf.test.is_gpu_available())
-#     print("GPU Device Name: ", tf.test.gpu_device_name())
 
 # Verify that PyTorch is using the GPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -125,6 +123,34 @@ logits_processor = LogitsProcessorList([
 #     print('constraint tokens', tokens)
 #     constraints.append(PhrasalConstraint(tokens))
 
+def estimate_histogram(beam_output):
+    scores = beam_output.scores
+
+    # Flatten all log probabilities
+    all_log_probs = torch.cat([F.log_softmax(score, dim=-1).flatten() for score in scores]).to(device)
+
+    # Remove values below some threshold
+    all_log_probs = all_log_probs[all_log_probs > ZERO_LOG_PROB]
+
+    # Remove extreme outliers
+    low = torch.quantile(all_log_probs, 0.0005)
+    all_log_probs = all_log_probs[all_log_probs >= low]
+
+    # Create linear bin edges in log space
+    num_bins = 100
+    min_log_prob = all_log_probs.min().item()
+    max_log_prob = 0  # The maximum log probability is 0
+    bin_edges = torch.linspace(min_log_prob, max_log_prob, num_bins + 1, device=device)
+
+    # Compute histogram
+    counts = torch.histc(all_log_probs, bins=num_bins, min=min_log_prob, max=max_log_prob)
+
+    summary = {
+        'counts': counts.cpu().tolist(),
+        'bin_edges': bin_edges.cpu().tolist(),
+    }
+    # print("summary", summary)
+    return summary
 
 
 # pos_checker = POSChecker(['NOUN'], tokenizer)
@@ -355,6 +381,15 @@ def forward_search_without_constraints(text, top_k=2, depth=5, num_beam_groups=2
             sequence.append(token)
 
         yield fix_infinity(sequence)
+    
+    # Finally, compute a rough histogram of the results
+    summary = estimate_histogram(beam_output) # , num_beams, depth)
+    
+    yield {
+        'thing': 'summary',
+        'summary': fix_infinity(summary)
+    }
+
 
 def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos_token, logits_processor=logits_processor, constraints=[]):
     text = text.replace('\xa0', ' ') # get rid of non-breaking space characters which seem to mess things up
