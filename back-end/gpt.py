@@ -155,7 +155,7 @@ def pluck_probs(phrase, extra_context=tokenizer.eos_token, top_k=0, depth=1):
             extra_context,
             return_offsets_mapping=True,
             return_tensors='pt'
-        )
+        ).to(device)
 
         context_input_ids = context_encoding['input_ids']
         context_offsets = context_encoding['offset_mapping']
@@ -164,7 +164,7 @@ def pluck_probs(phrase, extra_context=tokenizer.eos_token, top_k=0, depth=1):
             phrase,
             return_offsets_mapping=True,
             return_tensors='pt',
-        )
+        ).to(device)
 
         input_ids = encoding['input_ids']
         offsets = encoding['offset_mapping']
@@ -251,7 +251,7 @@ def forward_search_without_constraints(text, top_k=2, depth=5, num_beam_groups=2
         text,
         return_offsets_mapping=True,
         return_tensors='pt'
-    )
+    ).to(device)
 
     print(encoding)
 
@@ -372,7 +372,7 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
         text,
         return_offsets_mapping=True,
         return_tensors='pt'
-    )
+    ).to(device)
 
     print(encoding)
 
