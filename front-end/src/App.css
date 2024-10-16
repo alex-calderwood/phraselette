@@ -263,6 +263,13 @@ we will need to select the text children of the editor */
   overflow-y: auto;
 }
 
+
+.title {
+  color: var(--primary-text-color);
+  font-size: 14px;
+  padding: 2px;
+}
+
 .subtitle {
   color:var(--primary-text-color);
   font-size: var(--small-font-size);
@@ -593,7 +600,7 @@ div.searching {
 .prism-icon {
   font-size: 24px;
   color: var(--darker-text-color);
-  margin-bottom: 10px;
+  /* margin-bottom: 10px; */
 }
 
 .prism-info h3 {

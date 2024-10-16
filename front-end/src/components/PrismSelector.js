@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect} from 'react';
-import { IoPrismOutline } from "react-icons/io5";
+import { IoPrismOutline, IoColorPaletteOutline } from "react-icons/io5";
 import { Prism } from "../base/prism/Prism"
 import { deduplicateByKey } from '../scripts/utils'
 
@@ -41,11 +41,11 @@ export const PrismSelector = ({ prisms, activePrisms, onAddPrism, onTooltipUpdat
           onMouseLeave={(e) => handleMouseLeave(prism, e)}
           onMouseMove={(e) => handleMouseMove(prism, e)}
         >
-          <IoPrismOutline className="prism-icon" />
+          <IoColorPaletteOutline className="prism-icon" />
           <div className="prism-info">
             <div className="title">{prism.type}</div>
           </div>
-          <button onClick={() => onAddPrism(prism.type)}>Add Prism</button>
+          <button onClick={() => onAddPrism(prism.type)}>add</button>
         </div>
       ))}
     </div>
