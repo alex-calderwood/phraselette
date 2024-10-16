@@ -54,14 +54,25 @@ NEG_INF = -1e300
 
 
 
-# Set the environment variable to use GPU 5
-# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# Set the environment variable to use GPU 1
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 # Verify that TensorFlow is using the GPU
 # if gpu: 
-    # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-    # print("Is GPU available: ", tf.test.is_gpu_available())
-    # print("GPU Device Name: ", tf.test.gpu_device_name())
+#     print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+#     print("Is GPU available: ", tf.test.is_gpu_available())
+#     print("GPU Device Name: ", tf.test.gpu_device_name())
+
+# Verify that PyTorch is using the GPU
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
+if torch.cuda.is_available():
+    print(f"Current CUDA device: {torch.cuda.current_device()}")
+    print(f"Number of GPUs available: {torch.cuda.device_count()}")
+    print(f"GPU name: {torch.cuda.get_device_name(0)}")
+else:
+    print("CUDA is not available. Using CPU.")
 
 # tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
 # # add the EOS token as PAD token to avoid warnings
@@ -72,7 +83,8 @@ tokenizer = AutoTokenizer.from_pretrained("gpt2")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# print('gpt: loaded', model)
+# move your model to the GPU
+model = model.to(device)
 
 # JSON can't handle -Infinity
 # Turn any -inf in the result into a very small number
@@ -208,9 +220,15 @@ def pluck_probs(phrase, extra_context=tokenizer.eos_token, top_k=0, depth=1):
         print('Phrase:', phrase)
         traceback.print_exc()
 
+# def calculate_offset(offset, extra_context, start_token_offset):
+#     offset = offset.cpu().numpy()
+#     offset = offset.tolist()[0]
+#     offset[0] = len(extra_context) + offset[0] - start_token_offset
+#     offset[1] = len(extra_context) + offset[1] - start_token_offset
+#     return offset
+
 def calculate_offset(offset, extra_context, start_token_offset):
-    offset = offset.cpu().numpy()
-    offset = offset.tolist()[0]
+    offset = offset.squeeze().tolist()  # Remove batch dimension and convert to list
     offset[0] = len(extra_context) + offset[0] - start_token_offset
     offset[1] = len(extra_context) + offset[1] - start_token_offset
     return offset
@@ -298,13 +316,15 @@ def forward_search_without_constraints(text, top_k=2, depth=5, num_beam_groups=2
     for beam_idx in range(num_beams):
         sequence = []
         # current_end = offsets[-1, -1, 1].numpy().item() + (1 if ends_with_space else 0)
-        current_end = offsets[-1, -1, 1].cpu().numpy().item() + (1 if ends_with_space else 0)
+        # current_end = offsets[-1, -1, 1].cpu().numpy().item() + (1 if ends_with_space else 0)
+        current_end = offsets[-1, -1, 1].item() + (1 if ends_with_space else 0)
 
         beam_tokens = beam_output.sequences[beam_idx, len(input_ids[0]):]
         beam_token_scores = beam_output.scores
         for token_idx, token_id in enumerate(beam_tokens):
             # token_text = tokenizer.decode(token_id, skip_special_tokens=True) # eventually it would be nice to use this but we would have to deal with "" tokens
-            token_text = tokenizer.decode(token_id)
+            # token_text = tokenizer.decode(token_id)
+            token_text = tokenizer.decode(token_id.item())
 
             # If it is the first token we generate, remove the prefix space
             if ends_with_space and token_idx == 0:
@@ -395,13 +415,16 @@ def forward_search(text, top_k=50, depth=1, num_beam_groups=3, eos=tokenizer.eos
     for beam_idx in range(num_beams):
         sequence = []
         # current_end = offsets[-1, -1, 1].numpy().item() + (1 if ends_with_space else 0)
-        current_end = offsets[-1, -1, 1].cpu().numpy().item() + (1 if ends_with_space else 0)
+        # current_end = offsets[-1, -1, 1].cpu().numpy().item() + (1 if ends_with_space else 0)
+        current_end = offsets[-1, -1, 1].item() + (1 if ends_with_space else 0)
+
 
         beam_tokens = beam_output.sequences[beam_idx, len(input_ids[0]):]
         beam_token_scores = beam_output.scores
         for token_idx, token_id in enumerate(beam_tokens):
             # token_text = tokenizer.decode(token_id, skip_special_tokens=True) # eventually it would be nice to use this but we would have to deal with "" tokens
-            token_text = tokenizer.decode(token_id)
+            # token_text = tokenizer.decode(token_id)
+            token_text = tokenizer.decode(token_id.item())
 
             # If it is the first token we generate, remove the prefix space
             if ends_with_space and token_idx == 0:
