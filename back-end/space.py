@@ -4,8 +4,12 @@ from network import BREAK_TOKEN
 import re
 import json
 
-# TODO get spacy on GPU
-# spacy.require_gpu(1) # https://spacy.io/api/top-level#spacy.require_gpu
+gpu_num = 1
+on_gpu = spacy.prefer_gpu(gpu_num) # https://spacy.io/api/top-level#spacy.require_gpu
+if on_gpu:
+    print("spacy: started on GPU", gpu_num)
+else:
+    print("spacy: unable to start on gpu, reverting to CPU")
 
 nlp = spacy.load("en_core_web_sm") # disable=["attribute_ruler", "lemmatizer", "ner"]) # "tagger", "parser" "tok2vec",  
 

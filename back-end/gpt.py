@@ -63,7 +63,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 # Verify that PyTorch is using the GPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
+print(f"GPT using device: {device}")
 
 if torch.cuda.is_available():
     print(f"Current CUDA device: {torch.cuda.current_device()}")
