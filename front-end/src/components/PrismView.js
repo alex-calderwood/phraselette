@@ -94,15 +94,30 @@ export class PrismView extends Component {
       </div>
   }
 
+  parseText = (text) => {
+    let split = text.split(/(<i>.*?<\/i>)/);
+    console.log('spit', split)
+    return split.map((part, index) => {
+      if (part.startsWith('<i>') && part.endsWith('</i>')) {
+        return <i key={index}>{part.slice(3, -4)}</i>;
+      }
+      return part;
+    });
+  };
+
   bulletedText(text) {
-    const items = text.split('*').filter(item => item.trim() !== '');
-    return (
-      <ul className="bullets">
-        {items.map((line, index) => (
-          <li key={index} className="bullet">{line.trim()}</li>
-        ))}
-      </ul>
-    );
+    try {
+      const items = text.split('*').filter(item => item.trim() !== '');
+      return (
+        <ul className="bullets">
+          {items.map((line, index) => (
+            <li key={index} className="bullet">{this.parseText(line.trim())}</li>
+          ))}
+        </ul>
+      );
+    } catch (error) {
+      console.warn("prismview:", error)
+    }
   }
 
   render() {

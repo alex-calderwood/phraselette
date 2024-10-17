@@ -55,23 +55,26 @@ async function sendClaudeReq(partialPayload) {
   // if logging to google sheets, wait for the request to complete and then log it;
   // otherwise make it a promise so we can await it
   // return fetchJSONResponse(opts, payloadString);
-  if (('googleSheetID' in apiCreds) || ('googleSheetName' in apiCreds)) {
-    const claudeResponse = await fetchJSONResponse(opts, payloadString);
-    const claudeText = claudeReplyText(claudeResponse);
-    const googleAuth = await authorizeGoogle();
-    if (!('googleSheetID' in apiCreds) || (apiCreds.googleSheetID == null)) {
-      const sheetID = await createSheet(googleAuth, apiCreds.googleSheetName)
-      apiCreds.googleSheetID = sheetID
-      console.log("Created Google sheet with ID: " + sheetID)
+  const claudeResponse = await fetchJSONResponse(opts, payloadString);
+  const claudeText = claudeReplyText(claudeResponse);
+
+  try {
+    if (('googleSheetID' in apiCreds) || ('googleSheetName' in apiCreds)) {
+      const googleAuth = await authorizeGoogle();
+      if (!('googleSheetID' in apiCreds) || (apiCreds.googleSheetID == null)) {
+        const sheetID = await createSheet(googleAuth, apiCreds.googleSheetName)
+        apiCreds.googleSheetID = sheetID
+        console.log("Created Google sheet with ID: " + sheetID)
+      }
+      appendSheetItem(googleAuth, apiCreds.googleSheetID, prompt, 
+        payload["model"], JSON.stringify({"max_tokens": payload["max_tokens"]}), 
+        claudeText).catch(console.error);
     }
-    appendSheetItem(googleAuth, apiCreds.googleSheetID, prompt, 
-      payload["model"], JSON.stringify({"max_tokens": payload["max_tokens"]}), 
-      claudeText).catch(console.error);
-    return claudeResponse
-  } else {
-    const claudeResponse = fetchJSONResponse(opts, payloadString);
-    return claudeResponse
+  } catch (error) {
+    console.warn("textgen: unable to log to Google Sheets", error)
   }
+
+  return claudeResponse;
 
 }
 

@@ -2,7 +2,9 @@ const {sendClaudeReq, claudeReplyText} = require("./textgen.js");
 
 const wordRulez = `Each suggestion should be on its own line, surrounded by HTML-like tags: <entry>{actual word/phrase here}</entry>. Preserve the case case of the query (so if the query is lower-cased, each entry should be too, unless they are proper nouns, etc.). Preserve the tense, count, number, case, definiteness of the query. Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags.`
 
-function processRevisions(response) {
+const defnRulez = `Each definition should be a bullet using an * as the bullet.  Aim for 1-2 bullets. Each bullet should be a formatted as a dictionary entry with <i> tags for the italics. Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags.`
+
+function processEntries(response) {
     return response.match(/<entry>(.*?)<\/entry>/g).map((def) => {
         return def.replace(/<entry>|<\/entry>/g, ''); 
     });
@@ -22,7 +24,7 @@ async function queryThesaurus(message, clientSocket, mock=false) {
         prompt: `You are a thesaurus written in the style of ${message.description}. You only provide words that match this theme (${message.description}), and would appear in such a thesaurus. ${wordRulez} Try to provide between 10 and 30 alternatives.\nProvde synonyms for the following word or phrase (query): ${message.selection}`
     });
     let response = claudeReplyText(claudeJSON);
-    const revisions = processRevisions(response);
+    const revisions = processEntries(response);
     clientSocket.send(JSON.stringify({
         type: "thesaurusResponse",
         revisions: revisions,
@@ -60,7 +62,7 @@ async function queryReader(message, clientSocket) {
     let revisionResponse = claudeReplyText(revisonJSON);
     console.log("revisionResponse", revisionResponse)
 
-    const revisions = processRevisions(revisionResponse);
+    const revisions = processEntries(revisionResponse);
     clientSocket.send(JSON.stringify({
         type: "readerResponse",
         response: response,
@@ -70,5 +72,28 @@ async function queryReader(message, clientSocket) {
     }))
 }
 
-exports.handleThesaurus = queryThesaurus;
+async function queryDictionary(message, clientSocket, mock=false) {
+    if (mock) {
+        clientSocket.send(JSON.stringify({
+            type: "dictionaryResponse",
+            revisions: ["a word meaning everything, everywhere, all at once"],
+            prism: message.prism,
+            opening: message.opening,
+        }))
+        return;
+    }
+    const claudeJSON = await sendClaudeReq({
+        prompt: `You are a dictionary written in the style of ${message.description}. You only provide definitions that match this theme (${message.description}), and would appear in such a dictionary. ${defnRulez} Try to provide between 10 and 30 definitions.\nProvde (potential) definitions for the following word or phrase (query): ${message.selection}`
+    });
+    let definitions = claudeReplyText(claudeJSON);
+    clientSocket.send(JSON.stringify({
+        type: "dictionaryResponse",
+        definitions: definitions,
+        prism: message.prism,
+        opening: message.opening,
+    }))
+}
+
+exports.queryThesaurus = queryThesaurus;
 exports.queryReader = queryReader;
+exports.queryDictionary = queryDictionary;

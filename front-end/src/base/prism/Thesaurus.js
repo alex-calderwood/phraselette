@@ -10,6 +10,7 @@ export class ThesaurusPrism extends Prism {
       'description': {text: description, name: 'description'}
     }
     this.title = description;
+    this.duplicatable = true;
   }
 
   updateTextField(featureName, value) {

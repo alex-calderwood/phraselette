@@ -101,9 +101,21 @@ class App extends Component {
       reader.onSearchResults(opening, { message: msg }, doc, constraints);
     }
 
+    function handleDictionaryResponse(msg) {
+      let dict = Prism.getByID(this.state.prisms, msg.prism);
+      let constraints = Constraint.subsetByFeatures(
+        this.state.constraints,
+        dict.features
+      );
+      let opening = this.state.openings.findRangeById(msg.opening);
+      let doc = this._currentDocument().updateToOpening(opening);
+      dict.onSearchResults(opening, { message: msg }, doc, constraints);
+    }
+
     registerHandlers({
       thesaurusResponse: handleThesResponse.bind(this),
       readerResponse: handleReaderResponse.bind(this),
+      dictionaryResponse: handleDictionaryResponse.bind(this),
     });
 
     assignSocket(
@@ -370,6 +382,7 @@ class App extends Component {
     // Retrieve the relevant tokens
     const oldTokens = this.state.start !== null ? this.tokenManager.tokensAt(prismType, this.state.start, this.state.end) : [];
   
+    console.log("todo are these tokens right?", oldTokens);
     console.log('app: handling top-level click', {oldTokens, newSequence});
     
     // Call swapSequence with the retrieved tokens and the clicked sequence

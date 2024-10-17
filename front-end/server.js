@@ -9,7 +9,7 @@ const ws = require("ws");
 const axios = require("axios");
 const { makeID } = require("./src/server/utils.js");
 
-const { handleThesaurus, queryReader } = require("./src/server/queries.js");
+const { queryThesaurus, queryReader, queryDictionary } = require("./src/server/queries.js");
 
 // Something unlikely to be seen, must match the tokenization in the python (server.py)
 const breakToken = "&&VE*A=]";
@@ -78,9 +78,10 @@ wss.on("connection", (clientSocket, req) => {
     console.log("server: on-msg:", message);
 
     const handlers = {
-      thesaurus: (message) => handleThesaurus(message, clientSocket),
+      thesaurus: (message) => queryThesaurus(message, clientSocket),
       reader:    (message) => queryReader(message, clientSocket),
       stream:    (message) => handleStream(message, clientSocket),
+      dictionary: (message) => queryDictionary(message, clientSocket),
     };
 
     const handler = handlers[message.type];

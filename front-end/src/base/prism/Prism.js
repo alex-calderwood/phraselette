@@ -7,8 +7,8 @@ import { getUniqueID } from '../../scripts/utils.js';
 // }
 
 export class Prism {
-  static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'basic', 'probs'];
-  static SEARCH_TYPES = new Set(['context', 'reader', 'thesaurus']);
+  static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'dictionary', 'basic', 'probs'];
+  static SEARCH_TYPES = new Set(['context', 'reader', 'thesaurus', 'dictionary']);
   static MAIN_TYPE = Prism.TYPES[0]; // the type that is used for holding misc data
   /**
    * Create a Prism.

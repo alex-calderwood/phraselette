@@ -1,11 +1,11 @@
 import { sendMessage } from "../../scripts/socket.js";
 import { Prism } from './Prism.js';
-import { ThesaurusPrism } from './Thesaurus.js';
+// import { ThesaurusPrism } from './Thesaurus.js';
 
-export class ReaderPrism extends Prism {
+export class DictionaryPrism extends Prism {
   constructor(description) {
     // super('reader', ['prob']); // eventually... ahh ahh ahh ahhhhh
-    super('reader', []);
+    super('dictionary', []);
 
     this.textFields = {
       'description': {text: description, name: 'description'}
@@ -23,7 +23,7 @@ export class ReaderPrism extends Prism {
     this.onSearchTriggered();
     let description = this.textFields.description.text;
     sendMessage({
-      type: "reader",
+      type: "dictionary",
       context: document.prefixText,
       selection: document.selectionText,
       description: description,
@@ -34,10 +34,11 @@ export class ReaderPrism extends Prism {
 
   async onSearchResults(opening, insights, document, constraints) {
     let message = insights.message;
-    let revisions = message.revisions;
+    let definitions = message.definitions;
 
-    let predictions = await ThesaurusPrism.processRevisions(revisions, document);
+    // let predictions = await ThesaurusPrism.processRevisions(revisions, document);
+    console.log("dictionary definitions", definitions)
 
-    super.onSearchResults(opening, {predictions: predictions, text: message.response}, document, constraints);
+    super.onSearchResults(opening, {predictions: [], text: definitions}, document, constraints);
   }
 }
