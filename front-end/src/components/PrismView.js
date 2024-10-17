@@ -42,6 +42,7 @@ class PrismEditableTextField extends Component {
  * @extends {Component<PrismViewProps>}
  */
 export class PrismView extends Component {
+  static MAX_SUBTILE_LEN = 80
 
   /**
    * @param {PrismViewProps} props
@@ -53,12 +54,17 @@ export class PrismView extends Component {
     this.state = {
       constraints: [],
       hasHistogramData: false,
+      isSettingsView: false
     };
   }
 
   toggleHidden() {
     this.prism.hidden = !this.prism.hidden;
     this.forceUpdate();
+  }
+
+  toggleView = () => {
+    this.setState(prevState => ({ isSettingsView: !prevState.isSettingsView }));
   }
 
   removeConstraint() {
@@ -131,32 +137,50 @@ export class PrismView extends Component {
     let results = prism?.insights[opening?.id]?.results || [];
     let text = prism?.insights[opening?.id]?.text || null;
 
-    let activeNotHidden  = prism.active && !prism.hidden;
-    let showTokenContent = activeNotHidden && tokens.length > 0;
-    let showtext         = activeNotHidden && text;
-    let showOpeningElements = opening != null;
-    let showResults      = showOpeningElements && activeNotHidden && (results.length > 0 || this.props.isSearching)
-    let displayingFull 
-     = showTokenContent || showResults;
+    let activeNotHidden     = prism.active && !prism.hidden;
+    let showTokenContent    = activeNotHidden && tokens.length > 0;
+    let showtext            = activeNotHidden && text;
+    let showOpeningElements = activeNotHidden && opening != null;
+    let showResults         = showOpeningElements && activeNotHidden && (results.length > 0 || this.props.isSearching)
+    let displayingFull      = showTokenContent || showResults;
+
+
 
     let rotated = activeNotHidden ? "rotated" : "";
     let border  = activeNotHidden ? "border"  : "";
     let searching = this.props.isSearching ? "searching" : "";
 
-    let title = prism.title != prism.type && !activeNotHidden ? 
-      <span className="subtitle"> ({prism.title})</span> : ""
+
+    let title = "";
+    if (!activeNotHidden && prism.title != null && prism.title != prism.type) {
+      title = (prism.title.length > PrismView.MAX_SUBTILE_LEN) ? 
+        prism.title.slice(0, PrismView.MAX_SUBTILE_LEN) + '...' 
+        : prism.title;
+      console.log('TITLE', title, prism.title.length, PrismView.MAX_SUBTILE_LEN, prism.title.slice(0, PrismView.MAX_SUBTILE_LEN))
+      title = <span className="subtitle"> {title} </span>
+    }
 
     let textContent = showtext ? this.bulletedText(text) : "";
 
     return <div className={`prism`}>
         <div className={`prism-title ${rotated}`} onClick={this.toggleHidden.bind(this)}>
+          {/* Button to delete the prism */}
           {prism.undestroyable ? <div></div>:  <button className={`light-button`} onClick={() => onRemovePrism(prism)}>×</button> } 
           {/* Header stuff */}
           {prism.type} {title}
-          {/* Button to delete the prism */}
+          {/* settings */}
+          {/* <button onClick={this.toggleView}>
+            {this.state.isSettingsView ? "Back" : "Settings"}
+          </button> */}
         </div>
 
         <div className={`prism-content ${border} ${searching}`}>
+          {/* {this.state.isSettingsView ? (
+            <div>Settings View Placeholder</div>
+          ) : (
+            'hi'
+          )} */}
+
           {activeNotHidden ? Object.values(prism.textFields).map((field) => {
             return <PrismEditableTextField key={field.text} field={field} prism={prism} />
           }) : ""}

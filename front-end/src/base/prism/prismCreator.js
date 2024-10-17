@@ -50,7 +50,6 @@ const roles = {
     "a historical dictionary, which deals not only with the latterday meanings of words but also the historical development of their forms and meanings",
     "an etymology dictionary",
     "a linguistics dictionary",
-    "a reverse dictionary"
   ]
 }
 
