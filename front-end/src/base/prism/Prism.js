@@ -24,10 +24,8 @@ export class Prism {
     this.active = false;
     this.description = description;
 
-
     // some prisms should not be removed
     this.undestroyable = Prism.isWordType(this.type);
-
     this.canSearch = Prism.SEARCH_TYPES.has(this.type);
 
     // which tokens to look up in the tokenManager

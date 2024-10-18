@@ -226,14 +226,18 @@ we will need to select the text children of the editor */
     writing-mode: vertical-lr; /* Rotates the text 90 degrees */
     transform: rotate(180deg); /* Flips the text to the right orientation */
     display:flex;
+    padding: 2px;
     justify-content: space-between;
   }
-
 
   .prism-title:not(.rotated) {
     display:flex;
     justify-content: space-between;
     width: 100%
+  }
+
+  .prism-type-text:not(.rotated) {
+    padding-right: 0.25em;
   }
 
   .prism-content.border {
@@ -271,9 +275,17 @@ we will need to select the text children of the editor */
 }
 
 .subtitle {
-  color:var(--primary-text-color);
+  color: var(--primary-text-color);
   font-size: var(--small-font-size);
   padding-right: 2px;
+  padding-left: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  max-height: calc(2 * 1.2em); /* Adjust 1.2em to match your line-height if different */
 }
 
 .text {

@@ -42,7 +42,6 @@ class PrismEditableTextField extends Component {
  * @extends {Component<PrismViewProps>}
  */
 export class PrismView extends Component {
-  static MAX_SUBTILE_LEN = 80
 
   /**
    * @param {PrismViewProps} props
@@ -153,11 +152,8 @@ export class PrismView extends Component {
 
     let title = "";
     if (!activeNotHidden && prism.title != null && prism.title != prism.type) {
-      title = (prism.title.length > PrismView.MAX_SUBTILE_LEN) ? 
-        prism.title.slice(0, PrismView.MAX_SUBTILE_LEN) + '...' 
-        : prism.title;
-      console.log('TITLE', title, prism.title.length, PrismView.MAX_SUBTILE_LEN, prism.title.slice(0, PrismView.MAX_SUBTILE_LEN))
-      title = <span className="subtitle"> {title} </span>
+      title = prism.title;
+      title = <div className="subtitle"> {title} </div>
     }
 
     let textContent = showtext ? this.bulletedText(text) : "";
@@ -167,7 +163,7 @@ export class PrismView extends Component {
           {/* Button to delete the prism */}
           {prism.undestroyable ? <div></div>:  <button className={`light-button`} onClick={() => onRemovePrism(prism)}>×</button> } 
           {/* Header stuff */}
-          {prism.type} {title}
+           {title} <div className={`prism-type-text ${rotated}`}> {prism.type} </div>
           {/* settings */}
           {/* <button onClick={this.toggleView}>
             {this.state.isSettingsView ? "Back" : "Settings"}
