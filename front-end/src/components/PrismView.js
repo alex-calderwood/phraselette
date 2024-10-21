@@ -6,6 +6,8 @@ import { PrismControls } from "./PrismControls";
 import { SearchResults } from "./SearchResults";
 import { TokenManager } from "../base/TokenManager";
 import { Prism } from "../base/prism/Prism";
+// import { useTooltip } from './Tooltip'; // need to turn this into a hook component to be able to use this
+
 
 import { IoColorPaletteOutline } from "react-icons/io5";
 

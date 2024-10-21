@@ -16,3 +16,36 @@ export const Tooltip = ({ content, position }) => {
     </div>
   );
 };
+
+export const useTooltip = (onTooltipUpdate) => {
+  const [tooltipContent, setTooltipContent] = useState(null);
+
+  const handleMouseEnter = (content, event) => {
+    setTooltipContent(content);
+    updateTooltip(content, event);
+  };
+
+  const handleMouseLeave = () => {
+    setTooltipContent(null);
+    onTooltipUpdate(null);
+  };
+
+  const handleMouseMove = (event) => {
+    if (tooltipContent) {
+      updateTooltip(tooltipContent, event);
+    }
+  };
+
+  const updateTooltip = (content, event) => {
+    onTooltipUpdate({
+      content,
+      position: { x: event.clientX + 4, y: event.clientY + 4 }
+    });
+  };
+
+  return {
+    handleMouseEnter,
+    handleMouseLeave,
+    handleMouseMove
+  };
+};
