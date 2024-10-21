@@ -414,10 +414,12 @@ class App extends Component {
   onConstraintUpdate(prism, opening) {
     let predictions = prism?.insights[opening.id]?.results || [];
     let document = this._currentDocument().updateToOpening(opening);
-    let constraints = Constraint.subsetByFeatures(
+    // alex do the subsetting now
+    let constraints = Constraint.subsetByFeatures( // why are we subsetting?
       this.state.constraints,
       prism.features
     );
+    // let constraints = this.state.constraints;
     console.log(
       "app: updating constraints",
       {

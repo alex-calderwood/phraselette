@@ -54,6 +54,7 @@
   height: 100vh;
   display: flex; /* Make children flex, which will make them stack */
   max-width: 100%;
+  overflow: hidden; /* Add this line */
 } 
 
 .rainbow {
@@ -88,6 +89,8 @@
 .right {
   /* background-color:rgb(172, 172, 172) */
   max-width: 50%; /* Ensure it doesn't grow beyond 50% */
+  overflow-y: auto; /* Add this line */
+  height: 100vh; /* Add this line */
 }
 
 .selection-display {
@@ -614,6 +617,10 @@ div.searching {
   font-size: 24px;
   color: var(--darker-text-color);
   /* margin-bottom: 10px; */
+}
+
+.prism-icon.small {
+  font-size: 15px;
 }
 
 .prism-info h3 {

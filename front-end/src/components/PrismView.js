@@ -7,6 +7,8 @@ import { SearchResults } from "./SearchResults";
 import { TokenManager } from "../base/TokenManager";
 import { Prism } from "../base/prism/Prism";
 
+import { IoColorPaletteOutline } from "react-icons/io5";
+
 class PrismEditableTextField extends Component {
   constructor(props) {
     super(props)
@@ -133,6 +135,7 @@ export class PrismView extends Component {
     let onRemovePrism = this.props.onRemovePrism;
 
     let tokens = start !== null ? this.tokenManager.tokensAt(prism.tokenType, start, end) : [];
+
     let results = prism?.insights[opening?.id]?.results || [];
     let text = prism?.insights[opening?.id]?.text || null;
 
@@ -163,7 +166,7 @@ export class PrismView extends Component {
           {/* Button to delete the prism */}
           {prism.undestroyable ? <div></div>:  <button className={`light-button`} onClick={() => onRemovePrism(prism)}>×</button> } 
           {/* Header stuff */}
-           {title} <div className={`prism-type-text ${rotated}`}> {prism.type} </div>
+           {title} <div className={`prism-type-text ${rotated}`}> {prism.type} <IoColorPaletteOutline className="prism-icon small" /> </div>
           {/* settings */}
           {/* <button onClick={this.toggleView}>
             {this.state.isSettingsView ? "Back" : "Settings"}
