@@ -2,10 +2,6 @@ import { resolveConstraints, sortPredictions } from '../../scripts/resolution.js
 import { Constraint } from '../Constraint.js';
 import { getUniqueID } from '../../scripts/utils.js';
 
-// insights = {
-//   [start, end]: {insights}
-// }
-
 export class Prism {
   static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'dictionary', 'basic', 'probs'];
   static SEARCH_TYPES = new Set(['context', 'reader', 'thesaurus', 'dictionary']);

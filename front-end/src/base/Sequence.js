@@ -34,4 +34,11 @@ export class Sequence {
     get strippedTextContent() {
         return this.span.map(token => token.text).join('').trim();
     }
+
+    numWords() {
+        let words = this.span.reduce((acc, token) => {return acc + token.isSpace() ? 0 : 1}, 0)
+        console.log("sequence test", words)
+        return words;
+    }
+        
 }

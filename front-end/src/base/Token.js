@@ -65,4 +65,8 @@ export class Token {
         }
         return defaultValue;
     }
+
+    isSpace() {
+        return this.getAttribute('isSpacySpace') || this.getAttribute('pos') === "_SP";
+    }
 }

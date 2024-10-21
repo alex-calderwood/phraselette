@@ -1,5 +1,6 @@
-import React, { Component } from "react";
-import { BetterRhymeConstraint, CategoricalConstraint } from "../base/Constraint";
+import React, { Component, useState } from "react";
+import { BetterRhymeConstraint, CategoricalConstraint, 
+  NumericalRangeConstraint, WordLengthConstraint } from "../base/Constraint";
 import { LogHistogram } from "./Histogram"
 
 class HistogramRangeConstraintView extends Component {
@@ -25,6 +26,51 @@ class HistogramRangeConstraintView extends Component {
     );
   }
 }
+
+// gradually moving these to use hooks
+const RangeConstraintView = (props) => {
+  const { constraint, onConstraintUpdate } = props;
+  const [min, setMin] = useState(constraint.targetMin);
+  const [max, setMax] = useState(constraint.targetMax);
+  const text = `${constraint.feature.plain} min, max`;
+
+  const handleMinChange = (e) => {
+    const newMin = parseFloat(e.target.value);
+    setMin(newMin);
+    constraint.updateTargetMin(newMin);
+    onConstraintUpdate();
+  };
+
+  const handleMaxChange = (e) => {
+    const newMax = parseFloat(e.target.value);
+    setMax(newMax);
+    constraint.updateTargetMax(newMax);
+    onConstraintUpdate();
+  };
+
+  return (
+    <ConstraintWrapper {...props} >
+        <div className="text">{text}</div>
+        <div className="constraint-target">
+          <input
+            type="number"
+            value={min}
+            onChange={handleMinChange}
+            className="constraint-select"
+          />
+          <span className="text">to</span>
+          <input
+            type="number"
+            value={max}
+            onChange={handleMaxChange}
+            className="constraint-select"
+          />
+        </div>
+    </ConstraintWrapper>
+  );
+};
+
+export default RangeConstraintView;
 
 class CategoricalConstraintView extends Component {
   constructor(props) {
@@ -116,6 +162,7 @@ const constraintViews = {
   SoundConstraint: CategoricalConstraintView,
   RhymeConsntraint: CategoricalConstraintView,
   BetterRhymeConstraint: CategoricalConstraintView,
+  WordLengthConstraint: RangeConstraintView,
   NumericalRangeConstraint: HistogramRangeConstraintView,
 };
 

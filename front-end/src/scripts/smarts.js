@@ -348,7 +348,7 @@ function cutToMaxWords(maxWords, tokens) {
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
-    const isSpace = token.getAttribute('isSpacySpace') || token.getAttribute('pos') === "_SP";
+    const isSpace = token.isSpace()
     if (wordCount >= maxWords) break;
 
     if (!isSpace) {

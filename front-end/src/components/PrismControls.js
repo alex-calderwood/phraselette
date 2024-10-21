@@ -28,7 +28,6 @@ export class PrismControls extends Component {
     let onSearch = this.props.onSearch;
 
     let showConstraintButtons = opening != null;
-    console.log('constraint:', prism, opening, showConstraintButtons)
 
     return <div
         className="constraint-creator"

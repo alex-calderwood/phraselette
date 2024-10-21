@@ -186,7 +186,7 @@ export class PrismView extends Component {
           {showTokenContent ? this.tokenContent(prism, start, end, tokens) : ""}
 
           {showTokenContent ? this.props.constraints.map((constraint) => {
-            return <ConstraintRender 
+            return <ConstraintRender
               key={constraint.id} 
               constraint={constraint}
               prism={prism}
@@ -200,7 +200,6 @@ export class PrismView extends Component {
 
           {showOpeningElements ? <PrismControls
             tokens={tokens}
-            // startIndex={start} endIndex={end}
             opening={opening}
             onSearch={this.props.onSearch}
             prism={prism}

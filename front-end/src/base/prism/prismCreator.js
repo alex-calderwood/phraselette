@@ -66,7 +66,7 @@ export function makePrism(type, callbacks) {
   let prism = null;
   switch(type) {
     case 'words':
-      prism = new Prism('words', [Feature.POS]).setActive(true).setDoHighlight(true);
+      prism = new Prism('words', [Feature.POS, Feature.Length]).setActive(true).setDoHighlight(true);
       prism.description="A tool to view and constrain word's part of speech.";
       break;
     case 'context':

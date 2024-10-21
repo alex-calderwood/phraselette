@@ -1,16 +1,18 @@
 import { getUniqueID } from '../scripts/utils.js';
 import { Feature } from './Feature.js';
 import { POS } from '../../data/pos.js';
-import { overlaps } from '../scripts/utils.js';
+import { Sequence } from './Sequence.js'
 
 // feature -> constraint mapping
+// TODO: refactor such that target is a sequence (need to refactor constraint target...)
 export function makeConstraint(feature, target, opening) {
   console.log("constraint: making constraint", {feature, target, opening});
   if (opening == null) {
     console.warn("constraint: Warning, making a constraint with no opening");
   }
   let attribute = feature.attribute;
-  let dataType = feature.dataType;
+
+  // Switch on Feature's attribute name
   switch (attribute) {
     case 'pos':
       target = target.map(token => token.getAttribute('pos'));
@@ -31,8 +33,12 @@ export function makeConstraint(feature, target, opening) {
 
       if (attribute === 'rhyme') { return new BetterRhymeConstraint(finalTarget, opening); }
       return new SoundConstraint(finalTarget, opening);
+    case 'length':
+      return new WordLengthConstraint(target, opening);
   }
-  
+
+  // Catch all
+  let dataType = feature.dataType;
   switch(dataType) {
     case 'number':
       return new NumericalRangeConstraint(attribute, feature, opening);
@@ -51,7 +57,7 @@ export class Constraint {
     this.feature = feature;
     this.opening = opening;
     this.dataType = feature.dataType;
-    this.isPre = false;         // can the constraint be computed quickly?
+    this.isPre = false;         // can the constraint be computed during the generation process?
     this.range = null;          // what are the possible values of the constraint
     this.filterThreshold = 0;   // what is the minimum score to consider the constraint satisfied
   }
@@ -405,11 +411,11 @@ export class NumericalRangeConstraint extends Constraint {
   defaultRange = [0, 1];
 
   constructor(name, feature, opening) {
-    super(name, "number", opening);
-    this.feature = feature
+    super(name, feature, opening);
+    this.feature = feature;
     this.range = this.defaultRange;
-    this.targetMin = this.defaultRange[0];
-    this.targetMax = this.defaultRange[1];
+    this.targetMin = this.range[0];
+    this.targetMax = this.range[1];
   }
 
   async getScore(sequence, document) {
@@ -440,3 +446,62 @@ export class NumericalRangeConstraint extends Constraint {
     return this.targetMax;
   }
 }
+
+
+export class WordLengthConstraint extends NumericalRangeConstraint {
+  defaultRange = [1, 14];
+  constructor(target, opening) {
+    const feature = Feature.Length;
+    super(feature.attribute, feature, opening); // name, feature, opening
+    this.isPre = true;
+    this.range = this.defaultRange;
+    this.targetMin = this.range[0];
+    this.targetMax = this.range[1];
+    this.sequence = new Sequence(target); // eventually want target to be a sequence
+    this.targetNum = this.sequence.numWords();
+    this.filterThreshold = 1;
+  }
+
+  /*
+  * Return a [0-1] score indicating how much the token sequence coheres to the constraint target. 
+  * 0 means the span does not match the constraint
+  * 1 means the span perfectly coheres to the constraint
+  */
+  async getScore(sequence, document) {
+    if (sequence.numWords() <= this.targetNum) {
+      return 1;
+    }
+    return 0;
+  }
+
+  evaluate(score, sequence, document) {
+    return score >= this.filterThreshold;
+  }
+}
+
+// export class WordLengthConstraint extends Constraint {
+//   constructor(target, opening) {
+//     const feature = Feature.Length;
+//     super(feature.attribute, feature, opening);
+//     this.isPre = true;
+//     this.sequence = new Sequence(target); // eventually want target to be a sequence
+//     this.targetNum = this.sequence.numWords();
+//     this.filterThreshold = 1;
+//   }
+
+//   /*
+//   * Return a [0-1] score indicating how much the token sequence coheres to the constraint target. 
+//   * 0 means the span does not match the constraint
+//   * 1 means the span perfectly coheres to the constraint
+//   */
+//   async getScore(sequence, document) {
+//     if (sequence.numWords() <= this.targetNum) {
+//       return 1;
+//     }
+//     return 0;
+//   }
+
+//   evaluate(score, sequence, document) {
+//     return score >= this.filterThreshold;
+//   }
+// }
