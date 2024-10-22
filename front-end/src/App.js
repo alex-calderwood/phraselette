@@ -546,80 +546,82 @@ class App extends Component {
           </div>
 
           <div className="right">  {/* Everything on the right hand side of the screen */}
-            {!hasSelection && (
-              <div className={`inspector`}>
-                <InstructionsView />
-              </div>
-            )}
-            {hasSelection && (
-              <div className={`inspector`}>
-                {selectionText && selectionText.length > 0 ? (
-                  <div className="selection-display glass-pane">{selectionText}</div>
-                ) : (
-                  ""
-                )}
-                {showSelection ? (
-                  <div className="selection-info">
-                    {start} - {end}
-                  </div>
-                ) : (
-                  ""
-                )}
-                <ControlButtons
-                  onRetokenize={this.handleRetokenize}
-                  onSearch={this.triggerSearchAll}
-                  onDelete={this.deleteOpening}
-                  opening={opening}
-                />
-                {/* Constrained search results */}
-                <SearchResults
-                  results={localResults}
-                  isSearching={this.state.isSearching[opening?.id]}
-                  wrap={false}
-                  verticalLayout={true}
-                  showLength={true}
-                  onClickSequence={this.handleSequenceClick}
-                />
-                {/* Display the active prisms */}
-                {activePrisms.map((prism) => {
-                  let constraints = Constraint.subsetByFeatures(
-                    this.state.constraints,
-                    prism.features,
-                    opening
-                  )
-
-                  return (
-                    <PrismView
-                      key={prism.id}
-                      tokenManager={this.tokenManager}
-                      prism={prism}
-                      isSearching={prism.isSearching}
-                      startIndex={start}
-                      endIndex={end}
-                      opening={opening}
-                      constraints={constraints}
-                      onSearch={() => this.triggerSingleSearch(prism)}
-                      onClickSequence={this.handleSequenceClick}
-                      onConstraintUpdate={this.onConstraintUpdate.bind(this)}
-                      onRemovePrism={() => this.handleRemovePrism(prism)}
-                      addConstraint={this.addConstraint.bind(this)}
-                      removeConstraint={this.removeConstraint.bind(this)}
-                      debugMode={debugMode}
-                    />
-                  );
-                })}
-              </div>
-            )}
-
-            {/* End inspector */}
             <div className="lenses">
-              <PrismSelector
-                prisms={this.state.prisms} 
-                activePrisms={this.state.activePrisms}
-                onAddPrism={this.handleAddPrism.bind(this)} 
-                onTooltipUpdate={this.handleTooltipUpdate}
-                />
-            </div>
+                <PrismSelector
+                  prisms={this.state.prisms} 
+                  activePrisms={this.state.activePrisms}
+                  onAddPrism={this.handleAddPrism.bind(this)}
+                  onTooltipUpdate={this.handleTooltipUpdate}
+                  />
+              </div>
+
+              {!hasSelection && (
+                <div className={`inspector`}>
+                  <InstructionsView />
+                </div>
+              )}
+              {hasSelection && (
+                <div className={`inspector`}>
+                  {selectionText && selectionText.length > 0 ? (
+                    <div className="selection-display glass-pane">{selectionText}</div>
+                  ) : (
+                    ""
+                  )}
+                  {showSelection ? (
+                    <div className="selection-info">
+                      {start} - {end}
+                    </div>
+                  ) : (
+                    ""
+                  )}
+                  <ControlButtons
+                    onRetokenize={this.handleRetokenize}
+                    onSearch={this.triggerSearchAll}
+                    onDelete={this.deleteOpening}
+                    opening={opening}
+                  />
+                  {/* Constrained search results */}
+                  <SearchResults
+                    results={localResults}
+                    isSearching={this.state.isSearching[opening?.id]}
+                    wrap={false}
+                    verticalLayout={true}
+                    showLength={true}
+                    onClickSequence={this.handleSequenceClick}
+                  />
+                  {/* Display the active prisms */}
+                  {activePrisms.map((prism) => {
+                    let constraints = Constraint.subsetByFeatures(
+                      this.state.constraints,
+                      prism.features,
+                      opening
+                    )
+
+                    return (
+                      <PrismView
+                        key={prism.id}
+                        tokenManager={this.tokenManager}
+                        prism={prism}
+                        isSearching={prism.isSearching}
+                        startIndex={start}
+                        endIndex={end}
+                        opening={opening}
+                        constraints={constraints}
+                        onSearch={() => this.triggerSingleSearch(prism)}
+                        onClickSequence={this.handleSequenceClick}
+                        onConstraintUpdate={this.onConstraintUpdate.bind(this)}
+                        onRemovePrism={() => this.handleRemovePrism(prism)}
+                        addConstraint={this.addConstraint.bind(this)}
+                        removeConstraint={this.removeConstraint.bind(this)}
+                        debugMode={debugMode}
+                        onTooltipUpdate={this.handleTooltipUpdate}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+              {/* End inspector */}
+              
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@
   --selection-background: rgba(255, 255, 255, 0.00);
   --selection-color: rgb(15, 135, 127);
   --accent-color: rgb(211, 182, 234);
+  --darker-accent-color: rgb(163, 141, 181);
   --primary-text-color: rgb(60, 44, 72);
   --darker-text-color: rgb(86, 63, 102);
   --hover-color: rgb(183, 126, 229);
@@ -58,14 +59,16 @@
 } 
 
 .rainbow {
-  background-size: 200% 200%;
+  background-size: 400% 100%;
   background: linear-gradient(
-    14deg,
+    9deg,
+    rgba(255, 0, 0, var(--rainbow-alpha)),
+    rgba(255, 127, 0, var(--rainbow-alpha)),
     rgba(255, 255, 0, var(--rainbow-alpha)),
     rgba(0, 255, 0, var(--rainbow-alpha)),
     rgba(0, 0, 255, var(--rainbow-alpha)),
-    rgba(75, 0, 130, var(--rainbow-alpha)),
-    rgba(143, 0, 255, var(--rainbow-alpha))
+    rgba(75, 0, 130, var(--rainbow-alpha))
+    /* rgba(143, 0, 255, var(--rainbow-alpha)) */
   );
 }
 
@@ -608,26 +611,38 @@ div.searching {
   flex-direction: column;
   align-items: center;
   height: 100%; 
-  margin-right: 10px;
+  margin-right: 0.5em;
   min-width: 65px;
-  padding: 10px;
+  padding: 0.5em;
+}
+
+.glass-pane.border {
+  /* border: 4px solid var(--accent-color); */
+  outline: 3px solid var(--darker-accent-color);
+  outline-offset: -3px;
 }
 
 .prism-icon {
-  font-size: 24px;
+  font-size: 12px;
   color: var(--darker-text-color);
   /* margin-bottom: 10px; */
 }
 
-.prism-icon.small {
-  font-size: 15px;
+.prism-info {
+  display: flex;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.prism-info > .title {
+  color: var(--primary-text-color);
+  font-size: 12px;
+  padding: 2px;
 }
 
 .prism-info h3 {
-  font-size: 16px;
-  /* don't bold it */
-  margin-bottom: 5px;
-
+  font-size: 5px;
+  /* margin-bottom: 5px; */
 }
 
 .tooltip {

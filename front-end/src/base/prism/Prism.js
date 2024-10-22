@@ -3,7 +3,7 @@ import { Constraint } from '../Constraint.js';
 import { getUniqueID } from '../../scripts/utils.js';
 
 export class Prism {
-  static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'dictionary', 'basic', 'probs'];
+  static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'dictionary'];
   static SEARCH_TYPES = new Set(['context', 'reader', 'thesaurus', 'dictionary']);
   static MAIN_TYPE = Prism.TYPES[0]; // the type that is used for holding misc data
   /**

@@ -6,10 +6,33 @@ import { PrismControls } from "./PrismControls";
 import { SearchResults } from "./SearchResults";
 import { TokenManager } from "../base/TokenManager";
 import { Prism } from "../base/prism/Prism";
-// import { useTooltip } from './Tooltip'; // need to turn this into a hook component to be able to use this
-
+import { useTooltip } from './Tooltip'; // need to turn this into a hook component to be able to use this
 
 import { IoColorPaletteOutline } from "react-icons/io5";
+
+const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTooltipUpdate }) => {
+  const { handleMouseEnter, handleMouseLeave, handleMouseMove } = useTooltip(onTooltipUpdate);
+
+  const prismDescriptionText = ` (click to ${rotated ? 'collapse' : 'expand'})` + prism.description;
+
+  return (
+    <div 
+      className={`prism-title ${rotated}`} 
+      onClick={toggleHidden}
+      onMouseEnter={(e) => handleMouseEnter(prismDescriptionText, e)}
+      onMouseLeave={handleMouseLeave}
+      onMouseMove={handleMouseMove}
+    >
+      {!prism.undestroyable && (
+        <button className={`light-button`} onClick={() => onRemovePrism(prism)}>×</button>
+      )}
+      {title && <div className="subtitle">{title}</div>}
+      <div className={`prism-type-text ${rotated}`}>
+        {prism.type} <IoColorPaletteOutline className="prism-icon small" />
+      </div>
+    </div>
+  );
+};
 
 class PrismEditableTextField extends Component {
   constructor(props) {
@@ -134,7 +157,6 @@ export class PrismView extends Component {
     let start = this.props.startIndex;
     let end = this.props.endIndex;
     let opening = this.props.opening;
-    let onRemovePrism = this.props.onRemovePrism;
 
     let tokens = start !== null ? this.tokenManager.tokensAt(prism.tokenType, start, end) : [];
 
@@ -147,8 +169,6 @@ export class PrismView extends Component {
     let showOpeningElements = activeNotHidden && opening != null;
     let showResults         = showOpeningElements && activeNotHidden && (results.length > 0 || this.props.isSearching)
     let displayingFull      = showTokenContent || showResults;
-
-
 
     let rotated = activeNotHidden ? "rotated" : "";
     let border  = activeNotHidden ? "border"  : "";
@@ -164,16 +184,14 @@ export class PrismView extends Component {
     let textContent = showtext ? this.bulletedText(text) : "";
 
     return <div className={`prism`}>
-        <div className={`prism-title ${rotated}`} onClick={this.toggleHidden.bind(this)}>
-          {/* Button to delete the prism */}
-          {prism.undestroyable ? <div></div>:  <button className={`light-button`} onClick={() => onRemovePrism(prism)}>×</button> } 
-          {/* Header stuff */}
-           {title} <div className={`prism-type-text ${rotated}`}> {prism.type} <IoColorPaletteOutline className="prism-icon small" /> </div>
-          {/* settings */}
-          {/* <button onClick={this.toggleView}>
-            {this.state.isSettingsView ? "Back" : "Settings"}
-          </button> */}
-        </div>
+        <PrismTitle 
+          prism={prism}
+          rotated={rotated}
+          title={title}
+          onRemovePrism={this.props.onRemovePrism}
+          toggleHidden={this.toggleHidden.bind(this)}
+          onTooltipUpdate={this.props.onTooltipUpdate}
+        />
 
         <div className={`prism-content ${border} ${searching}`}>
           {/* {this.state.isSettingsView ? (

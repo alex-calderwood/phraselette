@@ -49,9 +49,9 @@ export class ContextPrism extends Prism {
     console.log('constraints: in llm', constraints)
 
     for (let prediction of predictions) {
-      let wordTokens = await miscTokensToWordTokens(prediction, document, numWords);
-      // console.warn("llm: WARNING I AM DISABLING NUMWORDS");
-      // let wordTokens = await miscTokensToWordTokens(prediction, document);
+      // let wordTokens = await miscTokensToWordTokens(prediction, document, numWords);
+      console.warn("llm: WARNING I AM DISABLING NUMWORDS");
+      let wordTokens = await miscTokensToWordTokens(prediction, document);
       prediction.span = wordTokens;
       setSequenceProb(prediction);
     }
