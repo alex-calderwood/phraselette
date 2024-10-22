@@ -12,6 +12,8 @@
   --normal-font-size: 12px;
   --small-font-size: 10px;
 
+  --editor-margin: 0.5em;
+
   --rainbow-alpha: 0.2; /* Adjust this value between 0 (fully transparent) and 1 (fully opaque) */
 
   /* disable mac's two finger swipe back */
@@ -92,7 +94,7 @@
 .right {
   /* background-color:rgb(172, 172, 172) */
   max-width: 50%; /* Ensure it doesn't grow beyond 50% */
-  overflow-y: auto; /* Add this line */
+  /* overflow-y: auto; Add this line */
   height: 100vh; /* Add this line */
 }
 
@@ -112,7 +114,7 @@
   outline: none; /* remove the blue outline */
   border-radius: 2px; /* curve the corners*/
 
-  margin: 6px;
+  margin: var(--editor-margin);
   padding: 20px;
   
   /* z-index: 1; */
@@ -170,6 +172,10 @@ we will need to select the text children of the editor */
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10.6px);
   -webkit-backdrop-filter: blur(10.6px);
+
+  /* scrolling behavior addiitons */
+  overflow-y: auto;
+  height: 88vh;
 }
 
 .glass-pane {
@@ -596,24 +602,49 @@ div.searching {
   }
 }
 
-.prism-selector {
-  display: flex;
-  overflow-x: auto;
-  
-  padding: 10px;
-  position: relative;
-  /* not sure if we want this */
-  /* scroll-behavior: smooth;  */
+.lenses {
+  margin: var(--editor-margin);
 }
 
-.prism-item {
+.prism-bar {
+  display: flex;
+  overflow-x: auto;  /* Enable horizontal scrolling */
+  overflow-y: hidden;  /* Prevent vertical scrolling */
+
+  height: 12vh;
+  
+  /* some extra effects to help the javascript y scroll to x scroll behavior */
+  overflow-anchor: none;  
+  overscroll-behavior-y: contain;
+  overflow-y: hidden;
+  
+  /* Customize scrollbar to match UI */
+  scrollbar-color: var(--accent-color) transparent;
+  scrollbar-width: thin;
+  
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color);
+    border-radius: var(--radius);
+  }
+}
+
+.prism-bar-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  height: 100%; 
   margin-right: 0.5em;
+  height: 90%;
   min-width: 65px;
-  padding: 0.5em;
+  padding-left: 0.5em;
+  padding-right: 0.5em;
 }
 
 .glass-pane.border {
@@ -643,6 +674,20 @@ div.searching {
 .prism-info h3 {
   font-size: 5px;
   /* margin-bottom: 5px; */
+}
+
+.prism-bar-buttons {
+  display: flex;
+  width: 100%; /* ensure the container takes full width */
+  gap: 4px; /* add some spacing between buttons */
+}
+
+.prism-bar-buttons > .big-button {
+  flex: 3; /* shorthand for flex-grow: 3, flex-shrink: 1, flex-basis: 0% */
+}
+
+.prism-bar-buttons > .small-button {
+  flex: 1; /* shorthand for flex-grow: 1, flex-shrink: 1, flex-basis: 0% */
 }
 
 .tooltip {

@@ -12,7 +12,7 @@ import { PrismView } from "./components/PrismView";
 import { SearchResults } from "./components/SearchResults";
 import ControlButtons from "./components/ControlButtons";
 import InstructionsView from "./components/InstructionsView";
-import { PrismSelector } from "./components/PrismSelector";
+import { PrismBar } from "./components/PrismBar";
 import { Tooltip } from "./components/Tooltip";
 
 import { resolveConstraints } from "./scripts/resolution";
@@ -199,13 +199,19 @@ class App extends Component {
     // update the tokenManager
     this.tokenManager.setActivePrism(prism, false);
 
+    // tell the prism it's not active
+    prism.active = false;
+
     // update the state
-    let prisms = this.state.prisms;
-    delete prisms[prism.id]
+    // let prisms = this.state.prisms;
+    // delete prisms[prism.id]
+    let newActive = Prism.getActive({ ...this.state.prisms, });
+    delete newActive[prism.id];
     this.setState({
-      prisms: { ...prisms, },
-      activePrisms: Prism.getActive({ ...prisms, }),
+      // prisms: { ...prisms, },
+      activePrisms: newActive,
     });
+
 
   }
 
@@ -547,13 +553,14 @@ class App extends Component {
 
           <div className="right">  {/* Everything on the right hand side of the screen */}
             <div className="lenses">
-                <PrismSelector
-                  prisms={this.state.prisms} 
-                  activePrisms={this.state.activePrisms}
-                  onAddPrism={this.handleAddPrism.bind(this)}
-                  onTooltipUpdate={this.handleTooltipUpdate}
-                  />
-              </div>
+              <PrismBar
+                prisms={this.state.prisms} 
+                activePrisms={this.state.activePrisms}
+                onAddPrism={this.handleAddPrism.bind(this)}
+                onTooltipUpdate={this.handleTooltipUpdate}
+                onRemovePrism={this.handleRemovePrism.bind(this)}
+                />
+            </div>
 
               {!hasSelection && (
                 <div className={`inspector`}>
@@ -621,7 +628,7 @@ class App extends Component {
                 </div>
               )}
               {/* End inspector */}
-              
+
           </div>
         </div>
       </div>
