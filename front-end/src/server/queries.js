@@ -1,6 +1,25 @@
 const {sendClaudeReq, claudeReplyText} = require("./textgen.js");
 
-const wordRulez = `Each suggestion should be on its own line, surrounded by HTML-like tags: <entry>{actual word/phrase here}</entry>. Preserve the case case of the query (so if the query is lower-cased, each entry should be too, unless they are proper nouns, etc.). Preserve the tense, count, number, case, definiteness of the query. Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags.`
+const constraintRulez = (message) => {
+    console.log('constraint', message, message.constraints,)
+    if (message == null || message.constraints == null || message.constraints.length == 0) {
+        return '';
+    }
+    let constraintText = ""
+    for (let constraint of message.constraints) {
+        switch(constraint.type) {
+            case "WordLengthConstraint":
+                constraintText += `Attempt to limit each response to ${constraint.min} and ${constraint.max} words. `
+                break;
+            }
+    }
+    console.log('cosnt text', constraintText)
+    return constraintText;
+}
+const wordRulez = (message) => {
+    return `Each suggestion should be on its own line, surrounded by HTML-like tags: <entry>{actual word/phrase here}</entry>. Preserve the case case of the query (so if the query is lower-cased, each entry should be too, unless they are proper nouns, etc.). Preserve the tense, count, number, case, definiteness of the query. ` +
+    constraintRulez(message) + `Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags.`
+}
 
 const defnRulez = `Each definition should be a bullet using an * as the bullet.  Aim for 1-2 bullets. Each bullet should be a formatted as a dictionary entry with <i> tags for the italics. Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags.`
 
@@ -21,8 +40,9 @@ async function queryThesaurus(message, clientSocket, mock=false) {
         return;
     }
     const claudeJSON = await sendClaudeReq({
-        prompt: `You are a thesaurus written in the style of ${message.description}. You only provide words that match this theme (${message.description}), and would appear in such a thesaurus. ${wordRulez} Try to provide between 10 and 30 alternatives.\nProvde synonyms for the following word or phrase (query): ${message.selection}`
+        prompt: `You are a thesaurus written in the style of ${message.description}. You only provide words that match this theme (${message.description}), and would appear in such a thesaurus. ${wordRulez(message)} Try to provide between 10 and 30 alternatives.\nProvde synonyms for the following word or phrase (query): ${message.selection}`
     });
+    console.log("thes claud json", claudeJSON)
     let response = claudeReplyText(claudeJSON);
     const revisions = processEntries(response);
     clientSocket.send(JSON.stringify({
@@ -52,7 +72,7 @@ async function queryReader(message, clientSocket) {
     let response = claudeReplyText(readerJSON);
     console.log("reader response", response)
 
-    let revisionsPrompt = `<prompt>\nA reader with the persona ${message.description} was given the following passage {context} and asked to comment on the text under scrutiny ({text}). Their insight is provided: ${response}. They also provided a list of revisions (suggestions) for the text. Each suggestion is an alternate way that they would write {text}, immediately following {context}, given their feedback. ${wordRulez} Do not preface the message with any additional text. Do not provide any definitions or anything other than the revision as it would immedately follow the {context}, and the surrounding <entry> tags. Try to provide between 3 and 6 alternatives.\n` + context + `<response>${response}\n`
+    let revisionsPrompt = `<prompt>\nA reader with the persona ${message.description} was given the following passage {context} and asked to comment on the text under scrutiny ({text}). Their insight is provided: ${response}. They also provided a list of revisions (suggestions) for the text. Each suggestion is an alternate way that they would write {text}, immediately following {context}, given their feedback. ${wordRulez(message)} Do not preface the message with any additional text. Do not provide any definitions or anything other than the revision as it would immedately follow the {context}, and the surrounding <entry> tags. Try to provide between 3 and 6 alternatives.\n` + context + `<response>${response}\n`
     console.log("revisionPrompt", revisionsPrompt);
 
     const revisonJSON = await sendClaudeReq({

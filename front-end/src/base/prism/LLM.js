@@ -31,27 +31,38 @@ export class ContextPrism extends Prism {
     numTokens = Math.floor(numWords * 4/3 + longestExpeectedWordInTokens);                            // enough tokens to approximate the correct word count
     numTokens = Math.max(ContextPrism.MIN_TOKENS, Math.min(ContextPrism.MAX_TOKENS, numTokens)); // clamp it
 
-    constraints = Constraint.subsetByFeatures(constraints, this.features)
+    // constraints = Constraint.subsetByFeatures(constraints, this.features)
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
 
-    console.log('llm: searching', {preConstraints, selectionWords, numWords, numTokens});
+    let wordCap = this.getMaxWordsFromConstraints(constraints);
+
+
+    console.log('llm: searching', {preConstraints, selectionWords, wordCap, numWords, numTokens});
 
     // TODO document that constraints might have been altererd in the meantime...
     // should copy them if necessary - at least document?
     await searchForward(document, preConstraints, numTokens).then(
-      ([predictions, summary]) => {return this.onSearchResults(opening, {predictions, summary}, document, constraints, numWords)}
+      ([predictions, summary]) => {return this.onSearchResults(opening, {predictions, summary}, document, constraints, wordCap)}
     )
   }
 
-  async onSearchResults(opening, insights, document, constraints, numWords) {
+  getMaxWordsFromConstraints(constraints) {
+    const numWordsConstraints = Constraint.getWordLengthConstraints(constraints);
+    let maxWordCount = Math.min(...numWordsConstraints.map(c => c.targetMax));
+    let wordCap = (numWordsConstraints != null && numWordsConstraints.length > 0 &&
+      maxWordCount != null && maxWordCount >= 0) ? maxWordCount : null;
+    return wordCap;
+
+  }
+
+  async onSearchResults(opening, insights, document, constraints, numWordsCutoff) {
     let predictions = insights.predictions;
+    let numWords = numWordsCutoff !== null ? numWordsCutoff : null;
 
     console.log('constraints: in llm', constraints)
 
     for (let prediction of predictions) {
-      // let wordTokens = await miscTokensToWordTokens(prediction, document, numWords);
-      console.warn("llm: WARNING I AM DISABLING NUMWORDS");
-      let wordTokens = await miscTokensToWordTokens(prediction, document);
+      let wordTokens = await miscTokensToWordTokens(prediction, document, numWordsCutoff);
       prediction.span = wordTokens;
       setSequenceProb(prediction);
     }

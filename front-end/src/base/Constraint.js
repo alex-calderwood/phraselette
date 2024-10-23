@@ -87,7 +87,11 @@ export class Constraint {
     return over;
   }
 
-  static subsetByFeatures(constraints, features, opening=null) { 
+  static subsetByFeatures(constraints, features, opening=null, requireOpening = false) {
+    if (opening === null && requireOpening) {
+      return [];
+    }
+    
     if (opening !== null) {
       constraints = constraints.filter((constraint) => {
         return constraint.applies(opening);
@@ -97,6 +101,19 @@ export class Constraint {
     return constraints.filter((constraint) => { // could also hard code the mapping for a speedup
       return features.includes(constraint.feature);
     });
+  }
+
+  toJSON() {
+    return undefined;
+  }
+
+  static nonEmptyConstraintJson(constraints) {
+    return constraints.map(c => c.toJSON()).filter(c => c != null);
+  }
+
+   // lil helper that maybe shouldn't go here, included for instructive purposes
+  static getWordLengthConstraints(constraints) {
+    return constraints.filter(c => c.feature.attribute == 'length');
   }
 }
 
@@ -456,9 +473,8 @@ export class WordLengthConstraint extends NumericalRangeConstraint {
     this.isPre = true;
     this.range = this.defaultRange;
     this.targetMin = this.range[0];
-    this.targetMax = this.range[1];
     this.sequence = new Sequence(target); // eventually want target to be a sequence
-    this.targetNum = this.sequence.numWords();
+    this.targetMax = this.sequence.numWords() || this.range[1];
     this.filterThreshold = 1;
   }
 
@@ -468,7 +484,7 @@ export class WordLengthConstraint extends NumericalRangeConstraint {
   * 1 means the span perfectly coheres to the constraint
   */
   async getScore(sequence, document) {
-    if (sequence.numWords() <= this.targetNum) {
+    if (sequence.numWords() <= this.targetMax) {
       return 1;
     }
     return 0;
@@ -477,31 +493,12 @@ export class WordLengthConstraint extends NumericalRangeConstraint {
   evaluate(score, sequence, document) {
     return score >= this.filterThreshold;
   }
+
+  toJSON() {
+    return {
+      type: this.constructor.name,
+      min: this.targetMin,
+      max: this.targetMax
+    };
+  }
 }
-
-// export class WordLengthConstraint extends Constraint {
-//   constructor(target, opening) {
-//     const feature = Feature.Length;
-//     super(feature.attribute, feature, opening);
-//     this.isPre = true;
-//     this.sequence = new Sequence(target); // eventually want target to be a sequence
-//     this.targetNum = this.sequence.numWords();
-//     this.filterThreshold = 1;
-//   }
-
-//   /*
-//   * Return a [0-1] score indicating how much the token sequence coheres to the constraint target. 
-//   * 0 means the span does not match the constraint
-//   * 1 means the span perfectly coheres to the constraint
-//   */
-//   async getScore(sequence, document) {
-//     if (sequence.numWords() <= this.targetNum) {
-//       return 1;
-//     }
-//     return 0;
-//   }
-
-//   evaluate(score, sequence, document) {
-//     return score >= this.filterThreshold;
-//   }
-// }

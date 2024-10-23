@@ -36,9 +36,10 @@ export class Sequence {
     }
 
     numWords() {
-        let words = this.span.reduce((acc, token) => {return acc + token.isSpace() ? 0 : 1}, 0)
-        console.log("sequence test", words)
-        return words;
+        return this.span.reduce(({count, inWord}, token) => ({
+            count: !token.isSpace() && !inWord ? count + 1 : count,
+            inWord: !token.isSpace()
+        }), {count: 0, inWord: false}).count;
     }
         
 }

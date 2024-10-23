@@ -79,10 +79,11 @@ class App extends Component {
 
     function handleThesResponse(msg) {
       let thesaurus = Prism.getByID(this.state.prisms, msg.prism);
-      let constraints = Constraint.subsetByFeatures(
-        this.state.constraints,
-        thesaurus.features
-      );
+      let constraints = this.state.constraints;
+      // let constraints = Constraint.subsetByFeatures(
+      //   this.state.constraints,
+      //   thesaurus.features
+      // );
       let opening = this.state.openings.findRangeById(msg.opening);
       let doc = this._currentDocument().updateToOpening(opening);
       // console.log('thesaurus: handleThesResponse', {doc, thesaurus, constraints, opening});
@@ -91,10 +92,11 @@ class App extends Component {
 
     function handleReaderResponse(msg) {
       let reader = Prism.getByID(this.state.prisms, msg.prism);
-      let constraints = Constraint.subsetByFeatures(
-        this.state.constraints,
-        reader.features
-      );
+      let constraints = this.state.constraints;
+      // let constraints = Constraint.subsetByFeatures(
+      //   this.state.constraints,
+      //   reader.features
+      // );
       let opening = this.state.openings.findRangeById(msg.opening);
       let doc = this._currentDocument().updateToOpening(opening);
       // console.log('reader: handleReaderResponse', {doc, reader, constraints, opening});
@@ -103,10 +105,11 @@ class App extends Component {
 
     function handleDictionaryResponse(msg) {
       let dict = Prism.getByID(this.state.prisms, msg.prism);
-      let constraints = Constraint.subsetByFeatures(
-        this.state.constraints,
-        dict.features
-      );
+      let constraints = this.state.constraints;
+      // let constraints = Constraint.subsetByFeatures(
+      //   this.state.constraints,
+      //   dict.features
+      // );
       let opening = this.state.openings.findRangeById(msg.opening);
       let doc = this._currentDocument().updateToOpening(opening);
       dict.onSearchResults(opening, { message: msg }, doc, constraints);
@@ -257,6 +260,8 @@ class App extends Component {
   async searchPrisms(prisms, opening, document) {
     this.setSearchingState(opening.id, true); // UI update
     let constraints = this.state.constraints;
+
+    console.log("constraints: searchPrismsConstratins", constraints)
 
     if (opening == null) {
       console.error("app: no opening found for search");
@@ -421,11 +426,11 @@ class App extends Component {
     let predictions = prism?.insights[opening.id]?.results || [];
     let document = this._currentDocument().updateToOpening(opening);
     // alex do the subsetting now
-    let constraints = Constraint.subsetByFeatures( // why are we subsetting?
-      this.state.constraints,
-      prism.features
-    );
-    // let constraints = this.state.constraints;
+    // let constraints = Constraint.subsetByFeatures( // why are we subsetting?
+    //   this.state.constraints,
+    //   prism.features
+    // );
+    let constraints = this.state.constraints;
     console.log(
       "app: updating constraints",
       {
@@ -601,7 +606,8 @@ class App extends Component {
                     let constraints = Constraint.subsetByFeatures(
                       this.state.constraints,
                       prism.features,
-                      opening
+                      opening,
+                      true,
                     )
 
                     return (

@@ -1,6 +1,7 @@
 import { sendMessage } from "../../scripts/socket.js";
 import { Prism } from './Prism.js';
 import { ThesaurusPrism } from './Thesaurus.js';
+import { Constraint } from "../Constraint.js";
 
 export class ReaderPrism extends Prism {
   constructor(description) {
@@ -29,6 +30,7 @@ export class ReaderPrism extends Prism {
       description: description,
       opening: opening.id,
       prism: this.id,
+      constraints: Constraint.nonEmptyConstraintJson(constraints),
     });
   }
 

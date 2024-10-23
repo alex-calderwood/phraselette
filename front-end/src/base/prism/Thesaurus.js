@@ -2,6 +2,7 @@ import { miscTokensToWordTokens, gpt2Tokenize } from '../../scripts/smarts.js';
 import { Sequence } from '../Sequence.js';
 import { sendMessage } from "../../scripts/socket.js";
 import { Prism, setSequenceProb } from './Prism.js';
+import { Constraint } from '../Constraint.js';
 
 export class ThesaurusPrism extends Prism {
   constructor(description) {
@@ -27,6 +28,7 @@ export class ThesaurusPrism extends Prism {
       description: description,
       opening: opening.id,
       prism: this.id,
+      constraints: Constraint.nonEmptyConstraintJson(constraints),
     });
   }
 
