@@ -231,6 +231,8 @@ export class PrismView extends Component {
           
           {showResults ? <SearchResults
                       showLength={true}
+                      wrap={false}
+                      short={true}
                       isSearching={this.props.isSearching} 
                       tokenType={prism.type}
                       onClickSequence={this.props.onClickSequence}

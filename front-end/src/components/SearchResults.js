@@ -11,6 +11,7 @@ export class SearchResults extends Component {
   render() {
     let wrap = this.props.wrap !== false; // default to true
     let vertical = this.props.verticalLayout === true; // default to false
+    let short = this.props.short == true;
 
     if (this.props.isSearching) {
       return <div className="search-results searching"></div>
@@ -30,6 +31,7 @@ export class SearchResults extends Component {
         onClickSequence={this.props.onClickSequence} 
         suppressPOS={true} 
         wrap={wrap}
+        short={short}
         verticalLayout={vertical}
       />
 

@@ -321,6 +321,10 @@ we will need to select the text children of the editor */
   width: 100%;  /* ensure full width */
 }
 
+.token-range-parent.short {
+  max-height: 25vh;
+}
+
 .token-range {
   position: relative;
   z-index: 2;
@@ -347,8 +351,8 @@ we will need to select the text children of the editor */
 .sequence {
   display: inline-block;
   padding: 0.1em;
-  margin-left: 0.25em;
-  margin-right: 0.25em;
+  margin-left: 0.1em;
+  margin-right: 0.1em;
   margin-bottom: 0.25em;
   /* margin-right: 2px; */
   background-color: #f1f1f1;
@@ -372,7 +376,7 @@ we will need to select the text children of the editor */
 
 /* 1ch is supposed to be equal to the approximate width of one character but it seems large*/
 .token.space {
-  width: 0.4ch;  
+  min-width: 0.4ch;
 }
 
 .token.simple {

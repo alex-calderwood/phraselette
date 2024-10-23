@@ -2,6 +2,7 @@ import React, { Component, createRef } from "react";
 import { getColor, zeroToOneColor, categoryToColor } from "../scripts/color";
 import { getUniqueID, scientific, debounce } from "../scripts/utils";
 import { humanLog } from "../scripts/utils";
+import { rgb } from "chroma-js";
 
 function tokenItemsToShow(tokenType) {
   let show = {
@@ -97,7 +98,8 @@ export class TokenRange extends Component {
 
   render() {
     let tokenType = this.props.tokenType;
-    let overflowing = this.state.overflowing ? "overflowing" : "";
+    let overflowing = this.state.overflowing ? " overflowing" : "";
+    let short = this.props.short ? " short" : ""
     let filterSpaces = this.props.filterSpaces || false;
     let forceExpand = this.props.expanded || false;
     let verticalLayout = this.props.verticalLayout || false;
@@ -115,7 +117,7 @@ export class TokenRange extends Component {
     let scoreLookup = tokenType === 'search' ? 'total' : tokenType;
 
     return (
-      <div className={"token-range-parent " + overflowing} >
+      <div className={"token-range-parent" + overflowing + short} >
           <div id={`tokenbar-${tokenType}-${this.id}`} className={`token-range${wrap}${vertical}`} >
               {tokens && tokens.map((tokenOrSeq) => {
                 if (tokenOrSeq.span) {
@@ -167,8 +169,8 @@ export class TokenRange extends Component {
   }
 
   renderToken(tokenType, token, expanded) {
-    let color = tokenType ? getColor(tokenType, token) : 'white';
-    let space = token.getAttribute('isSpacySpace') === true ? 'space' : '';
+    let color = tokenType ? getColor(tokenType, token) : rgb(0, 100, 0, 0);
+    let space = token.isSpace() ? 'space' : '';
     let fields = tokenItemsToShow(tokenType);
 
     let prob = fields.includes('prob') ? token.getAttribute('prob') : null;
@@ -199,8 +201,8 @@ export class TokenRange extends Component {
         <div className="item heading">{token.text}</div>
         {expanded && showCharRange && <div className="item range">[{token.start}-{token.end}]</div>}
         {expanded && pos   != null && <div className="item" style={{ backgroundColor: posColor }}>{pos}</div>}
-        {expanded && prob  != null && <div className="item" style={{ backgroundColor: color }}>{prob}</div>}
-        {expanded && sound != null && <div className="item" style={{ backgroundColor: color }}>{sound}</div>}
+        {expanded && prob  != null && <div className="item" style={{ backgroundColor: color   }}>{prob}</div>}
+        {expanded && sound != null && <div className="item" style={{ backgroundColor: color   }}>{sound}</div>}
       </div>
     );
   }
