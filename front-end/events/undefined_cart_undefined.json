@@ -5,18 +5,18 @@
     "events": [
       {
         "eventName": "StudyStarted",
-        "timestamp": 1729719445795,
+        "timestamp": 1729719668555,
         "eventDetails": {
-          "userId": "a",
-          "narrativeType": "blank"
+          "userId": "asdf",
+          "narrativeType": ""
         }
       }
     ],
     "completed": "TODO",
     "appState": {
       "prisms": {
-        "words-id-01e9e55f093b6": {
-          "id": "words-id-01e9e55f093b6",
+        "words-id-6e9d691bef091": {
+          "id": "words-id-6e9d691bef091",
           "type": "words",
           "title": "words",
           "active": true,
@@ -44,8 +44,8 @@
           "hidden": false,
           "isSearching": false
         },
-        "context-id-82b825bef944c": {
-          "id": "context-id-82b825bef944c",
+        "context-id-20a3df5b6e825": {
+          "id": "context-id-20a3df5b6e825",
           "type": "context",
           "title": "context",
           "active": true,
@@ -68,10 +68,10 @@
           "hidden": false,
           "isSearching": false
         },
-        "reader-id-b6d3d705bc91f": {
-          "id": "reader-id-b6d3d705bc91f",
+        "reader-id-ed5a91e58a773": {
+          "id": "reader-id-ed5a91e58a773",
           "type": "reader",
-          "title": "Phil, someone passionate about the Caribbean, despite not having been there",
+          "title": "William S. Burroughs, the beat writer",
           "active": false,
           "description": "A computational reader model that will provide feedback and alternatives to your text based on its understanding of the text.",
           "undestroyable": false,
@@ -81,7 +81,7 @@
           "duplicatable": true,
           "textFields": {
             "description": {
-              "text": "Phil, someone passionate about the Caribbean, despite not having been there",
+              "text": "William S. Burroughs, the beat writer",
               "name": "description"
             }
           },
@@ -91,8 +91,8 @@
           "hidden": false,
           "isSearching": false
         },
-        "thesaurus-id-d1ea3899adb2b": {
-          "id": "thesaurus-id-d1ea3899adb2b",
+        "thesaurus-id-ae8b50df58c4b": {
+          "id": "thesaurus-id-ae8b50df58c4b",
           "type": "thesaurus",
           "title": "a precise academic/scientific thesaurus",
           "active": false,
@@ -114,8 +114,8 @@
           "hidden": false,
           "isSearching": false
         },
-        "sound-id-b8f91285f85ef": {
-          "id": "sound-id-b8f91285f85ef",
+        "sound-id-1482872ce8aab": {
+          "id": "sound-id-1482872ce8aab",
           "type": "sound",
           "title": "sound",
           "active": false,
@@ -143,8 +143,8 @@
           "hidden": false,
           "isSearching": false
         },
-        "dictionary-id-a42920dbcbe52": {
-          "id": "dictionary-id-a42920dbcbe52",
+        "dictionary-id-3b5938a82e337": {
+          "id": "dictionary-id-3b5938a82e337",
           "type": "dictionary",
           "title": "a historical dictionary, which deals not only with the latterday meanings of words but also the historical development of their forms and meanings",
           "active": false,
@@ -169,7 +169,7 @@
       },
       "activePrisms": [
         {
-          "id": "words-id-01e9e55f093b6",
+          "id": "words-id-6e9d691bef091",
           "type": "words",
           "title": "words",
           "active": true,
@@ -198,7 +198,7 @@
           "isSearching": false
         },
         {
-          "id": "context-id-82b825bef944c",
+          "id": "context-id-20a3df5b6e825",
           "type": "context",
           "title": "context",
           "active": true,
@@ -222,7 +222,7 @@
           "isSearching": false
         }
       ],
-      "prismToHighlight": "words-id-01e9e55f093b6",
+      "prismToHighlight": "words-id-6e9d691bef091",
       "tokens": [
         "probs",
         "words",
@@ -242,5 +242,5 @@
       "events": []
     }
   },
-  "requestId": "id-6e5bd1768e7e7"
+  "requestId": "id-ecabf7587cfc6"
 }

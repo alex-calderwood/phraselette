@@ -30,17 +30,15 @@ export function Modal({ onSubmit, addEvent, eventName}) {
             onChange={(e) => setUserId(e.target.value)}
             required
           />
-          <select
+          {/* <select
             value={narrative}
             onChange={(e) => setNarrative(e.target.value)}
             required
           >
             <option value="">Select a story</option>
-            <option value="blank">Story A</option>
-            {/* <option value="alice">Story B</option>
-            <option value="mermaid">Tutorial</option> */}
-          </select>
-          <button type="submit">Explore</button>
+            <option value="blank">Blank</option>
+          </select> */}
+          <button type="submit">Begin</button>
         </form>
       </div>
     );
