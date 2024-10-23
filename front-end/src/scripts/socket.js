@@ -1,5 +1,6 @@
 // mostly ported from infinite-canvas
 import { getUniqueID } from "./utils";
+// import { userData f}
 
 // This will hold our websocket connection to the server;
 // it's null to begin with but initialized after connect
@@ -90,7 +91,7 @@ function assignSocket(socketProtocol, host){
 
     const handler = handlers[msg.type];
     if (!handler) {
-      console.error("ws: nohandler event.data", event.data, 'handlers', handlers, 'type', msg.type, extraHandlers);
+      console.error("ws: nohandler event.data", event.data, 'handlers', handlers, 'type', msg.type);
       return;
     }
     handler(msg);
@@ -115,5 +116,29 @@ function checkAndRefreshSocket() {
 function registerHandlers(handlers) {
   globalHandlers = Object.assign(globalHandlers, handlers);
 }
+
+export function sendEventstoServer (events, userData, appState) {
+  try {
+    let completed = 'TODO';
+    const response = sendMessage({
+      type: "event",
+      eventDetails:  {
+        userData,
+        events: events,
+        // story: userData.narrative,
+        completed,
+        appState
+    }
+    });
+    
+    console.log('server says:', response);
+
+  } catch (error) {
+    console.error('Error saving state to server:', error);
+  }
+
+};
+
+
 
 export {socket, sendMessage, assignSocket, checkAndRefreshSocket, registerHandlers};

@@ -6,6 +6,7 @@ const config = require("./webpack.config.js");
 const path = require("path");
 const http = require("http");
 const ws = require("ws");
+const fs = require("fs")
 const axios = require("axios");
 const { makeID } = require("./src/server/utils.js");
 
@@ -82,6 +83,7 @@ wss.on("connection", (clientSocket, req) => {
       reader:    (message) => queryReader(message, clientSocket),
       stream:    (message) => handleStream(message, clientSocket),
       dictionary: (message) => queryDictionary(message, clientSocket),
+      event:      (message) => storeEvents(message, clientSocket),
     };
 
     const handler = handlers[message.type];
@@ -103,6 +105,29 @@ wss.on("connection", (clientSocket, req) => {
     // broadcast({type: "leave", clientID: clientID});
   });
 });
+
+function storeEvents(message, clientSocket){
+  console.log("Event is stored now");
+  console.log(message);
+
+  const userId = message.eventDetails.userId;
+  const storyType = message.eventDetails.narrativeType;
+
+  const filePath = `events/${userId}_cart_${storyType}.json`;
+
+  try {
+    const jsonData = JSON.stringify(message, null, 2);
+    fs.writeFileSync(filePath, jsonData);
+    console.log(`Events stored successfully in ${filePath}`);
+  } catch (error) {
+      console.error('Error storing eents:', error);
+  }
+
+  clientSocket.send(JSON.stringify({
+    id: message.id, 
+    type: 'event_response',
+  }));
+}
 
 async function handleStream(message, clientSocket) {
   let streamEndpoints = [

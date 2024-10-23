@@ -20,7 +20,6 @@ export const PrismBar = ({ prisms, activePrisms, onAddPrism, onTooltipUpdate, on
   }
 
   const canDelete = (prism) => {
-    console.log('can delete:', {prism, active: prism.active, undestroyable: prism.undestroyable})
     return prism.active && !prism.undestroyable;
   }
 

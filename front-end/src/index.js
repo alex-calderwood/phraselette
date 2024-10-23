@@ -4,13 +4,17 @@ import './index.css';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 
+const appState = {
+    selection: null,
+    events: [],
+    // Add other global state variables you want here
+};
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  // <React.StrictMode>
-
-    // <App />
-  // </React.StrictMode>
   <ErrorBoundary>
-    <App />
+    <App {...appState}/>
   </ErrorBoundary>
 );
+
+export { appState };

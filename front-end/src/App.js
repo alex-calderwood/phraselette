@@ -18,7 +18,7 @@ import { Modal } from "./components/Modal";
 import { EVENT_NAMES } from './base/Logging';
 
 import { resolveConstraints } from "./scripts/resolution";
-import { assignSocket, registerHandlers } from "./scripts/socket";
+import { assignSocket, registerHandlers, sendEventstoServer } from "./scripts/socket";
 
 import { RangeMap } from "./base/RangeMap";
 import { ChangeType, TextChange } from "./base/TextChange";
@@ -154,18 +154,20 @@ class App extends Component {
     window.removeEventListener('beforeunload', handleBeforeUnload);
   }
 
-  addEvent = (newEvent, sendEvents=false) => {
+  addEvent = (newEvent, sendEvents=true) => { // note this should be set to false except at the end
     this.setState((prevState) => {
-      const updatedEvents = [...prevState.prevEvents, newEvent];
+      const updatedEvents = [...prevState.events, newEvent];
 
       if (sendEvents) {
         console.log("send log data to server...");
-        sendEventstoServer(updatedEvents);
+        sendEventstoServer(updatedEvents, prevState.userData, this.state);
       }
 
-      return updatedEvents;
+      return {
+        events: updatedEvents,
+      }
     });
-  };
+  }
 
   /*
    * Called when the user selects new text.
@@ -538,16 +540,37 @@ class App extends Component {
 
   handleModalSubmit = (data) => {
     this.setState({
-      data: data,
+      userData: data,
       showModal: false,
     })
+    console.log('userData:', data)
   };
 
-  render() {
+  /*
+   * If the current selection is within a larger opening, use that opening.
+  */
+  expandToOpening(start, end, localResults, opening) {
+    if (start == end) {
+      opening = this.state.openings.findEnclosingRange(start);
+    } else {
+      opening = this.state.openings.findExactRange(start, end);
+    }
 
+    if (opening == undefined) {
+      localResults = [];
+    } else {
+      localResults = opening.value;
+      [start, end] = [opening.start, opening.end];
+    }
+
+    let selectionText = this.text.slice(start, end + 1);
+
+    return { start, end, localResults: localResults, selectionText, opening};
+  }
+
+  render() {
     if (this.state.showModal) {
-      const addEvent = () => {}; // TODO
-      return <Modal onSubmit={this.handleModalSubmit} addEvent={addEvent} eventName={EVENT_NAMES.StudyStarted} />;
+      return <Modal onSubmit={this.handleModalSubmit} addEvent={this.addEvent} eventName={EVENT_NAMES.StudyStarted} />;
     }
 
     let [start, end] = [this.state.start, this.state.end];
@@ -672,28 +695,6 @@ class App extends Component {
         </div>
       </div>
     );
-  }
-
-  /*
-   * If the current selection is within a larger opening, use that opening.
-  */
-  expandToOpening(start, end, localResults, opening) {
-    if (start == end) {
-      opening = this.state.openings.findEnclosingRange(start);
-    } else {
-      opening = this.state.openings.findExactRange(start, end);
-    }
-
-    if (opening == undefined) {
-      localResults = [];
-    } else {
-      localResults = opening.value;
-      [start, end] = [opening.start, opening.end];
-    }
-
-    let selectionText = this.text.slice(start, end + 1);
-
-    return { start, end, localResults: localResults, selectionText, opening};
   }
 }
 
