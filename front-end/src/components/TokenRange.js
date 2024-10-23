@@ -25,15 +25,10 @@ export class TokenRange extends Component {
       overflowing: false,
       hoveredTokenId: null,
       hoverSequenceId: null,
+      lastMousePosition: null,  // This is new
     };
-    this.debouncedSetHoveredSequenceId = debounce(this.setHoveredSequenceId, 5);
-    this.debouncedSetHoveredTokenId = debounce(this.setHoveredTokenId, 5);
-
-    // let tokenType = this.props.tokenType;
-    // let tokens = this.props.tokens;
-    // console.log('tokenrange: constructor tokens for type', tokenType, tokens);
   }
-
+  
   setHoveredSequenceId = (id) => {
     this.setState({ hoverSequenceId: id });
   }
@@ -78,6 +73,27 @@ export class TokenRange extends Component {
     }
   }
 
+  handleMouseMove = (e, id, isSequence = false) => {
+    const currentPosition = { x: e.clientX, y: e.clientY };
+      this.setState({ lastMousePosition: currentPosition }, () => {
+        if (isSequence) {
+          // this.debouncedSetHoveredSequenceId(id);
+          this.setHoveredSequenceId(id);
+        } else {
+          this.setHoveredTokenId(id);
+        }
+      });
+  }
+  
+  // causes a little glitch
+  // handleMouseLeave = (isSequence = false) => {
+  //   this.setState({ lastMousePosition: null });
+  //   if (isSequence) {
+  //     this.debouncedSetHoveredSequenceId(null);
+  //   } else {
+  //     this.debouncedSetHoveredTokenId(null);
+  //   }
+  // }
 
   render() {
     let tokenType = this.props.tokenType;
@@ -129,15 +145,13 @@ export class TokenRange extends Component {
         id={id}
         key={id}
         className={`sequence ${simple}`}
-        onMouseEnter={() => this.debouncedSetHoveredSequenceId(sequence.id)}
-        onMouseLeave={() => this.debouncedSetHoveredSequenceId(null)}
+        onMouseMove={(e) => this.handleMouseMove(e, sequence.id, true)}
         style={style}
         onClick={() => { 
           if (this.props.onClickSequence) {
             this.props.onClickSequence(sequence); 
           }
         }}
-  
       >
         {/* Render tokens */}
         {sequence.span.map((token) => { return this.renderToken(tokenType, token, expanded); })}
@@ -178,10 +192,7 @@ export class TokenRange extends Component {
       <div
         key={key} 
         className={`token ${space} ${simple}`} 
-        // onMouseEnter={() => this.setState({ hoveredTokenId: token.id })}
-        // onMouseLeave={() => this.setState({ hoveredTokenId: null })}
-        onMouseEnter={() => this.debouncedSetHoveredTokenId(token.id)}
-        onMouseLeave={() => this.debouncedSetHoveredTokenId(null)}
+        onMouseEnter={() => this.setHoveredTokenId(token.id)}
         style={style}
         // onClick={() => { onClick(token); }}
       >
