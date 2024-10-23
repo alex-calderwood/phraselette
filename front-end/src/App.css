@@ -17,13 +17,29 @@
 
   --prism-bar-height: 12vh;
   --inspector-padding: 0.5em;
-  
 
   --rainbow-alpha: 0.2; /* Adjust this value between 0 (fully transparent) and 1 (fully opaque) */
 
   /* disable mac's two finger swipe back */
   overscroll-behavior-x: none;
   overflow-x: auto;
+
+  /* Customize scrollbar to match UI */
+  scrollbar-color: var(--accent-color) transparent;
+  scrollbar-width: thin;
+  
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color);
+    border-radius: var(--radius);
+  }
 }
 
 .App {
@@ -615,23 +631,6 @@ div.searching {
   overflow-anchor: none;  
   overscroll-behavior-y: contain;
   overflow-y: hidden;
-  
-  /* Customize scrollbar to match UI */
-  scrollbar-color: var(--accent-color) transparent;
-  scrollbar-width: thin;
-  
-  &::-webkit-scrollbar {
-    height: 8px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background-color: var(--accent-color);
-    border-radius: var(--radius);
-  }
 }
 
 .prism-bar-item {
@@ -754,4 +753,59 @@ div.searching {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* modal stuff */
+/* Modal overlay */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Modal form */
+.modal form {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10.6px);
+  padding: 1.5em;
+  border-radius: var(--radius);
+  width: 90%;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+
+/* Form elements */
+.modal input,
+.modal select {
+  width: 100%;
+  padding: 0.5em;
+  border: none;
+  border-radius: var(--radius);
+  background-color: white;
+  color: var(--primary-text-color);
+  font-size: var(--normal-font-size);
+}
+
+/* Submit button */
+.modal button[type="submit"] {
+  width: 100%;
+  padding: 0.5em;
+  background-color: var(--accent-color);
+  color: var(--darker-text-color);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.modal button[type="submit"]:hover {
+  background-color: var(--hover-color);
 }

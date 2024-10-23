@@ -14,6 +14,8 @@ import ControlButtons from "./components/ControlButtons";
 import InstructionsView from "./components/InstructionsView";
 import { PrismBar } from "./components/PrismBar";
 import { Tooltip } from "./components/Tooltip";
+import { Modal } from "./components/Modal";
+import { EVENT_NAMES } from './base/Logging';
 
 import { resolveConstraints } from "./scripts/resolution";
 import { assignSocket, registerHandlers } from "./scripts/socket";
@@ -61,11 +63,13 @@ class App extends Component {
       constraints: [],
       openings: new RangeMap(),
       isSearching: {},
-      info: {},
       start: 0,
       end: 0,
       localResults: [],
       opening: undefined,
+      showModal: true,
+      userData: null,
+      events: [],
     };
 
     window.state = this.state;
@@ -126,6 +130,42 @@ class App extends Component {
       loc.host + "/" + loc.hash.replace("#", "?")
     );
   }
+
+  componentDidMount() {
+    // Figure out which lense to initially higihlight // not really used at the moment, would love to get it back up
+    let highlightPrismID = Object.keys(this.state.prisms).filter((key) => {
+      return this.state.prisms[key].shouldHighlight;
+    });
+    highlightPrismID = highlightPrismID.length > 0 ? highlightPrismID[0] : null;
+    if (highlightPrismID) {
+      this.onHighlightPrismChange(highlightPrismID, true);
+    }
+
+    // Add top level keystroke listeners
+    document.addEventListener("keydown", this.onKeyDown.bind(this));
+
+    // Show modal on page refresh
+    const handleBeforeUnload = () => { this.setState({ showModal: true }) };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+  }
+
+  componentWillUnmount() {
+    document.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+  }
+
+  addEvent = (newEvent, sendEvents=false) => {
+    this.setState((prevState) => {
+      const updatedEvents = [...prevState.prevEvents, newEvent];
+
+      if (sendEvents) {
+        console.log("send log data to server...");
+        sendEventstoServer(updatedEvents);
+      }
+
+      return updatedEvents;
+    });
+  };
 
   /*
    * Called when the user selects new text.
@@ -216,25 +256,6 @@ class App extends Component {
     });
 
 
-  }
-
-  // Initialize the uninitialized
-  componentDidMount() {
-    // Figure out which lense to initially higihlight
-    let highlightPrismID = Object.keys(this.state.prisms).filter((key) => {
-      return this.state.prisms[key].shouldHighlight;
-    });
-    highlightPrismID = highlightPrismID.length > 0 ? highlightPrismID[0] : null;
-    if (highlightPrismID) {
-      this.onHighlightPrismChange(highlightPrismID, true);
-    }
-
-    // Add top level keystroke listeners
-    document.addEventListener("keydown", this.onKeyDown.bind(this));
-  }
-
-  componentWillUnmount() {
-    document.removeEventListener("keydown", this.onKeyDown);
   }
 
   onHighlightPrismChange(prismID, shouldHighlight) {
@@ -507,7 +528,6 @@ class App extends Component {
     })
   }
 
-
   handleTooltipUpdate = (newState) => {
     this.setState(
       {tooltipState: {
@@ -516,7 +536,20 @@ class App extends Component {
       }});
   };
 
+  handleModalSubmit = (data) => {
+    this.setState({
+      data: data,
+      showModal: false,
+    })
+  };
+
   render() {
+
+    if (this.state.showModal) {
+      const addEvent = () => {}; // TODO
+      return <Modal onSubmit={this.handleModalSubmit} addEvent={addEvent} eventName={EVENT_NAMES.StudyStarted} />;
+    }
+
     let [start, end] = [this.state.start, this.state.end];
     let selectionText = this.state.selectionText;
     let localResults = this.state.localResults;
