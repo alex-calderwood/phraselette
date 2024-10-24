@@ -107,13 +107,14 @@ wss.on("connection", (clientSocket, req) => {
 });
 
 function storeEvents(message, clientSocket){
-  console.log("Event is stored now");
-  console.log(message);
+  console.log("event: storing", message, 'event', message.event);
 
-  const userId = message.eventDetails.userId;
-  const storyType = message.eventDetails.narrativeType;
+  const event = message.event;
+  const userId = event.eventDetails.userId;
+  const timestamp = event.timestamp;
 
-  const filePath = `events/${userId}_cart_${storyType}.json`;
+  // const filePath = `events/${userId}_cart_${storyType}.json`;
+  const filePath = `events/${userId}_event_${timestamp}.json`;
 
   try {
     const jsonData = JSON.stringify(message, null, 2);

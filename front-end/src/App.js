@@ -160,7 +160,7 @@ class App extends Component {
 
       if (sendEvents) {
         console.log("send log data to server...");
-        sendEventstoServer(updatedEvents, prevState.userData, this.state);
+        sendEventstoServer(newEvent, prevState.userData, this.state);
       }
 
       return {
@@ -421,6 +421,16 @@ class App extends Component {
     
     // Call swapSequence with the retrieved tokens and the clicked sequence
     this.swapSequence(oldTokens, newSequence);
+
+    this.addEvent({
+      eventName: EVENT_NAMES.Swap,
+      timestamp: Date.now(),
+      eventDetails: {
+        userId: this.state.userData?.userId,
+        from: oldTokens,
+        to: newSequence
+      }
+    });
   }
 
   updateOpenings = (changes) => {

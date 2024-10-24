@@ -85,6 +85,7 @@ function assignSocket(socketProtocol, host){
     const handlers = {
       "stream": () => {},
       "stream_end": () => {},
+      "event_response": () => {},
       "error": (msg) => {console.error("ws: server error:", event.data)},
       ...globalHandlers
     };
@@ -117,21 +118,17 @@ function registerHandlers(handlers) {
   globalHandlers = Object.assign(globalHandlers, handlers);
 }
 
-export function sendEventstoServer (events, userData, appState) {
+export function sendEventstoServer(event, userData, appState) {
   try {
-    let completed = 'TODO';
-    const response = sendMessage({
+    const id = sendMessage({
       type: "event",
-      eventDetails:  {
-        userData,
-        events: events,
-        // story: userData.narrative,
-        completed,
-        appState
-    }
+      userData,
+      event: event,
+      // story: userData.narrative,
+      appState
     });
     
-    console.log('server says:', response);
+    console.log('server says:', id);
 
   } catch (error) {
     console.error('Error saving state to server:', error);
