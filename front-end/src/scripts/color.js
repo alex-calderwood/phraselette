@@ -17,7 +17,7 @@ export function getColor(tokenType, token) {
   switch (tokenType) {
     case 'basic':
       return categoryToColor(token.text);
-    case 'context': case 'probs': case 'alternate':
+    case 'search': case 'context': case 'probs': case 'alternate':
       return probColor(token);
     case 'words': case 'POS':
       return categoryToColor(token.getAttribute('pos', ''));

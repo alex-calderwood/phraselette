@@ -548,7 +548,8 @@ class App extends Component {
     this.setState(
       {tooltipState: {
         content: newState?.content,
-        position: newState?.position
+        position: newState?.position,
+        options: newState?.options
       }});
   };
 
@@ -608,6 +609,7 @@ class App extends Component {
         <Tooltip
           content={this.state.tooltipState?.content}
           position={this.state.tooltipState?.position}
+          options={this.state.tooltipState?.options}
         />
         <div className="editor-container rainbow">
           <div className="left">
@@ -670,6 +672,7 @@ class App extends Component {
                     verticalLayout={true}
                     showLength={true}
                     onClickSequence={this.handleSequenceClick}
+                    onTooltipUpdate={this.handleTooltipUpdate}
                   />
                   {/* Display the active prisms */}
                   {activePrisms.map((prism) => {

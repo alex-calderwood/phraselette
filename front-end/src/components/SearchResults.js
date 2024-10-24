@@ -33,7 +33,10 @@ export class SearchResults extends Component {
         wrap={wrap}
         short={short}
         verticalLayout={vertical}
-      />
+        onTooltipUpdate={this.props.onTooltipUpdate}
+        expandMode='reduce'
+        
+        />
 
     </div> 
   }

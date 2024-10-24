@@ -135,8 +135,11 @@ export class TokenRange extends Component {
     let overflowing = this.state.overflowing ? " overflowing" : "";
     let short = this.props.short ? " short" : ""
     let filterSpaces = this.props.filterSpaces || false;
-    let forceExpand = this.props.expanded || false;
+    let expandMode = ['expand', 'reduce', 'auto'].includes(this.props.expandMode) ? this.props.expandMode : 'auto';
+    let forceReduce = expandMode == 'reduce';
+    let forceExpand = expandMode == 'expand';
     let verticalLayout = this.props.verticalLayout || false;
+    let onTooltipUpdate = this.props.onTooltipUpdate ? this.props.onTooltipUpdate : () => {};
 
     let isSpace = (text) => { return text === ' ' || text === '\u00A0' }; // filter out ' ' and &nbsp;
     let tokens = this.props.tokens && this.props.tokens.length > 0 ? 
@@ -155,11 +158,11 @@ export class TokenRange extends Component {
               {tokens && tokens.map((tokenOrSeq) => {
                 if (tokenOrSeq.span) {
                   let sequence = tokenOrSeq;
-                  const expanded = forceExpand || this.state.hoverSequenceId === sequence.id;
+                  const expanded = !forceReduce && (forceExpand || this.state.hoverSequenceId === sequence.id);
                   return this.renderSequence(sequence, tokenType, expanded);
                 } else {
                   let token = tokenOrSeq;
-                  const expanded = forceExpand || this.state.hoveredTokenId === token.id;
+                  const expanded = !forceReduce && (forceExpand || this.state.hoveredTokenId === token.id);
                   return this.renderToken(tokenType, token, expanded);
                 }
               })}
@@ -189,15 +192,42 @@ export class TokenRange extends Component {
     let style = {
       border: `1px solid ${backgroundColor}`,
     };
-    console.log('token:', backgroundColor, originColor, style)
 
     const simple = expanded ? '' : 'simple';
+
+    const tooltipOptions = {styled: false, topLeft: false}
 
     return <div 
         id={id}
         key={id}
         className={`sequence ${simple} glass-pane`}
-        onMouseMove={(e) => this.handleMouseMove(e, sequence.id, true)}
+        // onMouseMove={(e) => this.handleMouseMove(e, sequence.id, true)}
+
+        onMouseEnter={(e) => {
+          if (this.props.onTooltipUpdate) {
+            const expandedSequence = this.renderSequence(sequence, tokenType, true);
+            this.props.onTooltipUpdate({
+              content: expandedSequence,
+              position: { x: e.clientX + 4, y: e.clientY + 4 },
+              options: tooltipOptions,
+            });
+          }
+        }}
+        onMouseLeave={() => {
+          if (this.props.onTooltipUpdate) {
+            this.props.onTooltipUpdate(null);
+          }
+        }}
+        onMouseMove={(e) => {
+          if (this.props.onTooltipUpdate) {
+            const expandedSequence = this.renderSequence(sequence, tokenType, true);
+            this.props.onTooltipUpdate({
+              content: expandedSequence,
+              position: { x: e.clientX + 4, y: e.clientY + 4 },
+              options: tooltipOptions
+            });
+          }
+        }}
         style={style}
         onClick={() => { 
           if (this.props.onClickSequence) {
@@ -224,6 +254,7 @@ export class TokenRange extends Component {
 
   renderToken(tokenType, token, expanded) {
     let color = tokenType ? getColor(tokenType, token) : rgb(0, 100, 0, 0);
+    console.log('render token', color, tokenType, token, expanded)
     let space = token.isSpace() ? 'space' : '';
     let fields = tokenItemsToShow(tokenType);
 

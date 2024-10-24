@@ -32,6 +32,7 @@ export class TokenAlternates extends Component {
           tokens={alternates}
           tokenType='alternate'
           onClickSequence={(clickedToken) => { this.onClickSequence(clickedToken, token) }}
+          expandMode='reduce'
           />
       </div> 
   }

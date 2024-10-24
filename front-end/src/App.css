@@ -386,6 +386,12 @@ we will need to select the text children of the editor */
   border-radius: var(--radius);
 }
 
+/* Override sequence wrapping when inside unstyled tooltips */
+.tooltip:not(.styled) .sequence {
+  text-wrap: nowrap;
+  white-space: nowrap;
+}
+
 .token { /* specific formatting for a token object */ 
   display: inline-block;
   background-color: hwb(0 95% 5% / 0.028);
@@ -708,14 +714,22 @@ div.searching {
 .tooltip {
   position: fixed;
   /* background-color: var(--accent-color); */
+  z-index: 9999;
+  pointer-events: none;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.tooltip.styled {
   color: var(--darker-text-color);
   padding: 5px 10px;
   border-radius: var(--radius);
   font-size: 0.5em;
   max-width: 200px;
-  z-index: 9999;
-  pointer-events: none;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Add this for unstyled tooltips */
+.tooltip:not(.styled) {
+  padding: 0px, 0px;
 }
 
 .prism-item button {

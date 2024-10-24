@@ -112,9 +112,11 @@ export class PrismView extends Component {
           tokenType={prism.type}
           startIndex={start} endIndex={end}
           debugMode={this.props.debugMode} 
-          expanded={true} />
+          expandMode={'reduce'} 
+          onTooltipUpdate={this.props.onTooltipUpdate}
+          />
 
-        {tokens.map((token) => {
+        {/* {tokens.map((token) => {
           return <TokenAlternates
             token={token}
             key={token.id}
@@ -122,7 +124,7 @@ export class PrismView extends Component {
             tokenManager={this.tokenManager}
             prism={prism}
             onClickSequence={this.props.onClickSequence} />;
-        })}
+        })} */}
       </div>
   }
 
@@ -236,6 +238,7 @@ export class PrismView extends Component {
                       isSearching={this.props.isSearching} 
                       tokenType={prism.type}
                       onClickSequence={this.props.onClickSequence}
+                      onTooltipUpdate={this.props.onTooltipUpdate}
                       results={results} /> : ""}
       </div>
     </div>;
