@@ -145,14 +145,18 @@ class App extends Component {
     document.addEventListener("keydown", this.onKeyDown.bind(this));
 
     // Show modal on page refresh
-    const handleBeforeUnload = () => { this.setState({ showModal: true }) };
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('beforeunload', this.handleBeforeUnload);
   }
 
   componentWillUnmount() {
     document.removeEventListener("keydown", this.onKeyDown);
-    window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.removeEventListener('beforeunload', this.handleBeforeUnload);
   }
+
+
+  handleBeforeUnload = () => { 
+    this.setState({ showModal: true }) 
+  };
 
   addEvent = (newEvent, sendEvents=true) => { // note this should be set to false except at the end
     this.setState((prevState) => {

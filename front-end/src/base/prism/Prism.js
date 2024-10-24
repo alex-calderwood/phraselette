@@ -72,7 +72,11 @@ export class Prism {
     let predictions = newInsights?.predictions || [];
     let summary     = newInsights?.summary || oldInsights?.summary;
 
-    console.log('constraints: in prism ', constraints);
+    for (let sequence of predictions) {
+      sequence.setAttribute('originPrism', this.type);
+    }
+
+    // console.log('constraints: in prism ', constraints);
 
     // constraints = Constraint.subsetByFeatures(constraints, this.features) // Do I need to do this? I also call it in onConstraintUpdate
     // const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
@@ -85,6 +89,7 @@ export class Prism {
 
     this.isSearching = false;
     this.onSearchComplete(opening);
+
   }
 
   /* 

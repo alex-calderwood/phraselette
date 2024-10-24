@@ -3,19 +3,53 @@ import { getColor, zeroToOneColor, categoryToColor } from "../scripts/color";
 import { getUniqueID, scientific, debounce } from "../scripts/utils";
 import { humanLog } from "../scripts/utils";
 import { rgb } from "chroma-js";
+const prismSettings = {
+  'context': {
+    'showItems': ['prob'],
+    'color': "#ffadad"
+  },
+  'probs': {
+    'showItems': ['prob'],
+    'color': "#ffd6a5"
+  },
+  'alternate': {
+    'showItems': ['prob'],
+    'color': "#fdffb6"
+  },
+  'sound': {
+    'showItems': ['sound'],
+    'color': "#caffbf"
+  },
+  'words': {
+    'showItems': ['pos'],
+    'color': "#9bf6ff"
+  },
+  'thesaurus': {
+    'showItems': ['pos', 'sound'],
+    'color': "#a0c4ff"
+  },
+  'search': {
+    'showItems': ['pos', 'sound', 'prob'],
+    'color': "#bdb2ff"
+  } // one more color ffc6ff
+};
 
 function tokenItemsToShow(tokenType) {
-  let show = {
-    'context': ['prob'],
-    'probs': ['prob'],
-    'alternate': ['prob'],
-    'sound': ['sound'],
-    'words': ['pos'],
-    'thesaurus': ['pos', 'sound'],
-    'search': ['pos', 'sound', 'prob'],
-  };
-  return show[tokenType] || [];
+  const show = prismSettings[tokenType]['showItems'];
+  if (show == null) {
+    console.warn("tokenrange: no settings found for", tokenType)
+  }
+  return show || [];
 }
+
+function getOriginColor(tokenType) {
+  const color = prismSettings[tokenType]['color'];
+  if (color == null) {
+    console.warn("tokenrange: no settings found for", tokenType, prismSettings)
+  }
+  return color || [];
+}
+
 
 export class TokenRange extends Component {
   constructor(props) {
@@ -104,13 +138,12 @@ export class TokenRange extends Component {
     let forceExpand = this.props.expanded || false;
     let verticalLayout = this.props.verticalLayout || false;
 
-    // filter out ' ' and &nbsp;
-    let isSpace = (text) => { return text === ' ' || text === '\u00A0' };
-
+    let isSpace = (text) => { return text === ' ' || text === '\u00A0' }; // filter out ' ' and &nbsp;
     let tokens = this.props.tokens && this.props.tokens.length > 0 ? 
       this.props.tokens.filter((token) => { return !filterSpaces || !isSpace(token.text) }) :
       [];
-    tokens = tokens.sort((a, b) => { return a.start - b.start });
+
+    tokens = tokens.sort((a, b) => { return a.start - b.start });  // put in correct order
 
     let wrap = this.props.wrap ? ' wrap' : ' nowrap';
     let vertical = verticalLayout ? '  vertical' : '';
@@ -136,17 +169,34 @@ export class TokenRange extends Component {
   }
 
   renderSequence(sequence, tokenType, expanded) {
-    let prob = sequence.getAttribute('prob', null);
-    let probColor = zeroToOneColor(prob);
     let id = `${this.id}-sequence-${sequence.id}`;
 
-    let style = probColor ? { backgroundColor: probColor } : {};
+    let colorBy =  this.props.colorBy == null ? "origin" : this.props.colorBy;
+    let prob = sequence.getAttribute('prob', null);
+    let origin = sequence.getAttribute('originPrism', null);
+    let originColor = getOriginColor(origin);
+
+    let probColor = zeroToOneColor(prob);
+    let backgroundColor;
+    if (colorBy == "origin" && originColor != null) {
+      backgroundColor = originColor; 
+    } else if (colorBy == "prob" && probColor != null) {
+        backgroundColor = probColor;
+    } else {
+      backgroundColor = null;
+    }
+
+    let style = {
+      border: `1px solid ${backgroundColor}`,
+    };
+    console.log('token:', backgroundColor, originColor, style)
+
     const simple = expanded ? '' : 'simple';
 
     return <div 
         id={id}
         key={id}
-        className={`sequence ${simple}`}
+        className={`sequence ${simple} glass-pane`}
         onMouseMove={(e) => this.handleMouseMove(e, sequence.id, true)}
         style={style}
         onClick={() => { 
@@ -165,7 +215,11 @@ export class TokenRange extends Component {
         {expanded && prob ? <div className="item" style={{ backgroundColor: probColor }}>
           {humanLog(prob)}
         </div> : ""}
+        {expanded && origin ? <div className="item" style={{ backgroundColor: originColor }}>
+          {origin}
+        </div> : ""}
     </div>;
+
   }
 
   renderToken(tokenType, token, expanded) {

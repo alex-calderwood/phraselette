@@ -207,6 +207,12 @@ we will need to select the text children of the editor */
   -webkit-backdrop-filter: blur(10.6px);
 }
 
+.glass-pane.border {
+  outline: 2px solid var(--darker-accent-color);
+  outline-offset: -2px;
+  animation: plonk 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
 /* same thing without border-radius */
 .glass {
   background: rgba(255, 255, 255, 0.4);
@@ -644,11 +650,6 @@ div.searching {
   padding-right: 0.5em;
 }
 
-.glass-pane.border {
-  outline: 2px solid var(--darker-accent-color);
-  outline-offset: -2px;
-  animation: plonk 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
 
 @keyframes plonk {
   0% {
