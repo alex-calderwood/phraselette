@@ -3,37 +3,7 @@ import { getColor, zeroToOneColor, categoryToColor } from "../scripts/color";
 import { getUniqueID, scientific, debounce } from "../scripts/utils";
 import { humanLog } from "../scripts/utils";
 import { rgb } from "chroma-js";
-const prismSettings = {
-  'context': {
-    'showItems': ['prob'],
-    'color': "#ffadad"
-  },
-  'probs': {
-    'showItems': ['prob'],
-    'color': "#ffd6a5"
-  },
-  'alternate': {
-    'showItems': ['prob'],
-    'color': "#fdffb6"
-  },
-  'sound': {
-    'showItems': ['sound'],
-    'color': "#caffbf"
-  },
-  'words': {
-    'showItems': ['pos'],
-    'color': "#9bf6ff"
-  },
-  'thesaurus': {
-    'showItems': ['pos', 'sound'],
-    'color': "#a0c4ff"
-  },
-  'search': {
-    'showItems': ['pos', 'sound', 'prob'],
-    'color': "#bdb2ff"
-  } // one more color ffc6ff
-};
-
+import { prismSettings } from "./prismSettings";
 function tokenItemsToShow(tokenType) {
   const show = prismSettings[tokenType]['showItems'];
   if (show == null) {
@@ -47,7 +17,7 @@ function getOriginColor(tokenType) {
   if (color == null) {
     console.warn("tokenrange: no settings found for", tokenType, prismSettings)
   }
-  return color || [];
+  return color || "#00000000";
 }
 
 
@@ -180,17 +150,19 @@ export class TokenRange extends Component {
     let originColor = getOriginColor(origin);
 
     let probColor = zeroToOneColor(prob);
-    let backgroundColor;
-    if (colorBy == "origin" && originColor != null) {
-      backgroundColor = originColor; 
-    } else if (colorBy == "prob" && probColor != null) {
-        backgroundColor = probColor;
-    } else {
-      backgroundColor = null;
-    }
+    let borderColor;
+    if (originColor != null) {
+      borderColor = originColor; 
+    }  
+    
+    let backgroundColor = null;
+    // if ((colorBy == "prob" || colorBy == "origin") && probColor != null) {
+    //   backgroundColor = probColor;
+    // }
 
     let style = {
-      border: `1px solid ${backgroundColor}`,
+      border: `1px solid ${borderColor}`,
+      backgroundColor: backgroundColor,
     };
 
     const simple = expanded ? '' : 'simple';
@@ -200,7 +172,7 @@ export class TokenRange extends Component {
     return <div 
         id={id}
         key={id}
-        className={`sequence ${simple} glass-pane`}
+        className={`sequence ${simple}`}
         // onMouseMove={(e) => this.handleMouseMove(e, sequence.id, true)}
 
         onMouseEnter={(e) => {

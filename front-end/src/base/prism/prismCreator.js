@@ -89,14 +89,16 @@ export function makePrism(type, callbacks) {
       prism = new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words').setActive(false);
       prism.description="A phonetic tool that allows you to view and constraint words based on their sound, rhyme scheme, and meter.";
       break;
-    case 'basic':
-      prism = new Prism('basic');
-      prism.description="deprecated";
-      break;
-    case 'probs':
-      prism = new Prism('probs');
-      prism.description="deprecated";
-      break;
+    // case 'basic':
+    //   prism = new Prism('basic');
+    //   prism.description="deprecated";
+    //   prism.color = "#ffadad";
+    //   break;
+    // case 'probs':
+    //   prism = new Prism('probs');
+    //   prism.description="deprecated";
+    //   prism.color = "#ffadad";
+    //   break;
   }
 
   if (prism === null) {

@@ -28,9 +28,13 @@ export const PrismBar = ({ prisms, activePrisms, onAddPrism, onTooltipUpdate, on
     const showDeleteButton = canDelete(prism);
     const active = prism.active;
 
+    console.log('prismbar', prism, active, prism.color)
+
     return <div
             key={prism.id}
-            className={"prism-bar-item glass-pane" + (active ? ' border' : '')}
+            className={"prism-bar-item glass-pane creamy" + (active ? ' active' : '')}
+            style={active ? { outline: `1px solid ${prism.color} !important` } : {}}
+            // outline: 1px solid var(--darker-accent-color);
             onMouseEnter={(e) => handleMouseEnter(prism.description, e)}
             onMouseLeave={handleMouseLeave}
             onMouseMove={handleMouseMove}
