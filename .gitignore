@@ -119,3 +119,6 @@ front-end/token copy.json
 front-end/google_client copy.json
 front-end/credentials copy.json
 front-end/google_client.json
+
+# Data
+# front-end/events/*
