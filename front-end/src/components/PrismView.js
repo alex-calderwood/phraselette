@@ -11,15 +11,15 @@ import { useTooltip } from './Tooltip'; // need to turn this into a hook compone
 import { prismStyles } from '../base/prism/prismSettings';
 import { IoColorPaletteOutline } from "react-icons/io5";
 
-const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTooltipUpdate }) => {
+const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTooltipUpdate, isSearching}) => {
   const { handleMouseEnter, handleMouseLeave, handleMouseMove } = useTooltip(onTooltipUpdate);
 
   const prismDescriptionText = ` (click to ${rotated ? 'collapse' : 'expand'})` + prism.description;
-
+  let searching = isSearching ? "searching-light" : "";
   
   return (
     <div 
-      className={`prism-title ${rotated}`} 
+      className={`prism-title ${rotated} ${searching}`} 
       onClick={toggleHidden}
       onMouseEnter={(e) => handleMouseEnter(prismDescriptionText, e)}
       onMouseLeave={handleMouseLeave}
@@ -176,8 +176,7 @@ export class PrismView extends Component {
 
     let rotated = activeNotHidden ? "rotated" : "";
     let activeClass  = activeNotHidden ? "active"  : "";
-    let searching = this.props.isSearching ? "searching" : "";
-
+    let searching = this.props.isSearching && activeNotHidden ? "searching" : "";
 
     let title = "";
     if (!activeNotHidden && prism.title != null && prism.title != prism.type) {
@@ -194,6 +193,7 @@ export class PrismView extends Component {
           prism={prism}
           rotated={rotated}
           title={title}
+          isSearching={this.props.isSearching}
           onRemovePrism={this.props.onRemovePrism}
           toggleHidden={this.toggleHidden.bind(this)}
           onTooltipUpdate={this.props.onTooltipUpdate}

@@ -282,14 +282,24 @@ we will need to select the text children of the editor */
   .prism-type-text:not(.rotated) {
     padding-right: 0.25em;
   }
+  
+  .prism-content {
+    transform-origin: left;
+    transform: scaleX(0);
+    opacity: 0;
+    transition: transform 0.12s cubic-bezier(0.175, 0.885, 0.32, 1.275), /* slight bounce */
+                opacity 0.08s ease-in;
+}
 
-  .prism-content.active {
+.prism-content.active {
     flex: 1;
     min-width: 0;
     overflow: hidden;
     width: 100%;
+    transform: scaleX(1);
+    opacity: 1;
     display: block;
-  }
+}
 
   .text-field {
     width: 100%;
@@ -624,6 +634,22 @@ div.searching {
   animation: rainbow 8s ease infinite;
   width: 100%;
   min-height: 1.5em;
+}
+
+/* without the width, min height change */
+div.searching-light {
+  background: linear-gradient(
+    45deg,
+    rgba(255, 0, 0, var(--rainbow-alpha)),
+    rgba(255, 127, 0, var(--rainbow-alpha)),
+    rgba(255, 255, 0, var(--rainbow-alpha)),
+    rgba(0, 255, 0, var(--rainbow-alpha)),
+    rgba(0, 0, 255, var(--rainbow-alpha)),
+    rgba(75, 0, 130, var(--rainbow-alpha)),
+    rgba(143, 0, 255, var(--rainbow-alpha))
+  );
+  background-size: 400% 400%;
+  animation: rainbow 8s ease infinite;
 }
 
 
