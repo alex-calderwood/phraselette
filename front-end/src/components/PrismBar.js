@@ -3,6 +3,7 @@ import { IoPrismOutline, IoColorPaletteOutline } from "react-icons/io5";
 import { Prism } from "../base/prism/Prism"
 import { deduplicateByKey } from '../scripts/utils'
 import { useTooltip } from './Tooltip';
+import { prismStyles } from '../base/prism/prismSettings';
 
 export const PrismBar = ({ prisms, activePrisms, onAddPrism, onTooltipUpdate, onRemovePrism}) => {
   const { handleMouseEnter, handleMouseLeave, handleMouseMove } = useTooltip(onTooltipUpdate);
@@ -23,30 +24,32 @@ export const PrismBar = ({ prisms, activePrisms, onAddPrism, onTooltipUpdate, on
     return prism.active && !prism.undestroyable;
   }
 
+
   const singlePrism = (prism) => {
     const showAddButton = canAdd(prism);
     const showDeleteButton = canDelete(prism);
     const active = prism.active;
 
-    console.log('prismbar', prism, active, prism.color)
+    const {style, titleStyle, buttonStyle} = prismStyles(prism);
 
     return <div
             key={prism.id}
-            className={"prism-bar-item glass-pane creamy" + (active ? ' active' : '')}
-            style={active ? { outline: `1px solid ${prism.color} !important` } : {}}
+            className={"prism-bar-item glass-pane" + (active ? ' active' : '')}
+            style={style}
+            // style={active ? { outline: `1px solid ${prism.color} !important` } : {}}
             // outline: 1px solid var(--darker-accent-color);
             onMouseEnter={(e) => handleMouseEnter(prism.description, e)}
             onMouseLeave={handleMouseLeave}
             onMouseMove={handleMouseMove}
           >
           <div className="prism-info">
-            <div className="title">{prism.type}</div>
-            <IoColorPaletteOutline className="prism-icon small" />
+            <div className="title" style={titleStyle}>{prism.type}</div>
+            {/* <IoColorPaletteOutline className="prism-icon small" /> */}
           </div>
           <div className="prism-bar-buttons">
-          {showDeleteButton && (<button className={`light-button big-button`} onClick={() => onRemovePrism(prism)}>×</button>)}
+          {showDeleteButton && (<button style={buttonStyle} className={`light-button big-button`} onClick={() => onRemovePrism(prism)}>×</button>)}
           {/* <button disabled={canAdd(prism)} onClick={() => onAddPrism(prism.type)}>add</button> */}
-          {showAddButton && <button className='big-button' onClick={() => onAddPrism(prism.type)}>+</button>}
+          {showAddButton && <button style={buttonStyle} className='big-button' onClick={() => onAddPrism(prism.type)}>+</button>}
           </div>
           
         </div>

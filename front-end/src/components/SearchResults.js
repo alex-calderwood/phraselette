@@ -12,9 +12,12 @@ export class SearchResults extends Component {
     let wrap = this.props.wrap !== false; // default to true
     let vertical = this.props.verticalLayout === true; // default to false
     let short = this.props.short == true;
+    let extraPadding = this.props.extraPadding && 'extra-padding';
 
     if (this.props.isSearching) {
-      return <div className="search-results searching"></div>
+      let searching = this.props.doAnimation && 'searching'
+      // let searching = 'searching';
+      return <div className={`search-results  ${searching} ${extraPadding}`}></div>
     }
 
     let results = this.props.results;
@@ -35,9 +38,7 @@ export class SearchResults extends Component {
         verticalLayout={vertical}
         onTooltipUpdate={this.props.onTooltipUpdate}
         expandMode='reduce'
-        
         />
-
     </div> 
   }
 }

@@ -668,6 +668,7 @@ class App extends Component {
                   <SearchResults
                     results={localResults}
                     isSearching={this.state.isSearching[opening?.id]}
+                    extraPadding={true}
                     wrap={false}
                     verticalLayout={true}
                     showLength={true}

@@ -208,7 +208,7 @@ we will need to select the text children of the editor */
 }
 
 .prism-bar-item.active {
-  outline:  1px solid #e78989;
+  /* outline:  1px solid #e78989; */
   outline-offset: -1px;
   animation: plonk 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
@@ -283,8 +283,7 @@ we will need to select the text children of the editor */
     padding-right: 0.25em;
   }
 
-  .prism-content.border {
-    border: 1px solid #f1f1f1;
+  .prism-content.active {
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -310,6 +309,13 @@ we will need to select the text children of the editor */
   overflow-y: auto;
 }
 
+.search-results.searching {
+  min-height: 100px;
+}
+
+.search-results.extra-padding {
+  margin-bottom: var(--editor-margin);
+}
 
 .title {
   color: var(--primary-text-color);
@@ -619,6 +625,7 @@ div.searching {
   width: 100%;
   min-height: 1.5em;
 }
+
 
 @keyframes rainbow {
   0% {

@@ -3,7 +3,7 @@ import { getColor, zeroToOneColor, categoryToColor } from "../scripts/color";
 import { getUniqueID, scientific, debounce } from "../scripts/utils";
 import { humanLog } from "../scripts/utils";
 import { rgb } from "chroma-js";
-import { prismSettings } from "./prismSettings";
+import { prismSettings } from "../base/prism/prismSettings";
 function tokenItemsToShow(tokenType) {
   const show = prismSettings[tokenType]['showItems'];
   if (show == null) {

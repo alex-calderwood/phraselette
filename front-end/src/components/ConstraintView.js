@@ -3,6 +3,7 @@ import { BetterRhymeConstraint, CategoricalConstraint,
   NumericalRangeConstraint, WordLengthConstraint } from "../base/Constraint";
 import { LogHistogram } from "./Histogram"
 
+
 class HistogramRangeConstraintView extends Component {
   constructor(props) {
     super(props);
@@ -147,10 +148,11 @@ class ConstraintWrapper extends Component {
   render() {
     const { constraint, children } = this.props;
     const id = `${constraint.id}-constraint`;
+    
     return (
       <div id={id} className="constraint">
         {children}
-        {!this.props.isTemp && <button onClick={() => this.onDelete()}>×</button>}
+        {!this.props.isTemp && <button style={this.props.styles.buttonStyle} onClick={() => this.onDelete()}>×</button>}
       </div>
     );
   }

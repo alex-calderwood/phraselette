@@ -8,6 +8,7 @@ import { TokenManager } from "../base/TokenManager";
 import { Prism } from "../base/prism/Prism";
 import { useTooltip } from './Tooltip'; // need to turn this into a hook component to be able to use this
 
+import { prismStyles } from '../base/prism/prismSettings';
 import { IoColorPaletteOutline } from "react-icons/io5";
 
 const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTooltipUpdate }) => {
@@ -15,6 +16,7 @@ const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTool
 
   const prismDescriptionText = ` (click to ${rotated ? 'collapse' : 'expand'})` + prism.description;
 
+  
   return (
     <div 
       className={`prism-title ${rotated}`} 
@@ -23,7 +25,7 @@ const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTool
       onMouseLeave={handleMouseLeave}
       onMouseMove={handleMouseMove}
     >
-      {!prism.undestroyable && (
+      {prism.undestroyable ? <div></div> : (
         <button className={`light-button`} onClick={() => onRemovePrism(prism)}>×</button>
       )}
       {title && <div className="subtitle">{title}</div>}
@@ -173,7 +175,7 @@ export class PrismView extends Component {
     let displayingFull      = showTokenContent || showResults;
 
     let rotated = activeNotHidden ? "rotated" : "";
-    let border  = activeNotHidden ? "border"  : "";
+    let activeClass  = activeNotHidden ? "active"  : "";
     let searching = this.props.isSearching ? "searching" : "";
 
 
@@ -185,7 +187,9 @@ export class PrismView extends Component {
 
     let textContent = showtext ? this.bulletedText(text) : "";
 
-    return <div className={`prism`}>
+    const styles = prismStyles(prism);
+
+    return <div className={`prism`} style={styles.style}>
         <PrismTitle 
           prism={prism}
           rotated={rotated}
@@ -195,7 +199,7 @@ export class PrismView extends Component {
           onTooltipUpdate={this.props.onTooltipUpdate}
         />
 
-        <div className={`prism-content ${border} ${searching}`}>
+        <div className={`prism-content ${activeClass} ${searching}`}>
           {/* {this.state.isSettingsView ? (
             <div>Settings View Placeholder</div>
           ) : (
@@ -218,6 +222,7 @@ export class PrismView extends Component {
               startIndex={start}
               endIndex={end}
               opening={opening}
+              styles={styles}
               onDelete={this.props.removeConstraint} 
               hasHistogramData={this.state.hasHistogramData}
               onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)}/>}) : ""
@@ -235,7 +240,8 @@ export class PrismView extends Component {
                       showLength={true}
                       wrap={false}
                       short={true}
-                      isSearching={this.props.isSearching} 
+                      doAnimation={false}
+                      isSearching={this.props.isSearching}
                       tokenType={prism.type}
                       onClickSequence={this.props.onClickSequence}
                       onTooltipUpdate={this.props.onTooltipUpdate}

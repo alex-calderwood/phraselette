@@ -1,7 +1,7 @@
 import { resolveConstraints, sortPredictions } from '../../scripts/resolution.js';
 import { Constraint } from '../Constraint.js';
 import { getUniqueID } from '../../scripts/utils.js';
-import { prismSettings } from '../../components/prismSettings.js';
+import { prismSettings } from './prismSettings.js';
 
 export class Prism {
   static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'dictionary'];
@@ -20,7 +20,7 @@ export class Prism {
     this.title = type;
     this.active = false;
     this.description = description;
-    this.color = prismSettings[this.type] || 'purple';
+    this.color = prismSettings[this.type].color || 'purple';
 
     // some prisms should not be removed
     this.undestroyable = Prism.isWordType(this.type);

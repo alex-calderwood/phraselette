@@ -115,3 +115,78 @@ export function zeroToOneColor(val) {
   <!-- ... -->
   <!-- <circle cx="50" cy="50" r="40" fill="black"/> -->
 </svg> */}
+
+
+/**
+ * Finds the interpolation between two colors, with optional ratio control
+ * @param {string} color1 - The first color
+ * @param {string} color2 - The second color
+ * @param {number} ratio - How far to go from color1 to color2 (0 to 1, default 0.5)
+ * @param {number|null} targetAlpha - Optional fixed alpha value for the result
+ * @returns {string} - CSS color string
+ */
+export function interp(color1, color2, ratio = 0.5, targetAlpha = null) {
+  try {
+    const c1 = chroma(color1);
+    const c2 = chroma(color2);
+    
+    // Get RGB values for both colors
+    const [r1, g1, b1] = c1.rgb();
+    const [r2, g2, b2] = c2.rgb();
+    
+    // Calculate the weighted average RGB values
+    const midR = Math.round(r1 + (r2 - r1) * ratio);
+    const midG = Math.round(g1 + (g2 - g1) * ratio);
+    const midB = Math.round(b1 + (b2 - b1) * ratio);
+    
+    // Create the result color
+    const result = chroma(midR, midG, midB);
+    
+    // If a target alpha is specified, use it
+    if (targetAlpha !== null) {
+      return result.alpha(targetAlpha).css();
+    }
+    
+    // Otherwise maintain the alpha of the first color
+    return result.alpha(c1.alpha()).css();
+  } catch (error) {
+    console.error('Invalid color input:', error);
+    return color1; // Return the original color if parsing fails
+  }
+}
+
+/**
+ * Creates a glass effect by mixing with semi-transparent white
+ * @param {string} color - The base color
+ * @returns {string} - CSS color string
+ */
+export function glassify(color, alpha = 0.5) {
+  const glassColor = `rgba(255, 255, 255, ${alpha})`;
+  const glassAlpha = chroma(glassColor).alpha();
+  
+  return interp(color, "rgb(255, 255, 255)", 0.3, glassAlpha);
+}
+
+export function subtleGlassify(color, alpha = 0.1) {
+  const glassColor = `rgba(255, 255, 255, ${alpha})`;
+  const glassAlpha = chroma(glassColor).alpha();
+  
+  return interp(color, "rgb(255, 255, 255)", 0.5, glassAlpha);
+}
+
+
+export function grayer(color, alpha = 0.5) {
+  const glassColor = `rgba(50, 50, 50, ${alpha})`;
+  const glassAlpha = chroma(glassColor).alpha();
+  
+  return interp(color, glassColor, 0.7, glassAlpha);
+}
+
+/**
+ * Deepens a color by moving 1/3 of the way towards black
+ * @param {string} color - The base color
+ * @returns {string} - CSS color string
+ */
+export function deepen(color) {
+  return interp(color, "rgb(0, 0, 0)", 1/3);
+}
