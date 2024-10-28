@@ -589,6 +589,8 @@ export class PrismEditor extends Component {
   * @param {string} newText - the new text to display
   */ 
   swapText = (start, end, newText) => {
+    console.log('swap', {start, end, newText})
+
     let startSpan = document.querySelector(`span[c='${start}']`);
     let endSpan = document.querySelector(`span[c='${end}']`);
 
@@ -864,6 +866,7 @@ export class PrismEditor extends Component {
     }
 
     while (child) {
+      
       if (child.tagName == "BR") { // TODO not sure this is used? or we can flatten these now
         i++;
         child = children[i];
@@ -883,7 +886,7 @@ export class PrismEditor extends Component {
         newSpans.push(child);
       }
 
-      // if (child.tagName === 'SPAN') {
+      // if (child.tagName === 'SPAN') { // probably don't need to check div anymore
       if (child.tagName === 'SPAN' || child.tagName === 'DIV') {
         let text = child.textContent;
         if (text.length > 1) {
@@ -894,8 +897,6 @@ export class PrismEditor extends Component {
           c = newC;
           newSpans.push(...brandNewSpans);
         }
-      } else if (child.tagName === 'DIV') {
-
       }
 
       i++;
