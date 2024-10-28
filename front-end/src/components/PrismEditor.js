@@ -34,7 +34,6 @@ export class PrismEditor extends Component {
 
     this.lastText = ''; // Store the last known text content
     // this.lastValidContent = null; // to move to managed state
-    
   }
 
   componentDidMount() {
@@ -370,7 +369,6 @@ export class PrismEditor extends Component {
         // the text that is selected
         text: windowSelection.toString(),
       };
-      // console.log('editor: saving selection', { ...selection });
       return selection;
     }
     else {
@@ -489,7 +487,7 @@ export class PrismEditor extends Component {
   }
 
   forceTokenize(prisms=this.tokenManager.activePrisms) {
-    console.log("editor: force tokenizing prisms", prisms)
+    console.log("editor: force tokenizing prisms", prisms);
     if (prisms.length < 1) { return; }
 
     let document = new Document(
@@ -546,9 +544,7 @@ export class PrismEditor extends Component {
   */
   onKeyUp(event) {
     this.keyUpSelection = this.currentSelection();
-
     this.styleContent();
-
     this.restoreSelection(this.keyUpSelection, event);
   }
 
@@ -572,8 +568,8 @@ export class PrismEditor extends Component {
   handlePaste = (event) => {
     event.preventDefault();
     const text = (event.clipboardData || window.clipboardData).getData('text/plain');
-    document.execCommand('insertText', false, text);
-    this.styleContent();
+    document.execCommand('insertText', false, text); // docs: https://developer.mozilla.org/en-US/docs/Web/API/Document/execCommand
+     // onKeyUp is calling this.styleContent();
   };
 
   // to call upon other actions that modify the selection
@@ -638,12 +634,14 @@ export class PrismEditor extends Component {
 
   /* 
   * Split a span into multiple spans, each containing a single character.
+  * Note that this modifies the document, adding new elements AFTER the originalSpan element.
+  * 
   * If the span contains a character at index c, the new spans will have indicies c, c+1, c+2, etc.
   * If the span is unstyled (missing an ID and c attribute), assign a unique ID and set the c attribute to c, as well as a color.
   *
   * @param {HTMLElement} span - the span to split
   * @param {number} c - the character index of the span
-  * @returns {number} the new character index
+  * @returns [{number}, element[]] - [the new character index, a list of spans that were created]
   */
   splitSpan(originalSpan, c) {
     // don't delete any spans, just add new ones and remove characters from the old span
@@ -804,23 +802,28 @@ export class PrismEditor extends Component {
     });
   }
 
-
-  // New helper function to process text nodes
-  // processTextNode(textNode, charIndex) {
-  //   let changes = [];
-  //   let text = textNode.textContent;
-  //   for (let j = 0; j < text.length; j++) {
-  //     const [span, newID] = this.createCharacterSpan(text[j], charIndex + j);
-  //     changes.push({ type: 'insert', node: span, target: textNode });
-  //   }
-  //   changes.push({ type: 'remove', node: textNode });
-  //   return changes;
-  // }
-
   styleContent() {
     this.splitIntoStyledCharacterSpans(this.contentRef.current);
     // Update the 'Openings' (the highlighted constraint areas in the doc) 
     this.colorOpenings(this.props.openings.keys());
+  }
+
+  wrapLooseTextNodes(element) {
+    // text that gets pasted to a blank page seems to be prefaced with a Text element, 
+    // so wrap it in a span
+    const childNodes = Array.from(element.childNodes);
+    childNodes.forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        // Create a new span
+        const span = document.createElement('span');
+        // Copy the text content
+        span.textContent = node.textContent;
+        // Replace the text node with the new span
+        element.replaceChild(span, node);
+      }
+    });
+    
+    return element;
   }
 
   /*
@@ -831,6 +834,9 @@ export class PrismEditor extends Component {
   * Each span is given a unique character id and a numerical index indicating its location in the text.
   */
   splitIntoStyledCharacterSpans(content) {
+
+    content = this.wrapLooseTextNodes(content);
+
     let children = [...traverseDOM(content)];
 
     let i = 0;
@@ -840,11 +846,11 @@ export class PrismEditor extends Component {
     let newSpans = [];
 
     if (!child) {
-      console.log('editor: no children');
+      console.warn('editor: no children');
       let text = content.textContent;
       content.innerHTML = '';
-      for (let i = 0; i < text.length; i++) {
-        const [span, newID] = this.createCharacterSpan(text[i], i);
+      for (let j = 0; j < text.length; j++) {
+        const [span, newID] = this.createCharacterSpan(text[j], j);
         content.appendChild(span);
         newSpans.push(span);
       }
@@ -858,30 +864,18 @@ export class PrismEditor extends Component {
     }
 
     while (child) {
-
-      // if (child.nodeType === Node.TEXT_NODE) {
-      //   // Handle text nodes
-      //   let text = child.textContent;
-      //   let textParent = child.parentNode || content;
-      //   let nextSibling = child.nextSibling;
-        
-      //   for (let j = 0; j < text.length; j++) {
-      //     const [span, newID] = this.createCharacterSpan(text[j], c);
-      //     textParent.insertBefore(span, nextSibling);
-      //     newSpans.push(span);
-      //     c++;
-      //   }
-        
-      //   textParent.removeChild(child);
-      //   i++;
-      //   child = children[i];
-      //   continue;
-      // }
-
-      if (child.tagName == "BR") {
+      if (child.tagName == "BR") { // TODO not sure this is used? or we can flatten these now
         i++;
         child = children[i];
         continue;
+      }
+
+      if (child.tagName === 'DIV') {
+         // TODO may also need to add a \n span if it was a BR
+        let spaceSpan = this.addNewlineSpanBefore(child);
+        this.setSpanAttributes(spaceSpan, c);
+        child = this.turnElementIntoSpan(child); 
+        c++;
       }
 
       let newID = this.setSpanAttributes(child, c);
@@ -889,11 +883,13 @@ export class PrismEditor extends Component {
         newSpans.push(child);
       }
 
-      if (child.tagName === 'SPAN') {
+      // if (child.tagName === 'SPAN') {
+      if (child.tagName === 'SPAN' || child.tagName === 'DIV') {
         let text = child.textContent;
         if (text.length > 1) {
           // split the span into multiple spans
           // and update the running character index based on the number of new spans
+          // note that the side effect of calling this is that document is modified, but we also return the newly created spans (not the original one though)
           const [newC, brandNewSpans] = this.splitSpan(child, c);
           c = newC;
           newSpans.push(...brandNewSpans);
@@ -907,6 +903,26 @@ export class PrismEditor extends Component {
       child = children[i];
     }
     return newSpans;
+  }
+
+  // Convert the element into a <span>, preserving attributes and innerHTML
+  // Modifies the document, replacing the old element with the new <span> element
+  turnElementIntoSpan(elt) {
+    const span = document.createElement('span');
+    // Copy all attributes
+    for (let attr of elt.attributes) {
+        span.setAttribute(attr.name, attr.value);
+    }
+    span.innerHTML = elt.innerHTML;
+    elt.replaceWith(span);
+    return span
+  }
+
+  addNewlineSpanBefore(elt) {
+    const newSpan = document.createElement('span');
+    newSpan.textContent = '\n';
+    elt.parentNode.insertBefore(newSpan, elt);
+    return newSpan
   }
 
   render() {
@@ -931,10 +947,11 @@ export class PrismEditor extends Component {
 
 function* traverseDOM(node) {
   if (
-    // node.nodeType === Node.TEXT_NODE || 
+    // node.nodeType === Node.TEXT_NODE || // we had this commented out 10.27
     (node.tagName === 'DIV' || node.tagName === 'SPAN' || node.tagName === 'BR')
     && node.className !== 'editor'
-    && !node.id.includes('selectionBoundary')) {
+    && !node.id.includes('selectionBoundary')) // special rangy element that we don't need to worry about
+  {
     yield node;
   }
 
