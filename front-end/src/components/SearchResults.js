@@ -16,7 +16,6 @@ export class SearchResults extends Component {
 
     if (this.props.isSearching) {
       let searching = this.props.doAnimation && 'searching'
-      // let searching = 'searching';
       return <div className={`search-results  ${searching} ${extraPadding}`}></div>
     }
 
@@ -25,7 +24,6 @@ export class SearchResults extends Component {
       return <div className='subtitle'>No results</div>
     }
     
-    console.log('search: results', results, this.tokenType)
     return <div className={"search-results"}>
       {this.props.showLength && <div className="subtitle">{`${results.length} results`}</div>}
       <TokenRange 

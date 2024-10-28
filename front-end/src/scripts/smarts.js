@@ -1,6 +1,7 @@
 import { Token } from "../base/Token.js";
 import { Sequence } from "../base/Sequence.js";
 import { streamFromWebSocket } from "./socket.js";
+import { Constraint } from "../base/Constraint.js";
 
 function badData(text) {
   if (!text || text.length === 0) {
@@ -203,7 +204,7 @@ export async function searchForward(document, constraints, depth, top_k=50) {
     console.error("searchForward called with invalid depth", depth);
     return [[], null];
   }
-  let sequenceGenerator = callSearch(document.prefixText, top_k, depth);
+  let sequenceGenerator = callSearch(document.prefixText, top_k, depth, constraints);
 
   let promise = await sequenceGenerator.next();
   let summary = null;
@@ -228,11 +229,12 @@ export async function searchForward(document, constraints, depth, top_k=50) {
   return [predictedSequences, summary];
 }
 
-async function* callSearch(prefix, top_k, depth) {
+async function* callSearch(prefix, top_k, depth, constraints) {
   const data = {
     text: prefix,
     top_k: top_k,
     depth: depth,
+    constraints: Constraint.nonEmptyConstraintJson(constraints),
   };
 
   await (yield* streamFromWebSocket('search', data));

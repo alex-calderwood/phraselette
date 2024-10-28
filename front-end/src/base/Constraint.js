@@ -108,7 +108,10 @@ export class Constraint {
   }
 
   static nonEmptyConstraintJson(constraints) {
-    return constraints.map(c => c.toJSON()).filter(c => c != null);
+    if (constraints == null) {
+      return [];
+    }
+    return constraints.filter(c => c != null).map(c => c.toJSON()).filter(j => j != null);
   }
 
    // lil helper that maybe shouldn't go here, included for instructive purposes

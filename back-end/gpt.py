@@ -246,13 +246,6 @@ def pluck_probs(phrase, extra_context=tokenizer.eos_token, top_k=0, depth=1):
         print('Phrase:', phrase)
         traceback.print_exc()
 
-# def calculate_offset(offset, extra_context, start_token_offset):
-#     offset = offset.cpu().numpy()
-#     offset = offset.tolist()[0]
-#     offset[0] = len(extra_context) + offset[0] - start_token_offset
-#     offset[1] = len(extra_context) + offset[1] - start_token_offset
-#     return offset
-
 def calculate_offset(offset, extra_context, start_token_offset):
     offset = offset.squeeze().tolist()  # Remove batch dimension and convert to list
     offset[0] = len(extra_context) + offset[0] - start_token_offset
@@ -260,7 +253,7 @@ def calculate_offset(offset, extra_context, start_token_offset):
     return offset
 
 # to exist while we dev on the constraints version
-def forward_search_without_constraints(text, top_k=2, depth=5, num_beam_groups=2, eos=tokenizer.eos_token, logits_processor=logits_processor):
+def forward_search_without_constraints(text, top_k=2, depth=5, num_beam_groups=2, eos=tokenizer.eos_token, logits_processor=logits_processor, prob_window=None):
     text = text.replace('\xa0', ' ') # get rid of non-breaking space characters which seem to mess things up
     ends_with_space = text.endswith(' ')
     if ends_with_space:

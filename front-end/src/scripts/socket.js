@@ -118,22 +118,26 @@ function registerHandlers(handlers) {
   globalHandlers = Object.assign(globalHandlers, handlers);
 }
 
+function pruneState(appState) {
+  const subset = ['activePrisms', 'selection', 'constraints', 'openings', 'start', 'end', 'userData']
+  .filter(key => key in appState) // line can be removed to make it inclusive
+  .reduce((obj2, key) => (obj2[key] = appState[key], obj2), {});
+
+  return subset;
+}
+
 export function sendEventstoServer(event, userData, appState) {
   try {
     const id = sendMessage({
       type: "event",
       userData,
       event: event,
-      // story: userData.narrative,
-      appState
+      appState: pruneState(appState),
     });
     
-    console.log('server says:', id);
-
   } catch (error) {
     console.error('Error saving state to server:', error);
   }
-
 };
 
 

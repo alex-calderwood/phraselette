@@ -1,14 +1,11 @@
 import React, { useState, useRef, useEffect} from 'react';
 
 export const Tooltip = ({ content, position, options }) => {
-  console.log("tooltip:", content, position, options)
   if (!content) return null;
   const doStyle = options == null || options.styled == null || options.styled == true;
   const className = doStyle ? ' styled glass' : '';
 
   const topLeft = options == null || options.topLeft == null || options.topLeft == true;
-
-  console.log('tooltip:', options, className)
 
   const style = topLeft ? {
     position: 'fixed',

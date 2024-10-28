@@ -31,6 +31,7 @@ export const PrismBar = ({ prisms, activePrisms, onAddPrism, onTooltipUpdate, on
     const active = prism.active;
 
     const {style, titleStyle, buttonStyle} = prismStyles(prism);
+    console.log('style prismbar', prism.type, {style, titleStyle, buttonStyle})
 
     return <div
             key={prism.id}

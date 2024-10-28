@@ -176,6 +176,7 @@ export function subtleGlassify(color, alpha = 0.1) {
 
 
 export function grayer(color, alpha = 0.5) {
+  console.log('color grayer', color, alpha)
   const glassColor = `rgba(50, 50, 50, ${alpha})`;
   const glassAlpha = chroma(glassColor).alpha();
   

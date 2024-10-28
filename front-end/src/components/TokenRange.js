@@ -3,7 +3,8 @@ import { getColor, zeroToOneColor, categoryToColor } from "../scripts/color";
 import { getUniqueID, scientific, debounce } from "../scripts/utils";
 import { humanLog } from "../scripts/utils";
 import { rgb } from "chroma-js";
-import { prismSettings } from "../base/prism/prismSettings";
+import { prismSettings, prismStyles } from "../base/prism/prismSettings";
+
 function tokenItemsToShow(tokenType) {
   const show = prismSettings[tokenType]['showItems'];
   if (show == null) {
@@ -226,7 +227,6 @@ export class TokenRange extends Component {
 
   renderToken(tokenType, token, expanded) {
     let color = tokenType ? getColor(tokenType, token) : rgb(0, 100, 0, 0);
-    console.log('render token', color, tokenType, token, expanded)
     let space = token.isSpace() ? 'space' : '';
     let fields = tokenItemsToShow(tokenType);
 

@@ -33,16 +33,16 @@ export class ContextPrism extends Prism {
 
     // constraints = Constraint.subsetByFeatures(constraints, this.features)
     const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
-
     let wordCap = this.getMaxWordsFromConstraints(constraints);
-
 
     console.log('llm: searching', {preConstraints, selectionWords, wordCap, numWords, numTokens});
 
     // TODO document that constraints might have been altererd in the meantime...
     // should copy them if necessary - at least document?
     await searchForward(document, preConstraints, numTokens).then(
-      ([predictions, summary]) => {return this.onSearchResults(opening, {predictions, summary}, document, constraints, wordCap)}
+      ([predictions, summary]) => {
+        return this.onSearchResults(opening, {predictions, summary}, document, constraints, wordCap)
+      }
     )
   }
 
@@ -52,7 +52,6 @@ export class ContextPrism extends Prism {
     let wordCap = (numWordsConstraints != null && numWordsConstraints.length > 0 &&
       maxWordCount != null && maxWordCount >= 0) ? maxWordCount : null;
     return wordCap;
-
   }
 
   async onSearchResults(opening, insights, document, constraints, numWordsCutoff) {
