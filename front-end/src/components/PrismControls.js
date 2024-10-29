@@ -37,9 +37,9 @@ export class PrismControls extends Component {
 
       <div className="constraint-buttons"> 
         {showConstraintButtons && prism.features.map((feature) => {
-          return <button key={feature.plain} onClick={() => this.addConstraint(feature, opening)}> add {feature.plain} constraint </button>;
+          return <button style={this.props.styles.buttonStyle} key={feature.plain} onClick={() => this.addConstraint(feature, opening)}> add {feature.plain} constraint </button>;
         })}
-        {prism.canSearch && <button onClick={onSearch}>▶</button>}
+        {prism.canSearch && <button style={this.props.styles.buttonStyle} onClick={onSearch}>▶</button>}
       </div>
 
     </div>

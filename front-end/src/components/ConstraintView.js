@@ -118,22 +118,24 @@ class CategoricalConstraintView extends Component {
     let target = this.state.target;
 
     return  <ConstraintWrapper {...this.props} >
-      <select className="constraint-mode" key={constraint.id} value={constraint.mode} onChange={this.handleChangeMode}>
+      <select className="constraint-mode" style={this.props.styles.buttonStyle} key={constraint.id} value={constraint.mode} onChange={this.handleChangeMode}>
           {modes.map(mode => {
             return <option key={mode} value={mode}>{mode}</option>
           })}
+
+          
       </select>
       <div className="constraint-target">
         {target.map(tokenTarget => {
-          return <select className="constraint-select" id={`constraint-select-${constraint.id}-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[featureAttribute]} onChange={this.handleChange}>
+          return <select className="constraint-select" id={`constraint-select-${constraint.id}-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[featureAttribute]} onChange={this.handleChange} style={this.props.styles.buttonStyle}>
             {possibleConstraintValues.map(value => {
               return <option key={value} value={value}>{value}</option>
             })}
           </select>
         })}
       </div>
-      <button onClick={this.addTarget}>＋</button>
-      <button onClick={this.deleteTarget}>−</button>
+      <button style={this.props.styles.buttonStyle} onClick={this.addTarget}>＋</button>
+      <button style={this.props.styles.buttonStyle} onClick={this.deleteTarget}>−</button>
     </ConstraintWrapper>;
   }
 }

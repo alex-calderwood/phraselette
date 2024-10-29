@@ -334,7 +334,7 @@ we will need to select the text children of the editor */
 }
 
 .subtitle {
-  color: var(--primary-text-color);
+  color: var(--primary-text-calor);
   font-size: var(--small-font-size);
   padding-right: 2px;
   padding-left: 2px;

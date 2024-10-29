@@ -32,6 +32,8 @@ export class PrismEditor extends Component {
     this.tokenManager.setOnToken(this.updateUITokens.bind(this)); // Claude says this causes many unnecessary re-renders and updates could be batched 
     this.changeTracker = new TextChangeTracker();
 
+    this.initialText = this.props.initialText;
+
     this.lastText = ''; // Store the last known text content
     // this.lastValidContent = null; // to move to managed state
   }
@@ -50,23 +52,23 @@ export class PrismEditor extends Component {
     this.editorNode.addEventListener('focus', this.handleFocus);
     this.editorNode.addEventListener('dblclick', this.onDoubleClick.bind(this));
 
-    let initializationText = "";
+    let initializationText = this.initialText || "";
     // Italo Calvino Quote for testing
-    let testingText = `how well I would write if I were not here! If between the white page and the writing of words and stories that take shape and disappear without anyone's ever writing them there were not interposed that uncomfortable partition which is my person! Style, taste, individual philosophy, subjectivity, cultural background, real experience, psychology, talent, tricks of the trade: all the elements that make what I write recognizable as mine seem to me a cage that restricts my possibilities.`;
+    // let testingText = `how well I would write if I were not here! If between the white page and the writing of words and stories that take shape and disappear without anyone's ever writing them there were not interposed that uncomfortable partition which is my person! Style, taste, individual philosophy, subjectivity, cultural background, real experience, psychology, talent, tricks of the trade: all the elements that make what I write recognizable as mine seem to me a cage that restricts my possibilities.`;
     // initializationText = testingText; // comment this out to have an empty editor
  
     let content = [];
 
-    // let initialId = getUniqueID();
-    // for (let i = 0; i < initializationText.length; i++) {
-    //   let c = initializationText[i];
-    //   let id = getUniqueID();
-    //   if (i === 0) { initialId = id; }
-    //   content.push(`<span id=${id} c=${i}>${c}</span>`);
-    // }
-    // if (content.length === 0) {
-    //   content.push(`<span id=${initialId} c="0"></span>`);
-    // }
+    let initialId = getUniqueID();
+    for (let i = 0; i < initializationText.length; i++) {
+      let c = initializationText[i];
+      let id = getUniqueID();
+      if (i === 0) { initialId = id; }
+      content.push(`<span id=${id} c=${i}>${c}</span>`);
+    }
+    if (content.length === 0) {
+      content.push(`<span id=${initialId} c="0"></span>`);
+    }
 
     // this.state = { content: content.join("") };
     this.setState({content: content.join("")}, () => {

@@ -38,6 +38,7 @@ import { ChangeType, TextChange } from "./base/TextChange";
 
 const initialPrismType = "words";
 const debugMode = false;
+const TEXT_STORAGE_KEY = 'prism-editor-text';
 
 class App extends Component {
   constructor(props) {
@@ -53,7 +54,9 @@ class App extends Component {
     window.tokenManager = this.tokenManager; // for debugging
     let prismToHighlight = Prism.getByType(activePrisms, initialPrismType);
 
-    this.text = null;
+    const savedText = localStorage.getItem(TEXT_STORAGE_KEY);
+    this.text = savedText || null;
+
     this.state = {
       prisms: prisms,
       activePrisms: activePrisms,
@@ -141,6 +144,10 @@ class App extends Component {
       this.onHighlightPrismChange(highlightPrismID, true);
     }
 
+    if (this.text) {
+      this.attemptInitialTokenization();
+    }
+
     // Add top level keystroke listeners
     document.addEventListener("keydown", this.onKeyDown.bind(this));
 
@@ -155,6 +162,10 @@ class App extends Component {
 
 
   handleBeforeUnload = () => { 
+    if (this.text) {
+      localStorage.setItem(TEXT_STORAGE_KEY, this.text);
+    }
+
     this.setState({ showModal: true }) 
   };
 
@@ -204,6 +215,16 @@ class App extends Component {
 
   setText(text) {
     this.text = text;
+    if (text) {
+      localStorage.setItem(TEXT_STORAGE_KEY, text);
+    } else {
+      localStorage.removeItem(TEXT_STORAGE_KEY);
+    }
+  }
+
+  clearSavedText() {
+    this.text = null;
+    localStorage.removeItem(TEXT_STORAGE_KEY);
   }
 
   _currentDocument() {
@@ -252,16 +273,11 @@ class App extends Component {
     prism.active = false;
 
     // update the state
-    // let prisms = this.state.prisms;
-    // delete prisms[prism.id]
     let newActive = Prism.getActive({ ...this.state.prisms, });
     delete newActive[prism.id];
     this.setState({
-      // prisms: { ...prisms, },
       activePrisms: newActive,
     });
-
-
   }
 
   onHighlightPrismChange(prismID, shouldHighlight) {
@@ -623,6 +639,7 @@ class App extends Component {
               searchPrisms={this.searchPrisms.bind(this)}
               updateOpenings={this.updateOpenings}
               openings={openings}
+              initialText={this.text}
               // opening={opening} 
               // document={document} // could send these in if needed
             />
@@ -674,6 +691,7 @@ class App extends Component {
                     showLength={true}
                     onClickSequence={this.handleSequenceClick}
                     onTooltipUpdate={this.handleTooltipUpdate}
+                    colorBy={'origin'}
                   />
                   {/* Display the active prisms */}
                   {activePrisms.map((prism) => {

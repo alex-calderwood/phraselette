@@ -40,9 +40,20 @@ export const prismSettings = {
   }
 };
 
+Object.keys(prismSettings).forEach(prismType => {
+  const defaultColor = prismSettings[prismType].color;
+  console.log('defaultColor', defaultColor)
+  prismSettings[prismType].deepColor  = deepen(defaultColor);
+  prismSettings[prismType].grayColor  = grayer(defaultColor);
+  prismSettings[prismType].glassColor = glassify(defaultColor, 0.6);
+  prismSettings[prismType].solidGlassColor = glassify(defaultColor, 0.8);
+
+  console.log('colors: prismSettings', prismType, prismSettings[prismType]);
+});
+
 export const prismStyles = (prism) => {
   const active = prism.active;
-  const textColor = active ? deepen(prism.color) : grayer(prism.color); // TODO cache this
+  let textColor = active ? deepen(prism.color) : grayer(prism.color); // TODO cache this
 
   const style = active ? {
     background: glassify(prism.color, 0.4),

@@ -21,6 +21,13 @@ function getOriginColor(tokenType) {
   return color || "#00000000";
 }
 
+function getOriginGlassColor(tokenType) {
+  const color = prismSettings[tokenType]['solidGlassColor'];
+  if (color == null) {
+    console.warn("tokenrange: no settings found for", tokenType, prismSettings)
+  }
+  return color || "#00000000";
+}
 
 export class TokenRange extends Component {
   constructor(props) {
@@ -149,6 +156,7 @@ export class TokenRange extends Component {
     let prob = sequence.getAttribute('prob', null);
     let origin = sequence.getAttribute('originPrism', null);
     let originColor = getOriginColor(origin);
+    let insideOriginColor = getOriginGlassColor(origin);
 
     let probColor = zeroToOneColor(prob);
     let borderColor;
@@ -157,9 +165,11 @@ export class TokenRange extends Component {
     }  
     
     let backgroundColor = null;
-    // if ((colorBy == "prob" || colorBy == "origin") && probColor != null) {
-    //   backgroundColor = probColor;
-    // }
+    if (colorBy == "prob" && probColor != null) {
+      backgroundColor = probColor;
+    } else if (colorBy == "origin" && originColor != null) {
+      backgroundColor = insideOriginColor;
+    }
 
     let style = {
       border: `1px solid ${borderColor}`,
@@ -167,8 +177,9 @@ export class TokenRange extends Component {
     };
 
     const simple = expanded ? '' : 'simple';
-
     const tooltipOptions = {styled: false, topLeft: false}
+
+    console.log('colors: tokenrange', style, insideOriginColor)
 
     return <div 
         id={id}

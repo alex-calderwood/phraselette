@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 
 export function Modal({ onSubmit, addEvent, eventName}) {
     const [userId, setUserId] = useState('');
-    // const [narrative, setNarrative] = useState('');
   
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -30,6 +29,9 @@ export function Modal({ onSubmit, addEvent, eventName}) {
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
             required
+            id="User ID"
+            name="User ID"
+            autocomplete="on"
           />
           {/* <select
             value={narrative}

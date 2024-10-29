@@ -36,6 +36,7 @@ export class SearchResults extends Component {
         verticalLayout={vertical}
         onTooltipUpdate={this.props.onTooltipUpdate}
         expandMode='reduce'
+        colorBy={this.props.colorBy}
         />
     </div> 
   }

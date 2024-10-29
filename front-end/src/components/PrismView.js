@@ -17,6 +17,12 @@ const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTool
   const prismDescriptionText = ` (click to ${rotated ? 'collapse' : 'expand'})` + prism.description;
   let searching = isSearching ? "searching-light" : "";
   
+  console.log("prismview: style:", styles.titleStyle, styles.titleStyle.color);
+
+  let type = <div className={`prism-type-text ${rotated}`} style={{color: styles.style.color}} >
+    {prism.type} <IoColorPaletteOutline className="prism-icon small" />
+  </div>
+
   return (
     <div 
       className={`prism-title ${rotated} ${searching}`} 
@@ -24,14 +30,13 @@ const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTool
       onMouseEnter={(e) => handleMouseEnter(prismDescriptionText, e)}
       onMouseLeave={handleMouseLeave}
       onMouseMove={handleMouseMove}
+      style={styles.titleStyle}
     >
       {prism.undestroyable ? <div></div> : (
         <button className={`light-button`} onClick={() => onRemovePrism(prism)}>×</button>
       )}
       {title && <div style={styles.titleStyle} className="colorless-subtitle">{title}</div>}
-      <div className={`prism-type-text ${rotated}`}>
-        {prism.type} <IoColorPaletteOutline className="prism-icon small" />
-      </div>
+      {type}
     </div>
   );
 };
@@ -162,6 +167,8 @@ export class PrismView extends Component {
     let end = this.props.endIndex;
     let opening = this.props.opening;
 
+    const styles = prismStyles(prism);
+
     let tokens = start !== null ? this.tokenManager.tokensAt(prism.tokenType, start, end) : [];
 
     let results = prism?.insights[opening?.id]?.results || [];
@@ -178,15 +185,16 @@ export class PrismView extends Component {
     let activeClass  = activeNotHidden ? "active"  : "";
     let searching = this.props.isSearching && activeNotHidden ? "searching" : "";
 
+
+
     let title = "";
     if (!activeNotHidden && prism.title != null && prism.title != prism.type) {
       title = prism.title;
-      title = <div className="subtitle"> {title} </div>
+      title = <div style={styles.titleStyle} className="colorless-subtitle"> {title} </div>
     }
 
     let textContent = showtext ? this.bulletedText(text) : "";
 
-    const styles = prismStyles(prism);
 
     return <div className={`prism`} style={styles.style}>
         <PrismTitle 
@@ -247,7 +255,10 @@ export class PrismView extends Component {
                       tokenType={prism.type}
                       onClickSequence={this.props.onClickSequence}
                       onTooltipUpdate={this.props.onTooltipUpdate}
-                      results={results} /> : ""}
+                      results={results} 
+                      styles={styles}
+                      colorBy={'origin'}
+                      /> : ""}
       </div>
     </div>;
   }
