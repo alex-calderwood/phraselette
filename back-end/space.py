@@ -4,7 +4,7 @@ from network import BREAK_TOKEN
 import re
 import json
 
-gpu_num = 1
+gpu_num = 0
 on_gpu = spacy.prefer_gpu(gpu_num) # https://spacy.io/api/top-level#spacy.require_gpu
 if on_gpu:
     print("spacy: started on GPU", gpu_num)
