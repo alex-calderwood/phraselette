@@ -3,4 +3,9 @@ export const EVENT_NAMES = {
     HighlightSelected: 'HighlightSelected', // time, span id, highlighted part
     Swap: 'Swap',
     TaskCompleted: 'TaskCompleted',
+    TextReqeuest: 'TextRequest',
+    AddWell: 'AddWell',
+    UpdateTextField: 'UpdateTextField',
+    RunSearch: 'RunSearch',
+    SearchResults: 'SearchResults'
 };

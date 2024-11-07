@@ -118,15 +118,15 @@ function registerHandlers(handlers) {
   globalHandlers = Object.assign(globalHandlers, handlers);
 }
 
+const toKeep = ['activePrisms', 'selection', 'constraints', 'openings', 'start', 'end', 'userData'];
 function pruneState(appState) {
-  const subset = ['activePrisms', 'selection', 'constraints', 'openings', 'start', 'end', 'userData']
-  .filter(key => key in appState) // line can be removed to make it inclusive
+  const subset = toKeep.filter(key => key in appState) // line can be removed to make it inclusive
   .reduce((obj2, key) => (obj2[key] = appState[key], obj2), {});
 
   return subset;
 }
 
-export function sendEventstoServer(event, userData, appState) {
+export function sendEventToServer(event, userData, appState) {
   try {
     const id = sendMessage({
       type: "event",
