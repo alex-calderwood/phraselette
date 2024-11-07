@@ -145,8 +145,7 @@ async function storeEvents(message, clientSocket) {
   // const timestamp = event.timestamp;
   const sessionID = event.sessionID;
 
-  const filePath = `events/${userId}_events_${sessionID}.json`;
-
+  const filePath = `../../study_events/${userId}_events_${sessionID}.json`;
   
   // Create events directory if it doesn't exist
   await fs.mkdir('events', { recursive: true }).catch(() => {});
@@ -170,7 +169,7 @@ async function storeEvents(message, clientSocket) {
       events.push(message);
       await fs.writeFile(filePath, JSON.stringify(events, null, 2));
       clientSocket.send(JSON.stringify({ 
-        id: message.requestId, 
+        id: message.id, 
         type: 'event_response' 
       }));
     } catch (err) {
