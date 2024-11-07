@@ -1,22 +1,10 @@
 import React, { useState, useEffect } from "react";
 
-export function Modal({ onSubmit, addEvent, eventName}) {
+export function Modal({ onSubmit }) {
     const [userId, setUserId] = useState('');
   
     const handleSubmit = (e) => {
         e.preventDefault();
-
-        const event = {
-        eventName: eventName,
-        timestamp: Date.now(),
-        eventDetails: {
-            userId,
-        //   narrativeType: narrative
-        }
-        };
-        addEvent(event);
-  
-    //   onSubmit({ userId, narrative });
         onSubmit({userId});
     };
   

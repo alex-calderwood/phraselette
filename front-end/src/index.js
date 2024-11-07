@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 const appState = {
     selection: null,
+    userData: null,
     events: [],
     // Add other global state variables you want here
 };

@@ -16,12 +16,14 @@ import { PrismBar } from "./components/PrismBar";
 import { Tooltip } from "./components/Tooltip";
 import { Modal } from "./components/Modal";
 import { EVENT_NAMES } from './base/Logging';
+import { getUniqueID } from './scripts/utils'
 
 import { resolveConstraints } from "./scripts/resolution";
-import { assignSocket, registerHandlers, sendEventstoServer } from "./scripts/socket";
+import { assignSocket, registerHandlers,  sendEventToServer } from "./scripts/socket";
 
 import { RangeMap } from "./base/RangeMap";
 import { ChangeType, TextChange } from "./base/TextChange";
+import { appState } from "./index" // anti pattern global
 
 //         *-*.                                 //        /    /    /
 //      _-',^. `-_.                         //        /   /  /
@@ -62,7 +64,7 @@ class App extends Component {
       activePrisms: activePrisms,
       prismToHighlight: prismToHighlight,
       tokens: Object.keys(this.tokenManager.tokens),
-      selection: null,
+      selection: this.props.selection,
       constraints: [],
       openings: new RangeMap(),
       isSearching: {},
@@ -72,7 +74,7 @@ class App extends Component {
       opening: undefined,
       showModal: true,
       userData: null,
-      events: [],
+      // events: [],
     };
 
     window.state = this.state;
@@ -122,6 +124,7 @@ class App extends Component {
       dict.onSearchResults(opening, { message: msg }, doc, constraints);
     }
 
+    // TODO once we find a way to get the state over to socket, we should move these there?
     registerHandlers({
       thesaurusResponse: handleThesResponse.bind(this),
       readerResponse: handleReaderResponse.bind(this),
@@ -169,19 +172,30 @@ class App extends Component {
     this.setState({ showModal: true }) 
   };
 
-  addEvent = (newEvent, sendEvents=true) => { // note this should be set to false except at the end
-    this.setState((prevState) => {
-      const updatedEvents = [...prevState.events, newEvent];
+  // addEvent = (newEvent, sendNewEvent=true) => {
+  addEvent = (newEvent) => {
+    try {    
+      newEvent.timestamp = Date.now();
+      newEvent.sessionID = this.state.sessionID;
+      console.log("addEvent: sending data to server...");
+      sendEventToServer(newEvent, this.state.userData, this.state);
 
-      if (sendEvents) {
-        console.log("send log data to server...");
-        sendEventstoServer(newEvent, prevState.userData, this.state);
-      }
+      // this.setState((prevState) => {
+      //   newEvent.timestamp = Date.now();
+      //   const updatedEvents = [...prevState.events, newEvent];
 
-      return {
-        events: updatedEvents,
-      }
-    });
+      //   if (sendNewEvent) {
+      //     console.log("addEvent: sending data to server...");
+      //     sendEventstoServer(newEvent, prevState.userData, this.state);
+      //   }
+
+      //   return {
+      //     events: updatedEvents,
+      //   }
+      // });
+    } catch (error) {
+      console.error("addEvent:", error)
+    }
   }
 
   /*
@@ -263,6 +277,14 @@ class App extends Component {
 
     // tokenize the text with the new lense
     this.attemptInitialTokenization();
+
+    this.addEvent({
+      eventName: EVENT_NAMES.AddWell,
+      eventDetails: {
+        prismType: prismType,
+        prism: prism,
+      }
+    });
   }
 
   handleRemovePrism(prism) {
@@ -304,7 +326,14 @@ class App extends Component {
     this.setSearchingState(opening.id, true); // UI update
     let constraints = this.state.constraints;
 
-    console.log("constraints: searchPrismsConstratins", constraints)
+    this.addEvent({
+      eventName: EVENT_NAMES.RunSearch,
+      eventDetails: {
+        prisms: prisms.map(p => p.id),
+        opening: opening, 
+        document: document,
+      }
+    });
 
     if (opening == null) {
       console.error("app: no opening found for search");
@@ -342,6 +371,14 @@ class App extends Component {
     this.setState(prevState => {
       const newOpenings = prevState.openings.copy();
       newOpenings.setById(opening.id, filteredPredictions); // Don't I want this to be the filtered ones?
+
+      this.addEvent({
+        eventName: EVENT_NAMES.SearchResults,
+        eventDetails: {
+          openings: newOpenings,
+          filteredPredictions: filteredPredictions
+        }
+      });
 
       return { 
         openings: newOpenings,
@@ -444,9 +481,7 @@ class App extends Component {
 
     this.addEvent({
       eventName: EVENT_NAMES.Swap,
-      timestamp: Date.now(),
       eventDetails: {
-        userId: this.state.userData?.userId,
         from: oldTokens,
         to: newSequence
       }
@@ -570,13 +605,22 @@ class App extends Component {
   };
 
   handleModalSubmit = (data) => {
-    this.setState({
-      userData: data,
-      showModal: false,
-    })
-    console.log('userData:', data)
-  };
-
+    const sessionID = getUniqueID("session"); // Generate once when they start
+    this.setState(
+      (prevState) => ({
+        userData: data,
+        showModal: false,
+        sessionID: sessionID
+      }),
+      () => {
+        appState.userData = data; // antipattern but useful
+        this.addEvent({
+          eventName: EVENT_NAMES.StudyStarted,
+          eventDetails: { },
+        });
+      }
+    );
+  }
   /*
    * If the current selection is within a larger opening, use that opening.
   */
@@ -601,7 +645,7 @@ class App extends Component {
 
   render() {
     if (this.state.showModal) {
-      return <Modal onSubmit={this.handleModalSubmit} addEvent={this.addEvent} eventName={EVENT_NAMES.StudyStarted} />;
+      return <Modal onSubmit={this.handleModalSubmit}  />;
     }
 
     let [start, end] = [this.state.start, this.state.end];
@@ -720,6 +764,7 @@ class App extends Component {
                         removeConstraint={this.removeConstraint.bind(this)}
                         debugMode={debugMode}
                         onTooltipUpdate={this.handleTooltipUpdate}
+                        addEvent={this.addEvent}
                       />
                     );
                   })}

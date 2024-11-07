@@ -6,11 +6,13 @@ const config = require("./webpack.config.js");
 const path = require("path");
 const http = require("http");
 const ws = require("ws");
-const fs = require("fs")
+const fs = require("fs").promises
 const axios = require("axios");
 const { makeID } = require("./src/server/utils.js");
-
 const { queryThesaurus, queryReader, queryDictionary } = require("./src/server/queries.js");
+
+const writeQueues = new Map();
+
 
 // Something unlikely to be seen, must match the tokenization in the python (server.py)
 const breakToken = "&&VE*A=]";
@@ -70,9 +72,16 @@ app.get("*", (req, res) => {
 
 // WebSocket connection handling
 wss.on("connection", (clientSocket, req) => {
-  const clientID = makeID("user");
+  const sessionId = makeID("session");
+  const connectTime = Date.now();
+  
+  // Attach to socket so we can access in message handlers
+  clientSocket.sessionData = {
+    sessionId,
+    connectTime
+  };
 
-  console.log("server: connect", clientID);
+  console.log("server: connect", sessionId);
 
   clientSocket.on("message", async (data) => {
     const message = JSON.parse(data.toString());
@@ -101,32 +110,73 @@ wss.on("connection", (clientSocket, req) => {
   });
 
   clientSocket.on("close", () => {
-    console.log("server: ws: close", clientID);
+    console.log("server: ws: close", sessionId);
     // broadcast({type: "leave", clientID: clientID});
   });
 });
 
-function storeEvents(message, clientSocket){
-  console.log("event: storing", message, 'event', message.event);
+// function storeEvents(message, clientSocket){
+//   console.log("event: storing", message, 'event', message.event);
 
+//   const event = message.event;
+//   const userId = event.eventDetails.userId;
+//   const timestamp = event.timestamp;
+
+//   // const filePath = `events/${userId}_cart_${storyType}.json`;
+//   const filePath = `events/${userId}_event_${timestamp}.json`;
+
+//   try {
+//     const jsonData = JSON.stringify(message, null, 2);
+//     fs.writeFileSync(filePath, jsonData);
+//     console.log(`Events stored successfully in ${filePath}`);
+//   } catch (error) {
+//       console.error('Error storing events:', error);
+//   }
+
+//   clientSocket.send(JSON.stringify({
+//     id: message.id, 
+//     type: 'event_response',
+//   }));
+// }
+
+async function storeEvents(message, clientSocket) {
+  const userId = message.userData.userId;
   const event = message.event;
-  const userId = event.eventDetails.userId;
-  const timestamp = event.timestamp;
+  // const timestamp = event.timestamp;
+  const sessionID = event.sessionID;
 
-  // const filePath = `events/${userId}_cart_${storyType}.json`;
-  const filePath = `events/${userId}_event_${timestamp}.json`;
+  const filePath = `events/${userId}_events_${sessionID}.json`;
 
-  try {
-    const jsonData = JSON.stringify(message, null, 2);
-    fs.writeFileSync(filePath, jsonData);
-    console.log(`Events stored successfully in ${filePath}`);
-  } catch (error) {
-      console.error('Error storing eents:', error);
+  
+  // Create events directory if it doesn't exist
+  await fs.mkdir('events', { recursive: true }).catch(() => {});
+
+  // Get or create queue for this user
+  if (!writeQueues.has(userId)) {
+    writeQueues.set(userId, Promise.resolve());
   }
 
-  clientSocket.send(JSON.stringify({
-    id: message.id, 
-    type: 'event_response',
+  // Chain this write onto the queue
+  writeQueues.set(userId, writeQueues.get(userId).then(async () => {
+    try {
+      let events = [];
+      try {
+        const content = await fs.readFile(filePath);
+        events = JSON.parse(content);
+      } catch (err) {
+        if (err.code !== 'ENOENT') console.error('Read error:', err);
+      }
+      
+      events.push(message);
+      await fs.writeFile(filePath, JSON.stringify(events, null, 2));
+      clientSocket.send(JSON.stringify({ 
+        id: message.requestId, 
+        type: 'event_response' 
+      }));
+    } catch (err) {
+      console.error('Write error:', err);
+      throw err;
+    }
   }));
 }
 

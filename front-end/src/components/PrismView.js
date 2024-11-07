@@ -11,6 +11,9 @@ import { useTooltip } from './Tooltip'; // need to turn this into a hook compone
 import { prismStyles } from '../base/prism/prismSettings';
 import { IoColorPaletteOutline } from "react-icons/io5";
 
+import { appState } from "../index"
+import { EVENT_NAMES } from "../base/Logging";
+
 const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTooltipUpdate, isSearching, styles}) => {
   const { handleMouseEnter, handleMouseLeave, handleMouseMove } = useTooltip(onTooltipUpdate);
 
@@ -52,9 +55,18 @@ class PrismEditableTextField extends Component {
 
   editTextField() {
     let value = document.getElementById(this.id).value || '';
-    console.log("textfield: updating", value);
+    console.log("textfield: updating to", value);
     this.setState({ text: value });
     this.props.prism.updateTextField(this.props.field.name, value);
+
+    this.props.addEvent({
+      eventName: EVENT_NAMES.UpdateTextField,
+      eventDetails: {
+        userId: appState.userData?.userId,
+        prism: this.props.prism,
+        to: value
+      }
+    });
   }
 
   render() {
@@ -216,7 +228,7 @@ export class PrismView extends Component {
           )} */}
 
           {activeNotHidden ? Object.values(prism.textFields).map((field) => {
-            return <PrismEditableTextField key={field.text} field={field} prism={prism} />
+            return <PrismEditableTextField key={field.text} field={field} prism={prism} addEvent={this.props.addEvent} />
           }) : ""}
 
           {textContent}
