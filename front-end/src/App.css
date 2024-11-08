@@ -12,13 +12,13 @@
   --hover-color: rgb(183, 126, 229);
   --button-height: 1.5em;
   --radius: 2px;
-  --normal-font-size: 12px;
-  --small-font-size: 10px;
+  --normal-font-size: 11px;
+  --small-font-size: 9px;
 
   --editor-margin: 0.5em;
   --inspector-bottom-gap: 0.5em;
 
-  --prism-bar-height: 12vh;
+  --prism-bar-height: 9vh;
   --inspector-padding: 0.5em;
 
   --rainbow-alpha: 0.2; /* Adjust this value between 0 (fully transparent) and 1 (fully opaque) */
@@ -96,8 +96,6 @@
   max-width: 100%;
   overflow: hidden; /* Add this line */
 } 
-
-
 
 select {
   font-size: 12px;
@@ -829,7 +827,7 @@ div.searching-light {
   flex-direction: column;
   align-items: center;
   margin-right: 0.25em;
-  height: 90%;
+  /* height: 90%; */
   min-width: 65px;
   padding-left: 0.5em;
   padding-right: 0.5em;

@@ -13,11 +13,11 @@ export const EditorControls = ({ onRestart }) => {
         <h2 className="major-text">Are you sure?</h2>
         <p className="text">This action will delete all your current work. This cannot be undone.</p>
         <div className="control-buttons">
-          <button className="setting-button" type="button" onClick={() => setShowModal(false)} className="light-button">
+          <button type="button" onClick={() => setShowModal(false)} className="light-button">
             Cancel
           </button>
           <button className="setting-button" type="submit">
-            Yes, restart
+            Yes, refresh
           </button>
         </div>
       </form>
@@ -27,7 +27,7 @@ export const EditorControls = ({ onRestart }) => {
   return (
     <div className="control-buttons editor-controls">
       <button className="setting-button" onClick={() => setShowModal(true)}>
-        Restart
+        Refresh
       </button>
       {showModal && <Modal />}
     </div>
