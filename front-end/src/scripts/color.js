@@ -12,6 +12,30 @@ const MAX_LOGPROB = 0;
 
 const BRIGHTEN = 2.5;
 
+
+export function generateRainbowColors(n, pastelAmount = 0.25) {
+  // Clamp pastelAmount between 0 and 1
+  pastelAmount = Math.max(0, Math.min(1, pastelAmount));
+  
+  // Create base rainbow scale
+  const rainbowScale = chroma.scale([
+    '#8B00FF', // Violet
+    '#0000FF', // Blue  
+    '#00FF00', // Green
+    '#FFFF00', // Yellow
+    '#FF7F00', // Orange
+    '#FF0000'  // Red
+  ]).mode('rgb');
+  
+  return Array.from({ length: n }, (_, i) => {
+    // Get base rainbow color
+    const baseColor = rainbowScale(i / (n - 1));
+    
+    // Mix with white based on pastelAmount
+    return chroma.mix(baseColor, 'white', pastelAmount).hex();
+  });
+}
+
 export function getColor(tokenType, token) {
   let prob = token.getAttribute('prob', 0);
   switch (tokenType) {
@@ -70,7 +94,6 @@ export function lengthNormedLogProbToColor(token) {
   let prob = token.getAttribute('prob', 0);
   return getLogProbToColor(prob).css();
 }
-
 
 export function getLogProbToColor(logProb) {
   // Clamp the logProb to our defined range

@@ -22,7 +22,8 @@ const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTool
   let searching = isSearching ? "searching-light" : "";
 
   let type = <div className={`prism-type-text ${rotated}`} style={{color: styles.style.color}} >
-    {prism.type} <IoColorPaletteOutline className="prism-icon small" />
+    {prism.type} 
+    {/* <IoColorPaletteOutline className="prism-icon small" /> */}
   </div>
 
   return (

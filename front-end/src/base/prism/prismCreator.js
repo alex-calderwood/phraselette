@@ -36,7 +36,7 @@ const roles = {
     "a group theorist",
     "Tristan Tzara, the Dadaist poet",
     "Trotsky, the Russian revolutionary",
-    "a confident expert in a different fields who provides competent and broad feedback despite being uninformed on this topic",
+    "a confident expert in a different field who provides competent and broad feedback despite being uninformed on this topic",
     "William S. Burroughs, cut-up maniac",
     "Cormac McCarthy after writing Blood Meridian",
     "J.R.R. Tolkein in a whimsical mood",

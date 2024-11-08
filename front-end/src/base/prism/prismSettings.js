@@ -1,53 +1,65 @@
-import { glassify, subtleGlassify, deepen, grayer} from '../../scripts/color';
+import { glassify, subtleGlassify, deepen, grayer, generateRainbowColors} from '../../scripts/color';
 
 
 export const prismSettings = {
+  'words': {
+    'showItems': ['pos'],
+    'color': "#9bf6ff",
+    'defaultIndex': 0,
+  },
   'context': {
     'showItems': ['prob'],
-    'color': "#00B1E1"
+    'color': "#00B1E1",
+    'defaultIndex': 1,
   },
   'probs': {
     'showItems': ['prob'],
-    'color': "#ffd6a5"
+    'color': "#ffd6a5",
+    'defaultIndex': 2,
   },
-  'alternate': {
-    'showItems': ['prob'],
-    'color': "#fdffb6"
-  },
+  // 'alternate': {
+  //   'showItems': ['prob'],
+  //   'color': "#fdffb6"
+  // },
   'sound': {
     'showItems': ['sound'],
-    'color': "#caffbf"
-  },
-  'words': {
-    'showItems': ['pos'],
-    'color': "#9bf6ff"
+    'color': "#caffbf",
+    'defaultIndex': 3,
   },
   'thesaurus': {
     'showItems': ['pos', 'sound', 'prob'],
-    'color': "#a0c4ff"
+    'color': "#a0c4ff",
+    'defaultIndex': 4,
   },
   'reader': {
     'showItems': ['pos', 'sound', 'prob'],
-    'color': "#ffc6ff"
+    'color': "#ffc6ff",
+    'defaultIndex': 5,
   },
   'dictionary': {
     'showItems': ['pos', 'sound'],
-    'color': "#bdb2ff"
+    'color': "#bdb2ff",
+    'defaultIndex': 6,
   },
   'search': {
     'showItems': ['pos', 'sound', 'prob'],
-    'color': "#ffc6ff"
+    'color': "#ffc6ff",
+    'defaultIndex': 7,
   }
 };
 
-Object.keys(prismSettings).forEach(prismType => {
-  const defaultColor = prismSettings[prismType].color;
+let rainbow = generateRainbowColors(Object.keys(prismSettings).length);
+let prismTypes = Object.keys(prismSettings).sort((a, b) => prismSettings[a].defaultIndex - prismSettings[b].defaultIndex);
+for(let i = 0; i < prismTypes.length; i++) {
+  const defaultColor = rainbow[i];
+  const prismType = prismTypes[i];
+  prismSettings[prismType].color = defaultColor;
   prismSettings[prismType].deepColor  = deepen(defaultColor);
   prismSettings[prismType].grayColor  = grayer(defaultColor);
   prismSettings[prismType].glassColor = glassify(defaultColor, 0.6);
   prismSettings[prismType].solidGlassColor = glassify(defaultColor, 0.8);
-  // console.log('colors: prismSettings', prismType, prismSettings[prismType]);
-});
+  console.log('colors: prismSettings', prismType, prismSettings[prismType]);
+};
 
 export const prismStyles = (prism) => {
   const active = prism.active;
