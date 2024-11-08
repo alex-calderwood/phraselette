@@ -117,6 +117,15 @@ export class CategoryListConstraintView extends Component {
     this.props.onConstraintUpdate();
   }
 
+  deleteTargetAtIndex = (indexToDelete) => {
+    let newTarget = this.state.target.filter((_, index) => index !== indexToDelete)
+      .map((item, index) => ({ ...item, index })); // reindex remaining items
+    
+    this.props.constraint.replaceTarget(newTarget);
+    this.setState({ target: newTarget });
+    this.props.onConstraintUpdate();
+  };
+
   render() {
     let constraint = this.props.constraint;
     let featureAttribute = constraint.feature.attribute;
@@ -124,29 +133,52 @@ export class CategoryListConstraintView extends Component {
     let modes = Object.keys(constraint.modes);
     let target = this.state.target;
 
-    return  <ConstraintWrapper {...this.props}>
-      {this.renderExtra()}
-      <div className="constraint-content">
-        <select className="constraint-mode" style={this.props.styles.buttonStyle} 
-          key={constraint.id} value={constraint.mode} onChange={this.handleChangeMode}>
-            {modes.map(mode => {
-              return <option key={mode} value={mode}>{mode}</option>
-            })}
-            
-        </select>
-        <div className="constraint-target">
-          {target.map(tokenTarget => {
-            return <select className="constraint-select" id={`constraint-select-${constraint.id}-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[featureAttribute]} onChange={this.handleChange} style={this.props.styles.buttonStyle}>
-              {possibleConstraintValues.map(value => {
-                return <option key={value} value={value}>{value}</option>
-              })}
-            </select>
-          })}
+    return (
+      <ConstraintWrapper {...this.props}>
+        {this.renderExtra()}
+        <div className="constraint-content">
+          <select 
+            className="constraint-mode" 
+            style={this.props.styles.buttonStyle}
+            key={constraint.id} 
+            value={constraint.mode} 
+            onChange={this.handleChangeMode}
+          >
+            {modes.map(mode => (
+              <option key={mode} value={mode}>{mode}</option>
+            ))}
+          </select>
+          <div className="constraint-target">
+            {target.map((tokenTarget, index) => (
+              <div 
+                className="constraint-select-container" 
+                key={`container-${tokenTarget.index}`}
+              >
+                <select
+                  className="constraint-select"
+                  id={`constraint-select-${constraint.id}-${tokenTarget.index}`}
+                  value={tokenTarget[featureAttribute]}
+                  onChange={this.handleChange}
+                  style={this.props.styles.buttonStyle}
+                >
+                  {possibleConstraintValues.map(value => (
+                    <option key={value} value={value}>{value}</option>
+                  ))}
+                </select>
+                <button
+                  className="constraint-delete-button glass"
+                  onClick={() => this.deleteTargetAtIndex(index)}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+          <button style={this.props.styles.buttonStyle} onClick={this.pushTarget}>＋</button>
+          <button style={this.props.styles.buttonStyle} onClick={this.popTarget}>−</button>
         </div>
-        <button style={this.props.styles.buttonStyle} onClick={this.pushTarget}>＋</button>
-        <button style={this.props.styles.buttonStyle} onClick={this.popTarget}>−</button>
-      </div>
-    </ConstraintWrapper>;
+      </ConstraintWrapper>
+    );
   }
 }
 
@@ -155,7 +187,7 @@ export class ConstraintWrapper extends Component {
   onDelete() {
     this.props.onDelete(this.props.constraint);
   }
-  
+
   render() {
     const { constraint, children } = this.props;
     const id = `${constraint.id}-constraint`;

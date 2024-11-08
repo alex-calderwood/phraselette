@@ -64,6 +64,7 @@ export const prismStyles = (prism) => {
   const titleStyle = {color: textColor}
   const buttonStyle = active ? {
     background: glassify(prism.color, 0.6),
+    
     color: textColor,
   } : {
     background: grayer(prism.color, 0.4),
