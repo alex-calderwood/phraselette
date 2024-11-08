@@ -21,15 +21,7 @@ export function Modal({ onSubmit }) {
             name="User ID"
             autocomplete="on"
           />
-          {/* <select
-            value={narrative}
-            onChange={(e) => setNarrative(e.target.value)}
-            required
-          >
-            <option value="">Select a story</option>
-            <option value="blank">Blank</option>
-          </select> */}
-          <button type="submit">Begin</button>
+          <button className="setting-button" type="submit">Begin</button>
         </form>
       </div>
     );

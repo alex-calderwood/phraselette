@@ -8,6 +8,7 @@ import { Document } from "./base/Document";
 import { Constraint } from "./base/Constraint";
 
 import { PrismEditor } from "./components/PrismEditor";
+import { EditorControls } from "./components/EditorControls";
 import { PrismView } from "./components/PrismView";
 import { SearchResults } from "./components/SearchResults";
 import ControlButtons from "./components/ControlButtons";
@@ -687,6 +688,13 @@ class App extends Component {
               initialText={this.text}
               // opening={opening} 
               // document={document} // could send these in if needed
+            />
+            <EditorControls 
+              onRestart={() => {
+                this.clearSavedText();
+                this.setText('');
+                window.location.reload();
+              }}
             />
           </div>
 
