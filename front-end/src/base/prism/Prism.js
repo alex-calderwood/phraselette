@@ -82,7 +82,15 @@ export class Prism {
 
     // constraints = Constraint.subsetByFeatures(constraints, this.features) // Do I need to do this? I also call it in onConstraintUpdate
     // const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
-    let results = await resolveConstraints(predictions, constraints, opening, false);
+    let [results, rejectedPredictions] = await resolveConstraints(
+      predictions,
+      constraints,
+      opening,
+      false,
+      0,
+    );
+
+
     results = sortPredictions(results, this.sortBy, true);
 
     let resolvedInsights = {...newInsights, results: results, summary: summary};

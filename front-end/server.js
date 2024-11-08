@@ -138,45 +138,41 @@ wss.on("connection", (clientSocket, req) => {
 //     type: 'event_response',
 //   }));
 // }
-
 async function storeEvents(message, clientSocket) {
-  const userId = message.userData.userId;
-  const event = message.event;
-  // const timestamp = event.timestamp;
-  const sessionID = event.sessionID;
-
-  const filePath = `../../study_events/${userId}_events_${sessionID}.json`;
-  
-  // Create events directory if it doesn't exist
-  await fs.mkdir('events', { recursive: true }).catch(() => {});
-
-  // Get or create queue for this user
-  if (!writeQueues.has(userId)) {
-    writeQueues.set(userId, Promise.resolve());
-  }
-
-  // Chain this write onto the queue
-  writeQueues.set(userId, writeQueues.get(userId).then(async () => {
-    try {
-      let events = [];
-      try {
-        const content = await fs.readFile(filePath);
-        events = JSON.parse(content);
-      } catch (err) {
-        if (err.code !== 'ENOENT') console.error('Read error:', err);
-      }
-      
-      events.push(message);
-      await fs.writeFile(filePath, JSON.stringify(events, null, 2));
-      clientSocket.send(JSON.stringify({ 
-        id: message.id, 
-        type: 'event_response' 
-      }));
-    } catch (err) {
-      console.error('Write error:', err);
-      throw err;
+  try {
+    const { userId } = message.userData;
+    const { sessionID } = message.event;
+    const filePath = `../../study_events/${userId}_events_${sessionID}.json`;
+    
+    if (!writeQueues.has(userId)) {
+      writeQueues.set(userId, Promise.resolve());
     }
-  }));
+
+    writeQueues.set(userId, writeQueues.get(userId).then(async () => {
+      try {
+        let events = [];
+        try {
+          const content = await fs.readFile(filePath);
+          events = JSON.parse(content);
+        } catch (err) {
+          console.error('Read error:', err);
+        }
+
+        await fs.mkdir('events', { recursive: true });
+        events.push(message);
+        await fs.writeFile(filePath, JSON.stringify(events, null, 2));
+        
+        clientSocket.send(JSON.stringify({
+          id: message.id,
+          type: 'event_response'
+        }));
+      } catch (err) {
+        console.error('Write error:', err);
+      }
+    }));
+  } catch (err) {
+    console.error('Top level error:', err);
+  }
 }
 
 async function handleStream(message, clientSocket) {

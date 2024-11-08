@@ -172,7 +172,6 @@ class App extends Component {
     this.setState({ showModal: true }) 
   };
 
-  // addEvent = (newEvent, sendNewEvent=true) => {
   addEvent = (newEvent) => {
     try {    
       newEvent.timestamp = Date.now();
@@ -180,19 +179,6 @@ class App extends Component {
       console.log("addEvent: sending data to server...");
       sendEventToServer(newEvent, this.state.userData, this.state);
 
-      // this.setState((prevState) => {
-      //   newEvent.timestamp = Date.now();
-      //   const updatedEvents = [...prevState.events, newEvent];
-
-      //   if (sendNewEvent) {
-      //     console.log("addEvent: sending data to server...");
-      //     sendEventstoServer(newEvent, prevState.userData, this.state);
-      //   }
-
-      //   return {
-      //     events: updatedEvents,
-      //   }
-      // });
     } catch (error) {
       console.error("addEvent:", error)
     }
@@ -362,10 +348,12 @@ class App extends Component {
     ).filter((r) => r && r.length > 0)
     .flat();
 
-    let filteredPredictions = await resolveConstraints(
+    let [filteredPredictions, rejectedPredictions] = await resolveConstraints(
       predictions,
       constraints,
-      opening
+      opening, 
+      true, 
+      1,
     );
 
     this.setState(prevState => {
@@ -376,7 +364,8 @@ class App extends Component {
         eventName: EVENT_NAMES.SearchResults,
         eventDetails: {
           openings: newOpenings,
-          filteredPredictions: filteredPredictions
+          filteredPredictions: filteredPredictions,
+          rejectedPredictions: rejectedPredictions
         }
       });
 

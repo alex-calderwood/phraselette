@@ -9,17 +9,17 @@ let globalHandlers = {};
 
 function sendMessage(message) {
   if(checkAndRefreshSocket()){return}
-  const requestId = getUniqueID();
-  message.requestId = requestId;
+  const id = getUniqueID('request');
+  message.id = id;
   console.log("req:" + message.type, message);
   socket.send(JSON.stringify(message));
-  return requestId;
+  return id;
 }
 
 export async function* streamFromWebSocket(streamType, data) {
-  const requestId = getUniqueID();
+  const id = getUniqueID('request');
   const request = { 
-    id: requestId, 
+    id: id, 
     type: 'stream',
     subtype: streamType,
     data
@@ -38,7 +38,7 @@ export async function* streamFromWebSocket(streamType, data) {
 
     const messageHandler = (event) => {
       const message = JSON.parse(event.data);
-      if (message.id === requestId) {
+      if (message.id === id) {
         if (message.type === 'stream') {
           // console.log(`Received stream data for ${streamType}`);
           messageQueue.push(message.data);
@@ -119,11 +119,34 @@ function registerHandlers(handlers) {
 }
 
 const toKeep = ['activePrisms', 'selection', 'constraints', 'openings', 'start', 'end', 'userData'];
-function pruneState(appState) {
-  const subset = toKeep.filter(key => key in appState) // line can be removed to make it inclusive
-  .reduce((obj2, key) => (obj2[key] = appState[key], obj2), {});
+const keysToRemove = ['tokenManager', "span"];
 
-  return subset;
+function pruneState(appState) {
+  // Deep clone the input first to avoid mutations
+  const stateCopy = JSON.parse(JSON.stringify(appState));
+  
+  // First apply toKeep filter
+  const subset = toKeep
+    .filter(key => key in stateCopy)
+    .reduce((obj2, key) => (obj2[key] = stateCopy[key], obj2), {});
+
+  // Recursively remove keys
+  function removeKeys(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    
+    if (Array.isArray(obj)) {
+      return obj.map(removeKeys);
+    }
+    
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+      if (!keysToRemove.includes(key)) {
+        acc[key] = removeKeys(value);
+      }
+      return acc;
+    }, {});
+  }
+
+  return removeKeys(subset);
 }
 
 export function sendEventToServer(event, userData, appState) {

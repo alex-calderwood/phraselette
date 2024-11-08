@@ -57,7 +57,6 @@ NEG_INF = -1e300
 
 
 
-
 # Set the environment variable to use GPU 1
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
@@ -124,33 +123,41 @@ logits_processor = LogitsProcessorList([
 #     constraints.append(PhrasalConstraint(tokens))
 
 def estimate_histogram(beam_output):
-    scores = beam_output.scores
+    try:
+        scores = beam_output.scores
 
-    # Flatten all log probabilities
-    all_log_probs = torch.cat([F.log_softmax(score, dim=-1).flatten() for score in scores]).to(device)
+        # Flatten all log probabilities
+        all_log_probs = torch.cat([F.log_softmax(score, dim=-1).flatten() for score in scores]).to(device)
 
-    # Remove values below some threshold
-    all_log_probs = all_log_probs[all_log_probs > ZERO_LOG_PROB]
+        # Remove values below some threshold
+        all_log_probs = all_log_probs[all_log_probs > ZERO_LOG_PROB]
 
-    # Remove extreme outliers
-    low = torch.quantile(all_log_probs, 0.0005)
-    all_log_probs = all_log_probs[all_log_probs >= low]
+        # Remove extreme outliers
+        # low = torch.quantile(all_log_probs, 0.0005)
+        low = torch.quantile(all_log_probs, 0.005)
+        all_log_probs = all_log_probs[all_log_probs >= low]
 
-    # Create linear bin edges in log space
-    num_bins = 100
-    min_log_prob = all_log_probs.min().item()
-    max_log_prob = 0  # The maximum log probability is 0
-    bin_edges = torch.linspace(min_log_prob, max_log_prob, num_bins + 1, device=device)
+        # Create linear bin edges in log space
+        num_bins = 100
+        min_log_prob = all_log_probs.min().item()
+        max_log_prob = 0  # The maximum log probability is 0
+        bin_edges = torch.linspace(min_log_prob, max_log_prob, num_bins + 1, device=device)
 
-    # Compute histogram
-    counts = torch.histc(all_log_probs, bins=num_bins, min=min_log_prob, max=max_log_prob)
+        # Compute histogram
+        counts = torch.histc(all_log_probs, bins=num_bins, min=min_log_prob, max=max_log_prob)
 
-    summary = {
-        'counts': counts.cpu().tolist(),
-        'bin_edges': bin_edges.cpu().tolist(),
-    }
-    # print("summary", summary)
-    return summary
+        summary = {
+            'counts': counts.cpu().tolist(),
+            'bin_edges': bin_edges.cpu().tolist(),
+        }
+        # print("summary", summary)
+        return summary
+    except Exception as e: 
+        return {
+            'counts': [],
+            'bin_edges': [],
+            'error': str(e)
+        }
 
 
 # pos_checker = POSChecker(['NOUN'], tokenizer)

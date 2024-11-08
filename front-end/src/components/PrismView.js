@@ -19,8 +19,6 @@ const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTool
 
   const prismDescriptionText = ` (click to ${rotated ? 'collapse' : 'expand'})` + prism.description;
   let searching = isSearching ? "searching-light" : "";
-  
-  console.log("prismview: style:", styles.titleStyle, styles.titleStyle.color);
 
   let type = <div className={`prism-type-text ${rotated}`} style={{color: styles.style.color}} >
     {prism.type} <IoColorPaletteOutline className="prism-icon small" />
@@ -162,7 +160,6 @@ export class PrismView extends Component {
 
   parseText = (text) => {
     let split = text.split(/(<i>.*?<\/i>)/);
-    console.log('spit', split)
     return split.map((part, index) => {
       if (part.startsWith('<i>') && part.endsWith('</i>')) {
         return <i key={index}>{part.slice(3, -4)}</i>;

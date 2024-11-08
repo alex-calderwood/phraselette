@@ -6,10 +6,12 @@
  * c.) resolve them to words here
  * d.) ignore them if they are not words
 */
-export async function resolveConstraints(predictions, constraints, opening, sort=true, comparator='total', sortByAttribute=false) {
+export async function resolveConstraints(predictions, constraints, opening, sort=true, threshold=0, comparator='total', sortByAttribute='total') {
     const postConstraints = constraints.filter((constraint) => { return !constraint.isPre; });
 
-    let filtered = [];
+    let accepted = [];
+    let rejected = [];
+
     for (let sequence of predictions) {
         let sequenceTotal = 0;
         let reject = false;
@@ -20,17 +22,21 @@ export async function resolveConstraints(predictions, constraints, opening, sort
                 sequence.scores[constraint.name] = {'value': score, 'constraint': constraint};
                 sequenceTotal += score;
 
-                if (!constraint.evaluate(score)) { reject = true;}
+                if (!constraint.evaluate(score, threshold)) { reject = true;}
             }
         }
         sequence.scores['total'] = {'value': sequenceTotal, 'constraint': null}
-        if (!reject) { filtered.push(sequence); }
+        sequence.setAttribute('total', sequenceTotal);
+        if (!reject) { accepted.push(sequence); }
+        else         { rejected.push(sequence); }
     }
 
     if (sort) {
-        filtered = sortPredictions(filtered, comparator, sortByAttribute);
+        accepted = sortPredictions(accepted, comparator, sortByAttribute);
+        rejected = sortPredictions(rejected, comparator, sortByAttribute);
     }
-    return filtered;
+
+    return [accepted, rejected];
 }
 
 // todo

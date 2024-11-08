@@ -58,21 +58,21 @@ async function sendClaudeReq(partialPayload) {
   const claudeResponse = await fetchJSONResponse(opts, payloadString);
   const claudeText = claudeReplyText(claudeResponse);
 
-  try {
-    if (('googleSheetID' in apiCreds) || ('googleSheetName' in apiCreds)) {
-      const googleAuth = await authorizeGoogle();
-      if (!('googleSheetID' in apiCreds) || (apiCreds.googleSheetID == null)) {
-        const sheetID = await createSheet(googleAuth, apiCreds.googleSheetName)
-        apiCreds.googleSheetID = sheetID
-        console.log("Created Google sheet with ID: " + sheetID)
-      }
-      appendSheetItem(googleAuth, apiCreds.googleSheetID, prompt, 
-        payload["model"], JSON.stringify({"max_tokens": payload["max_tokens"]}), 
-        claudeText).catch(console.error);
-    }
-  } catch (error) {
-    console.warn("textgen: unable to log to Google Sheets", error)
-  }
+  // try {
+  //   if (('googleSheetID' in apiCreds) || ('googleSheetName' in apiCreds)) {
+  //     const googleAuth = await authorizeGoogle();
+  //     if (!('googleSheetID' in apiCreds) || (apiCreds.googleSheetID == null)) {
+  //       const sheetID = await createSheet(googleAuth, apiCreds.googleSheetName)
+  //       apiCreds.googleSheetID = sheetID
+  //       console.log("Created Google sheet with ID: " + sheetID)
+  //     }
+  //     appendSheetItem(googleAuth, apiCreds.googleSheetID, prompt, 
+  //       payload["model"], JSON.stringify({"max_tokens": payload["max_tokens"]}), 
+  //       claudeText).catch(console.error);
+  //   }
+  // } catch (error) {
+  //   console.warn("textgen: unable to log to Google Sheets", error)
+  // }
 
   return claudeResponse;
 

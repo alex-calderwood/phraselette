@@ -82,10 +82,9 @@ export class Constraint {
     return 0;
   }
 
-  evaluate(score, sequence, document) {
-    return score > this.filterThreshold;
+  evaluate(score, threshold=this.filterThreshold) {
+    return score >= threshold;
   }
-
 
   applies(opening) {
     if (this.opening == null) {
@@ -188,7 +187,7 @@ export class CategoricalConstraint extends Constraint {
   }
 
   async getScore(sequence, document) {
-    console.log('constraint: score mode', this.mode, sequence.textContent);
+    // console.log('constraint: score mode', this.mode, sequence.textContent);
 
     if (sequence === null || sequence.span.length === 0 || this.targetSequence === null || this.targetSequence.length === 0) {
       return 0;
@@ -204,7 +203,7 @@ export class CategoricalConstraint extends Constraint {
     let flattenedTargetFeatures = this.flatten ? targetFeatures.flat() : targetFeatures;
     flattenedTargetFeatures = flattenedTargetFeatures.filter(val => !this.ignore.includes(val))
 
-    console.log('constraint: scoring token', tokenFeatures, 'target', flattenedTargetFeatures)
+    // console.log('constraint: scoring token', tokenFeatures, 'target', flattenedTargetFeatures)
 
     let score = 0;
     if (this.modes[this.mode]) {
@@ -214,7 +213,7 @@ export class CategoricalConstraint extends Constraint {
     }
     
     score = score ? 1 : 0;
-    console.log('constraint: score', score)
+    // console.log('constraint: score', score)
     return score;
   }
 
@@ -320,6 +319,14 @@ export class CategoricalConstraint extends Constraint {
     }
 
     this.targetSequence = newTargetSequence;
+  }
+
+  toJSON() {
+    return {
+      type: this.constructor.name,
+      mode: this.mode,
+      target: this.targetSequence,
+    };
   }
 }
 
@@ -455,6 +462,14 @@ export class SoundConstraint extends CategoricalConstraint {
 
     return targetPhones.map((sound, i) => { return { sound: sound, index: i }; });
   }
+
+  toJSON() {
+      return {
+        type: this.constructor.name,
+        mode: this.mode,
+        target: this.targetSequence,
+      };
+    }
 }
 
 export class NumericalRangeConstraint extends Constraint {
@@ -523,8 +538,8 @@ export class WordLengthConstraint extends NumericalRangeConstraint {
     return 0;
   }
 
-  evaluate(score, sequence, document) {
-    return score >= this.filterThreshold;
+  evaluate(score, threshold=this.filterThreshold) {
+    return score >= threshold;
   }
 
   toJSON() {
