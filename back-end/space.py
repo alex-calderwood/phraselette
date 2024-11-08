@@ -1,5 +1,5 @@
 import spacy, json
-from words import get_additional_word_data
+from word_data import get_additional_word_data
 from network import BREAK_TOKEN
 import re
 import json

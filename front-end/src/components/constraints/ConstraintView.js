@@ -1,17 +1,16 @@
 import React, { Component, useState } from "react";
 import { BetterRhymeConstraint, CategoricalConstraint, 
-  NumericalRangeConstraint, WordLengthConstraint } from "../base/Constraint";
-import { LogHistogram } from "./Histogram"
+  NumericalRangeConstraint, WordLengthConstraint, SoundConstraint} from "../../base/Constraint";
+import { LogHistogram } from "../Histogram"
 
-
-class HistogramRangeConstraintView extends Component {
+export class HistogramRangeConstraintView extends Component {
   constructor(props) {
     super(props);
   }
 
   update = (newMin, newMax) => {
-    this.props.constraint.updateTargetMin(newMin);
-    this.props.constraint.updateTargetMax(newMax);
+    this.props.constraint.updateTargetAtIndexMin(newMin);
+    this.props.constraint.updateTargetAtIndexMax(newMax);
     this.props.onConstraintUpdate();
   }
 
@@ -29,7 +28,7 @@ class HistogramRangeConstraintView extends Component {
 }
 
 // gradually moving these to use hooks
-const RangeConstraintView = (props) => {
+export const RangeConstraintView = (props) => {
   const { constraint, onConstraintUpdate } = props;
   const [min, setMin] = useState(constraint.targetMin);
   const [max, setMax] = useState(constraint.targetMax);
@@ -38,14 +37,14 @@ const RangeConstraintView = (props) => {
   const handleMinChange = (e) => {
     const newMin = parseFloat(e.target.value);
     setMin(newMin);
-    constraint.updateTargetMin(newMin);
+    constraint.updateTargetAtIndexMin(newMin);
     onConstraintUpdate();
   };
 
   const handleMaxChange = (e) => {
     const newMax = parseFloat(e.target.value);
     setMax(newMax);
-    constraint.updateTargetMax(newMax);
+    constraint.updateTargetAtIndexMax(newMax);
     onConstraintUpdate();
   };
 
@@ -71,9 +70,7 @@ const RangeConstraintView = (props) => {
   );
 };
 
-export default RangeConstraintView;
-
-class CategoricalConstraintView extends Component {
+export class CategoryListConstraintView extends Component {
   constructor(props) {
     super(props);
     let constraint = this.props.constraint;
@@ -82,15 +79,25 @@ class CategoricalConstraintView extends Component {
       mode:   constraint.mode,
     }
   }
+
+  renderExtra() { // for subclasses to override
+    return null;
+  }
+
+  replaceTarget = (newTarget) => {
+    this.setState({ target: newTarget });
+    this.props.constraint.replaceTarget(newTarget)
+    this.props.onConstraintUpdate();
+  }
   
-  addTarget = () => {
-    let newTarget = this.props.constraint.addTarget();
+  pushTarget = () => {
+    let newTarget = this.props.constraint.pushTarget();
     this.setState({ target: newTarget });
     this.props.onConstraintUpdate();
   }
 
-  deleteTarget = () => {
-    let newTarget = this.props.constraint.deleteTarget();
+  popTarget = () => {
+    let newTarget = this.props.constraint.popTarget();
     this.setState({ target: newTarget });
     this.props.onConstraintUpdate();
   }
@@ -98,7 +105,7 @@ class CategoricalConstraintView extends Component {
   handleChange = (event) => {
     const newValue = event.target.value;
     const index = event.target.id.split('-').pop();
-    let newTarget = this.props.constraint.updateTarget(index, newValue);
+    let newTarget = this.props.constraint.updateTargetAtIndex(index, newValue);
     this.setState({ target: newTarget });
     this.props.onConstraintUpdate();
   };
@@ -117,36 +124,38 @@ class CategoricalConstraintView extends Component {
     let modes = Object.keys(constraint.modes);
     let target = this.state.target;
 
-    return  <ConstraintWrapper {...this.props} >
-      <select className="constraint-mode" style={this.props.styles.buttonStyle} key={constraint.id} value={constraint.mode} onChange={this.handleChangeMode}>
-          {modes.map(mode => {
-            return <option key={mode} value={mode}>{mode}</option>
-          })}
-
-          
-      </select>
-      <div className="constraint-target">
-        {target.map(tokenTarget => {
-          return <select className="constraint-select" id={`constraint-select-${constraint.id}-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[featureAttribute]} onChange={this.handleChange} style={this.props.styles.buttonStyle}>
-            {possibleConstraintValues.map(value => {
-              return <option key={value} value={value}>{value}</option>
+    return  <ConstraintWrapper {...this.props}>
+      {this.renderExtra()}
+      <div className="constraint-content">
+        <select className="constraint-mode" style={this.props.styles.buttonStyle} 
+          key={constraint.id} value={constraint.mode} onChange={this.handleChangeMode}>
+            {modes.map(mode => {
+              return <option key={mode} value={mode}>{mode}</option>
             })}
-          </select>
-        })}
+            
+        </select>
+        <div className="constraint-target">
+          {target.map(tokenTarget => {
+            return <select className="constraint-select" id={`constraint-select-${constraint.id}-${tokenTarget.index}`} key={tokenTarget.index} value={tokenTarget[featureAttribute]} onChange={this.handleChange} style={this.props.styles.buttonStyle}>
+              {possibleConstraintValues.map(value => {
+                return <option key={value} value={value}>{value}</option>
+              })}
+            </select>
+          })}
+        </div>
+        <button style={this.props.styles.buttonStyle} onClick={this.pushTarget}>＋</button>
+        <button style={this.props.styles.buttonStyle} onClick={this.popTarget}>−</button>
       </div>
-      <button style={this.props.styles.buttonStyle} onClick={this.addTarget}>＋</button>
-      <button style={this.props.styles.buttonStyle} onClick={this.deleteTarget}>−</button>
     </ConstraintWrapper>;
   }
 }
 
-class ConstraintWrapper extends Component {
+export class ConstraintWrapper extends Component {
   
   onDelete() {
     this.props.onDelete(this.props.constraint);
-    this.props.onConstraintUpdate();
   }
-
+  
   render() {
     const { constraint, children } = this.props;
     const id = `${constraint.id}-constraint`;
@@ -157,23 +166,5 @@ class ConstraintWrapper extends Component {
         {!this.props.isTemp && <button style={this.props.styles.buttonStyle} onClick={() => this.onDelete()}>×</button>}
       </div>
     );
-  }
-}
-
-const constraintViews = {
-  CategoricalConstraint: CategoricalConstraintView,
-  POSConstraint: CategoricalConstraintView,
-  SoundConstraint: CategoricalConstraintView,
-  RhymeConsntraint: CategoricalConstraintView,
-  BetterRhymeConstraint: CategoricalConstraintView,
-  WordLengthConstraint: RangeConstraintView,
-  NumericalRangeConstraint: HistogramRangeConstraintView,
-};
-
-export class ConstraintRender extends React.Component {
-  render() {
-    const { constraint, ...otherProps } = this.props;
-    const ConstraintView = constraintViews[constraint.constructor.name];
-    return ConstraintView ? <ConstraintView key={constraint.id} constraint={constraint} {...otherProps} /> : null;
   }
 }

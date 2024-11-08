@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { TokenRange } from "./TokenRange";
 import { TokenAlternates } from "./Alternates";
-import { ConstraintRender } from "./ConstraintView";
+import { ConstraintRender } from "./constraints/ConstraintRender";
 import { PrismControls } from "./PrismControls";
 import { SearchResults } from "./SearchResults";
 import { TokenManager } from "../base/TokenManager";
@@ -112,9 +112,22 @@ export class PrismView extends Component {
     this.setState(prevState => ({ isSettingsView: !prevState.isSettingsView }));
   }
 
-  removeConstraint() {
-    let constraint = this.props.constraints.pop();
+  // componentDidUpdate(prevProps, prevState) {
+  //     if (prevProps.constraints !== this.props.constraints) {
+  //       // constraints changed, do your update here
+  //       // this.handleConstraintsChanged();
+  //       this.prismHandleOnConstraintUpdate();
+  //     }
+  //   }
+
+  onAddConstraint(constraint) {
+    this.props.addConstraint(constraint);
+    this.prismHandleOnConstraintUpdate(this.prism, this.props.opening);
+  }
+
+  onRemoveConstraint(constraint) {
     this.props.removeConstraint(constraint);
+    this.prismHandleOnConstraintUpdate(this.prism, this.props.opening);
   }
 
   prismHandleOnConstraintUpdate() {
@@ -244,7 +257,7 @@ export class PrismView extends Component {
               endIndex={end}
               opening={opening}
               styles={styles}
-              onDelete={this.props.removeConstraint} 
+              onDelete={this.onRemoveConstraint.bind(this)} 
               hasHistogramData={this.state.hasHistogramData}
               onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)}/>}) : ""
           }
@@ -254,7 +267,7 @@ export class PrismView extends Component {
             opening={opening}
             onSearch={this.props.onSearch}
             prism={prism}
-            onAdd={this.props.addConstraint}
+            onAdd={this.onAddConstraint.bind(this)}
             styles={styles}
             onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)} /> : "" }
           

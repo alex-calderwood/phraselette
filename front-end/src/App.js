@@ -399,10 +399,8 @@ class App extends Component {
 
   removeConstraint(constraint) {
     console.log("app: removing constraint", constraint);
-    this.setState({
-      constraints: this.state.constraints.filter((c) => {
-        return c !== constraint;
-      }),
+    this.setState((prevState) => {
+      return {constraints: this.state.constraints.filter((c) => { return c !== constraint; }) }
     });
   }
 

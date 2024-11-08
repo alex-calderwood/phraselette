@@ -557,18 +557,23 @@ button:hover {
 }
 
 .constraint {
-  display: flex;
   align-items: center;
   justify-content: center;
   width: auto;
-  /* margin-bottom: 8px; */
+  display: flex;
 
   input {
     background-color: #f1f1f1;
     border: none;
     outline: none;
-    max-width: 3em;
+    /* max-width: 3em; */
   }
+}
+
+.constraint-content {
+  display: flex;
+  width: auto;
+  justify-content: center;
 }
 
 .histogram {
@@ -585,6 +590,22 @@ button:hover {
   vertical-align: middle;
 }
 
+
+.default-form {
+  justify-content: center;
+  align-items: center;
+  font-size: 8px;
+  margin-right: 4px;
+
+  input {
+    margin-right: 2px;
+  }
+
+  ::placeholder {
+    color: rgba(0, 0, 0, 0.3)
+  }
+}
+
 .constraint-buttons {
   /* make the buttons appear next to each other and center them */
   display: flex;
@@ -596,6 +617,7 @@ button:hover {
     margin-right: 4px;   
   }
 }
+
 
 .constraint-mode {
   margin-right: 2px;

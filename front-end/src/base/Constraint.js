@@ -3,6 +3,8 @@ import { Feature } from './Feature.js';
 import { POS } from '../../data/pos.js';
 import { Sequence } from './Sequence.js'
 
+
+
 // feature -> constraint mapping
 // TODO: refactor such that target is a sequence (need to refactor constraint target...)
 export function makeConstraint(feature, target, opening) {
@@ -18,19 +20,7 @@ export function makeConstraint(feature, target, opening) {
       target = target.map(token => token.getAttribute('pos'));
       return new POSConstraint(target, opening);
     case 'sound': case 'rhyme':
-      let firstPronunciationPerToken = target.map((token) => {
-        let phonemes = token.getAttribute('phonemes', []); 
-        if (phonemes && phonemes.length > 0) { 
-          return phonemes[0]; 
-        } else {
-          if (attribute === 'rhyme') { return BetterRhymeConstraint.defaultTarget; }
-          return SoundConstraint.defaultTarget;
-        }
-      });
-      let finalTarget = firstPronunciationPerToken.map((tokenPhonemes) => {
-        return tokenPhonemes.split(' ');
-      }).flat().filter(phoneme => phoneme && phoneme.length > 0);
-
+      let finalTarget = makePhonemeTargetFromTokens(target, attribute);
       if (attribute === 'rhyme') { return new BetterRhymeConstraint(finalTarget, opening); }
       return new SoundConstraint(finalTarget, opening);
     case 'length':
@@ -49,6 +39,27 @@ export function makeConstraint(feature, target, opening) {
   console.error('Could not make constraint for feature:', feature);
   return null;
 }
+
+export function makePhonemeTargetFromTokens(targetTokens, attribute='sound') {
+  if(targetTokens == null) {
+    return null
+  }
+
+  let firstPronunciationPerToken = targetTokens.map((token) => {
+    let phonemes = token.getAttribute('phonemes', []);
+    if (phonemes && phonemes.length > 0) {
+      return phonemes[0];
+    } else {
+      if (attribute === 'rhyme') { return BetterRhymeConstraint.defaultTarget; }
+      return SoundConstraint.defaultTarget;
+    }
+  });
+  let finalTarget = firstPronunciationPerToken.map((tokenPhonemes) => {
+    return tokenPhonemes.split(' ');
+  }).flat().filter(phoneme => phoneme && phoneme.length > 0);
+  return finalTarget;
+}
+
 
 export class Constraint {
   constructor(name, feature, opening) {
@@ -83,7 +94,7 @@ export class Constraint {
     }
 
     let over = this.opening.id == opening.id;
-    console.log("constraint: overlaps", this.opening, opening, over)
+    // console.log("constraint: overlaps", this.opening, opening, over)
     return over;
   }
 
@@ -263,7 +274,7 @@ export class CategoricalConstraint extends Constraint {
     return false;
   }
 
-  updateTarget(index, newValue) {
+  updateTargetAtIndex(index, newValue) {
     if (this.targetSequence == null || this.targetSequence.length === 0) {
       console.log('constraint: no target span to update for constraint', this);
       return;
@@ -272,7 +283,8 @@ export class CategoricalConstraint extends Constraint {
     return this.targetSequence;
   }
 
-  addTarget(newTarget=null) {
+  // add something to the end of the target
+  pushTarget(newTarget=null) {
     if (this.defaultTarget === null) {
       console.error('constraint: no default target for constraint', this);
       return this.targetSequence;
@@ -292,13 +304,22 @@ export class CategoricalConstraint extends Constraint {
     return this.targetSequence;
   }
 
-  deleteTarget() {
+  popTarget() {
     if (this.targetSequence === null || this.targetSequence.length === 0) {
       // nothing
     } else {
       this.targetSequence.pop();
     }
     return this.targetSequence;
+  }
+
+  replaceTarget(newTargetSequence) {
+    if (newTargetSequence == null || newTargetSequence.length == 0) {
+      console.warn("constraint: replace target with null value", newTargetSequence);
+      newTargetSequence = [];
+    }
+
+    this.targetSequence = newTargetSequence;
   }
 }
 
@@ -396,12 +417,13 @@ export class BetterRhymeConstraint extends CategoricalConstraint {
   }
 }
 
-class SoundConstraint extends CategoricalConstraint {
+export class SoundConstraint extends CategoricalConstraint {
   static defaultTarget = '';
   constructor(targetPhones, opening) {
     super('sound', Feature.Sound, SoundConstraint.defaultTarget, opening);
-    this.targetSequence = targetPhones.map((sound, i) => { return { sound: sound, index: i }; });
     this.flatten = true;
+    const preparedTarget = SoundConstraint.prepareTarget(targetPhones);
+    this.replaceTarget(preparedTarget); // set this.targetSequence
 
     // ARPAbet http://www.speech.cs.cmu.edu/cgi-bin/cmudict
     this.range = [
@@ -424,6 +446,14 @@ class SoundConstraint extends CategoricalConstraint {
       return phonemes[0].split(' ');
     }
     return [];
+  }
+
+  static prepareTarget(targetPhones) {
+    if (targetPhones == null) {
+      return [];
+    }
+
+    return targetPhones.map((sound, i) => { return { sound: sound, index: i }; });
   }
 }
 
@@ -456,12 +486,12 @@ export class NumericalRangeConstraint extends Constraint {
     return token[this.feature] || 0;
   }
 
-  updateTargetMin(newValue) {
+  updateTargetAtIndexMin(newValue) {
     this.targetMin = newValue;
     return this.targetMin;
   }
 
-  updateTargetMax(newValue) {
+  updateTargetAtIndexMax(newValue) {
     this.targetMax = newValue;
     return this.targetMax;
   }

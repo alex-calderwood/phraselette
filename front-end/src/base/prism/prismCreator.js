@@ -86,7 +86,8 @@ export function makePrism(type, callbacks) {
       prism.description="A phonetic tool that allows you to view and constraint words based on their sound, rhyme scheme, and meter.";
       break;
       case 'sound':
-      prism = new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words').setActive(false);
+      // prism = new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words').setActive(false);
+      prism = new Prism('sound', [Feature.Sound], 'words').setActive(true);
       prism.description="A phonetic tool that allows you to view and constraint words based on their sound, rhyme scheme, and meter.";
       break;
     // case 'basic':

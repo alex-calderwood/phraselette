@@ -179,8 +179,6 @@ export class TokenRange extends Component {
     const simple = expanded ? '' : 'simple';
     const tooltipOptions = {styled: false, topLeft: false}
 
-    console.log('colors: tokenrange', style, insideOriginColor)
-
     return <div 
         id={id}
         key={id}
