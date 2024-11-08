@@ -488,12 +488,18 @@ class App extends Component {
     });
   }
 
-  onKeyDown(event) {
-    if (event.metaKey && event.key === "k") {
-      return this.handleRetokenize();
-    }
+  // onKeyDown(event) {
+  //   // if (event.metaKey && event.key === "k") {
+  //   //   return this.handleRetokenize();
+  //   // }
 
-    if (event.metaKey && event.key === "'") {
+  //   if (event.metaKey && event.key === "'") {
+  //     return this.triggerSearchAll();
+  //   }
+  // }
+
+  onKeyDown(event) {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       return this.triggerSearchAll();
     }
   }
@@ -718,6 +724,7 @@ class App extends Component {
                     onRetokenize={this.handleRetokenize}
                     onSearch={this.triggerSearchAll}
                     onDelete={this.deleteOpening}
+                    onTooltipUpdate={this.handleTooltipUpdate}
                     opening={opening}
                   />
                   {/* Constrained search results */}
@@ -731,6 +738,8 @@ class App extends Component {
                     onClickSequence={this.handleSequenceClick}
                     onTooltipUpdate={this.handleTooltipUpdate}
                     colorBy={'origin'}
+
+                    
                   />
                   {/* Display the active prisms */}
                   {activePrisms.map((prism) => {

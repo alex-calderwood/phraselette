@@ -17,7 +17,8 @@ import { EVENT_NAMES } from "../base/Logging";
 const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTooltipUpdate, isSearching, styles}) => {
   const { handleMouseEnter, handleMouseLeave, handleMouseMove } = useTooltip(onTooltipUpdate);
 
-  const prismDescriptionText = ` (click to ${rotated ? 'collapse' : 'expand'})` + prism.description;
+  
+  const prismDescriptionText = `Click to ${rotated ? 'collapse' : 'expand'}. ` + prism.description;
   let searching = isSearching ? "searching-light" : "";
 
   let type = <div className={`prism-type-text ${rotated}`} style={{color: styles.style.color}} >
@@ -110,14 +111,6 @@ export class PrismView extends Component {
     this.setState(prevState => ({ isSettingsView: !prevState.isSettingsView }));
   }
 
-  // componentDidUpdate(prevProps, prevState) {
-  //     if (prevProps.constraints !== this.props.constraints) {
-  //       // constraints changed, do your update here
-  //       // this.handleConstraintsChanged();
-  //       this.prismHandleOnConstraintUpdate();
-  //     }
-  //   }
-
   onAddConstraint(constraint) {
     this.props.addConstraint(constraint);
     this.prismHandleOnConstraintUpdate(this.prism, this.props.opening);
@@ -145,8 +138,7 @@ export class PrismView extends Component {
           expandMode={'reduce'} 
           onTooltipUpdate={this.props.onTooltipUpdate}
           />
-
-        {/* {tokens.map((token) => {
+        {/* {tokens.map((token) => { 
           return <TokenAlternates
             token={token}
             key={token.id}
@@ -234,11 +226,6 @@ export class PrismView extends Component {
         />
 
         <div className={`prism-content ${activeClass} ${searching}`}>
-          {/* {this.state.isSettingsView ? (
-            <div>Settings View Placeholder</div>
-          ) : (
-            'hi'
-          )} */}
 
           {activeNotHidden ? Object.values(prism.textFields).map((field) => {
             return <PrismEditableTextField key={field.text} field={field} prism={prism} addEvent={this.props.addEvent} />
@@ -270,6 +257,7 @@ export class PrismView extends Component {
             prism={prism}
             onAdd={this.onAddConstraint.bind(this)}
             styles={styles}
+            onTooltipUpdate={this.props.onTooltipUpdate}
             onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)} /> : "" }
           
           {showResults ? <SearchResults

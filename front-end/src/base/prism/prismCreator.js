@@ -11,36 +11,44 @@ const roles = {
     "A Tralfamadorian dictionary. The Tralfamadorians are an alien species that abduct Billy Pilgrim, keep him prisoner, and teach him their philosophy on life. They are green and resemble toilet plungers with eyes. The Tralfamadorians are fatalists – they believe that everything is predestined and that nothing can be done to change the course of the universe. They can time travel and do not view time linearly: “All moments, past, present and future, always have existed, always will exist.” Because of this, they know how and when the universe will end, but they accept this, as their worldview dictates that they have no power to change future events.",
     "a precise academic/scientific thesaurus",
     "Deleuze and Guattari's thesaurus",
-    "Derrida's phrasebook",
-    "a romance novel phrasebook",
+    "Derrida's catch phrases and deep cuts",
+    "a romance novel's lexicon",
     "Emily Dickenson's playful lexicon (extremely playful Dickenson thesaurus)",
     "Jane Austen's country house 'free indirect discourse' or 'free indirect style' lexicon",
     "the thesaurus James Joyce used for Ulysses",
     "an everyday English thesaurus",
     "Alfred Jarry's inverted dictionary of pataphysics",
     "William Carlos Williams' observations",
-    "the collected works of George R. R. Martin",
     "a Wizard's wacky spellbook",
-    "James Gleick's scientific thesaurus for popular science",
+    "James Gleick's precise scientific thesaurus",
+    "a thesaurus of meaningless words",
+    "a thesaurus of metonyms",
+    "a thesaurus of homonyms and near homonyms (words having the same spelling or pronunciation but different meanings and origins)",
+    "a thesaurus of homophones and near homophones (words having the same pronunciation but different meanings, origins, or spelling)",
+    "a thesaurus of hypernyms (a word with a broad meaning that more specific words fall under)",
+    "a thesaurus of hyponyms (a word or phrase whose semantic field is more specific than its hypernym)",
   ],
   'reader': [
     "a surrealist in the mold of Max Ernst, Marcel Duchamp, and Andre Breton",
+    "a baker",
+    "Georg Cantor",
+    "Gertrude Abercrombie",
+    "a group theorist",
     "Tristan Tzara, the Dadaist poet",
-    "Trotsky, the Russian revolutionary, during his academic years",
-    "a group who are all experts in their fields (painting, ethnography, and freshwater algae), but not in mine",
-    "William S. Burroughs, the beat writer",
-    "Cormac McCarthy",
-    "J.R.R. Tolkein",
-    "James Patterson",
-    "Virginia Woolf",
+    "Trotsky, the Russian revolutionary",
+    "a confident expert in a different fields who provides competent and broad feedback despite being uninformed on this topic",
+    "William S. Burroughs, cut-up maniac",
+    "Cormac McCarthy after writing Blood Meridian",
+    "J.R.R. Tolkein in a whimsical mood",
+    "Virginia Woolf, an author of fractured narratives, stream-of-consciousness prose, focus on characters' interior monologue, writing 'psychological novels'",
     "a thousand year old vampire",
     "a gothic novelist",
     "a literary critic at the Atlantic",
-    "Derek Walcott",
-    "Phil, someone passionate about the Caribbean, despite not having been there",
+    "Kathy Acker, writer known for transgressive and appropriative writing, also wrote in the post-nouveau roman European tradition",
+    "Derek Walcott, San Lucian Nobel laureate whose writing gives 'an account of the simultaneous unity and division created by the ocean and by human dealings with it.'",
     "the Hulk",
-    "a guardian of the forest",
-    "Donna Haraway",
+    "a skateboarder who is over it, just pick a word already",
+    "Donna Haraway, being expansive with novel word choice",
     "Emily Witt, the millennial NYT writer",
     "Mark Leyner. Leyner employs an intense and unconventional style in his works of fiction. His stories are generally humorous and absurd: In The Tetherballs of Bougainville, Mark's father survives a lethal injection at the hands of the New Jersey penal system, and so is freed but must live the remainder of his life in fear of being executed, at New Jersey's discretion, in any situation and regardless of collateral damage. They frequently incorporate elements of meta-fiction: In the same novel, an adolescent Mark produces a film adaptation of the story of his father's failed execution, although he reads a newspaper review of the movie to the prison's warden, and then dies, before even leaving the prison. At the sentence level, Leyner uses sprawling imagery and an extravagant vocabulary, bordering on prose poetry.",
   ],
@@ -50,6 +58,9 @@ const roles = {
     "a historical dictionary, which deals not only with the latterday meanings of words but also the historical development of their forms and meanings",
     "an etymology dictionary",
     "a linguistics dictionary",
+    "your father's dictionary",
+    "your mother's dictionary",
+    "an incorrect dictionary with definititons that might be Dutch, or Swedish?"
   ]
 }
 
@@ -71,19 +82,19 @@ export function makePrism(type, callbacks) {
       break;
     case 'context':
       prism = new ContextPrism().setActive(true);
-      prism.description="A tool to generate and constrain words based on the statistical probability they follow the previous words (based on GPT-2))";
+      prism.description="A tool to generate and constrain words based on the statistical probability they follow the previous context (GPT-2).";
       break;
     case 'reader':
       prism = new ReaderPrism(randomRole('reader')).setActive(false);
-      prism.description="A computational reader model that will provide feedback and alternatives to your text based on its understanding of the text.";
+      prism.description="A reader model to provide feedback and alternatives to your text.";
       break;
     case 'thesaurus':
       prism = new ThesaurusPrism(randomRole('thesaurus')).setActive(false);
-      prism.description="A stylistic thesaurus. Specify the type of thesaurus you would like in plain text ('a wizard's spellbook')";
+      prism.description="A stylistic thesaurus. Specify the type of thesaurus you would like in plain text ('a wizard's spellbook' or 'a thesaurus of meaningless words')";
       break;
     case 'dictionary':
       prism = new DictionaryPrism(randomRole('dictionary')).setActive(false);
-      prism.description="A phonetic tool that allows you to view and constraint words based on their sound, rhyme scheme, and meter.";
+      prism.description="A stylistic dictionary. Specify the type of dictionary you would like in plain text ('an incorrect dictionary with definititons that might be Dutch')";
       break;
       case 'sound':
       // prism = new Prism('sound', [Feature.Sound, Feature.Rhyme], 'words').setActive(false);
