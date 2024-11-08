@@ -22,6 +22,7 @@ import { resolveConstraints } from "./scripts/resolution";
 import { assignSocket, registerHandlers,  sendEventToServer } from "./scripts/socket";
 
 import { RangeMap } from "./base/RangeMap";
+import { randomRole } from "./base/prism/prismCreator"
 import { ChangeType, TextChange } from "./base/TextChange";
 import { appState } from "./index" // anti pattern global
 
@@ -563,6 +564,13 @@ class App extends Component {
     this.triggerSearch([prism], false);
   }
 
+  reRole = (prism) =>{ 
+    // randomize the prism's role text
+    for(let [field, value] of Object.entries(prism.textFields) ) {
+      value.text = randomRole(prism.type)
+    }
+  }
+
   deleteOpening = () => {
     let toDelete = this.state.opening?.id;
 
@@ -744,6 +752,7 @@ class App extends Component {
                         opening={opening}
                         constraints={constraints}
                         onSearch={() => this.triggerSingleSearch(prism)}
+                        onRandomize={() => this.reRole(prism)}
                         onClickSequence={this.handleSequenceClick}
                         onConstraintUpdate={this.onConstraintUpdate.bind(this)}
                         onRemovePrism={() => this.handleRemovePrism(prism)}

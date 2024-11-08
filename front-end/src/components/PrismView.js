@@ -183,6 +183,11 @@ export class PrismView extends Component {
     }
   }
 
+  onRandomize() {
+    this.props.onRandomize();
+    this.forceUpdate()
+  }
+
   render() {
     let prism = this.prism;
     let start = this.props.startIndex;
@@ -206,8 +211,6 @@ export class PrismView extends Component {
     let rotated = activeNotHidden ? "rotated" : "";
     let activeClass  = activeNotHidden ? "active"  : "";
     let searching = this.props.isSearching && activeNotHidden ? "searching" : "";
-
-
 
     let title = "";
     if (!activeNotHidden && prism.title != null && prism.title != prism.type) {
@@ -263,6 +266,7 @@ export class PrismView extends Component {
             tokens={tokens}
             opening={opening}
             onSearch={this.props.onSearch}
+            onRandomize={this.onRandomize.bind(this)}
             prism={prism}
             onAdd={this.onAddConstraint.bind(this)}
             styles={styles}

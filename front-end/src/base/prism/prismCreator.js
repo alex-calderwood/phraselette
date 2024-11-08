@@ -54,7 +54,7 @@ const roles = {
 }
 
 /* randomly select a role from the roles */
-function randomRole(type) {
+export function randomRole(type) {
   let role = roles[type];
   if(role) {
     return role[Math.floor(Math.random() * role.length)];

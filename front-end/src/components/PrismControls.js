@@ -16,6 +16,7 @@ export class PrismControls extends Component {
     this.setState({ showFullCreator: false });
   }
 
+
   addConstraint(feature, opening) {
     let target = this.props.tokens;
     let constraint = makeConstraint(feature, target=target, opening);
@@ -25,6 +26,7 @@ export class PrismControls extends Component {
   render() {
     let prism = this.props.prism;
     let opening = this.props.opening;
+    let onRandomize = this.props.onRandomize;
     let onSearch = this.props.onSearch;
 
     let showConstraintButtons = opening != null;
@@ -39,7 +41,8 @@ export class PrismControls extends Component {
         {showConstraintButtons && prism.features.map((feature) => {
           return <button style={this.props.styles.buttonStyle} key={feature.plain} onClick={() => this.addConstraint(feature, opening)}> add {feature.plain} constraint </button>;
         })}
-        {prism.canSearch && <button style={this.props.styles.buttonStyle} onClick={onSearch}>▶</button>}
+        {prism.duplicatable && <button style={this.props.styles.buttonStyle} onClick={onRandomize}>🎲</button>}
+        {prism.canSearch && <button style={this.props.styles.buttonStyle} onClick={onSearch}>🔎</button>}
       </div>
 
     </div>
