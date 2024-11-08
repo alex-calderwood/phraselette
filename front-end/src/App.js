@@ -656,7 +656,7 @@ class App extends Component {
     let opening = this.state.opening;
     let openings = this.state.openings;
 
-    const hasSelection = selectionText && selectionText.length > 0;
+    const hasSelection = selectionText && selectionText.length > 1;
     const showSelection = debugMode && this.state.start !== null && this.state.end !== null;
 
     const activePrisms = Prism.getActive(this.state.prisms);
@@ -667,13 +667,13 @@ class App extends Component {
     window.state = this.state;
 
     return (
-      <div className="context-container" ref={this.containerRef}>
+      <div className="context-container rainbow" ref={this.containerRef}>
         <Tooltip
           content={this.state.tooltipState?.content}
           position={this.state.tooltipState?.position}
           options={this.state.tooltipState?.options}
         />
-        <div className="editor-container rainbow">
+        <div className="editor-container">
           <div className="left">
             {/* The text editor */}
             <PrismEditor
@@ -736,7 +736,7 @@ class App extends Component {
                     opening={opening}
                   />
                   {/* Constrained search results */}
-                  <SearchResults
+                  {/* <SearchResults
                     results={localResults}
                     isSearching={this.state.isSearching[opening?.id]}
                     extraPadding={true}
@@ -746,9 +746,7 @@ class App extends Component {
                     onClickSequence={this.handleSequenceClick}
                     onTooltipUpdate={this.handleTooltipUpdate}
                     colorBy={'origin'}
-
-                    
-                  />
+                  /> */}
                   {/* Display the active prisms */}
                   {activePrisms.map((prism) => {
                     let constraints = Constraint.subsetByFeatures(
@@ -785,8 +783,40 @@ class App extends Component {
               )}
               {/* End inspector */}
 
+              {/* {hasSelection && (
+                <div className="fixed-results-container">
+                  <SearchResults
+                    results={localResults}
+                    isSearching={this.state.isSearching[opening?.id]}
+                    extraPadding={true}
+                    wrap={false}
+                    verticalLayout={true}
+                    showLength={true}
+                    onClickSequence={this.handleSequenceClick}
+                    onTooltipUpdate={this.handleTooltipUpdate}
+                    colorBy={'origin'}
+                  />
+                </div>
+              )} */}
+
           </div>
         </div>
+
+        {hasSelection && (
+          <div className="bottom-results glass-pane">
+            <SearchResults
+              results={localResults}
+              isSearching={this.state.isSearching[opening?.id]}
+              extraPadding={true}
+              wrap={false}
+              verticalLayout={true}
+              showLength={true}
+              onClickSequence={this.handleSequenceClick}
+              onTooltipUpdate={this.handleTooltipUpdate}
+              colorBy={'origin'}
+            />
+          </div>
+        )}
       </div>
     );
   }

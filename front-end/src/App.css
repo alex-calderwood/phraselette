@@ -82,20 +82,44 @@
   color: #61dafb;
 }
 
-
 .context-container {
   width: 100%;
   height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
+.editor-container {
+  flex: 1;
+  min-height: 0; /* allows container to shrink when results appear */
+  display: flex; /* Make children flex, which will make them stack */
+}
+
+
+.right {
+  flex: 0 0 50%;  
+  max-width: 50%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.left {
+  flex: 0 0 50%;
+  max-width: 50%;
+  display: flex;          /* Add these */
+  flex-direction: column; /* new lines */
+}
+
+
+/* 
 .editor-container {
   top: 0; left: 0; 
   width: 100%;
   height: 100vh;
-  display: flex; /* Make children flex, which will make them stack */
   max-width: 100%;
-  overflow: hidden; /* Add this line */
-} 
+  overflow: hidden;
+}  */
 
 select {
   font-size: 12px;
@@ -212,24 +236,6 @@ select:hover::after {
   );
 }
 
-.right {
-  flex: 0 0 50%;  /* Make them take up 50% of the space */
-  max-width: 50%; /* Ensure it doesn't grow beyond 50% */
-}
-
-.left {
-  flex: 0 0 50%;
-  max-width: 50%;
-  display: flex;          /* Add these */
-  flex-direction: column; /* new lines */
-}
-
-.right {
-  /* background-color:rgb(172, 172, 172) */
-  max-width: 50%; /* Ensure it doesn't grow beyond 50% */
-  /* overflow-y: auto; Add this line */
-  height: 100vh; /* Add this line */
-}
 
 .selection-display {
   color:  var(--selection-color);
@@ -281,12 +287,6 @@ select:hover::after {
   margin: 0 var(--editor-margin) var(--editor-margin) var(--editor-margin);
 }
 
-/* make the z index of the text on the editor slightly higher so we can put something in between, so
-we will need to select the text children of the editor */
-/* .editor > * {
-  z-index: 3;
-} */
-
 .lense-bar {
   z-index: 2;
   width: 100%;
@@ -296,22 +296,16 @@ we will need to select the text children of the editor */
 }
 
 .inspector {
-  justify-content: center;
-  /* background-color: white; */
-  /* box-shadow: 0 3px 5px rgba(0,0,0,0.30), 0 3px 5px rgba(0,0,0,0.22); */
   padding: var(--inspector-padding);
-  /* margin: 10px; */
-
-  /* From https://css.glass */
+  margin-bottom: var(--inspector-bottom-gap);
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.3);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10.6px);
   -webkit-backdrop-filter: blur(10.6px);
-
-  /* scrolling behavior addiitons */
   overflow-y: auto;
-  height: calc(100vh - var(--inspector-bottom-gap) - var(--prism-bar-height) - (2 * var(--editor-margin)) - (2 * var(--inspector-padding)));
+  flex: 1;
+  min-height: 0;
 }
 
 .glass-pane {
@@ -425,6 +419,12 @@ we will need to select the text children of the editor */
   font-size: var(--small-font-size);
   padding-left: 1em;
   margin: 0;
+}
+
+.bottom-results {
+  padding: 8px;
+  max-height: 16vh;
+  overflow-y: auto;
 }
 
 .search-results {
