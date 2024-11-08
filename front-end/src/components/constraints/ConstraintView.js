@@ -195,7 +195,10 @@ export class ConstraintWrapper extends Component {
     return (
       <div id={id} className="constraint">
         {children}
-        {!this.props.isTemp && <button style={this.props.styles.buttonStyle} onClick={() => this.onDelete()}>×</button>}
+        {!this.props.isTemp && <button 
+          style={this.props.styles.buttonStyle} 
+          className="constraint-main-delete"
+          onClick={() => this.onDelete()}>×</button>}
       </div>
     );
   }

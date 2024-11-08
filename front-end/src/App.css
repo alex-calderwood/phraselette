@@ -612,16 +612,17 @@ label {
 }
 
 .constraint {
-  align-items: center;
+  align-items: center;  /* Keep center alignment */
   justify-content: center;
   width: auto;
   display: flex;
+  flex-direction: column;  /* Stack elements vertically */
+  position: relative;  /* For absolute positioning of delete button */
 
   input {
     background-color: #f1f1f1;
     border: none;
     outline: none;
-    /* max-width: 3em; */
   }
 }
 
@@ -629,6 +630,33 @@ label {
   display: flex;
   width: auto;
   justify-content: center;
+  margin-top: 0.5em;  /* Add space between form and content */
+}
+
+.constraint-main-delete {
+  position: absolute;
+  top: 0;           /* Adjust this */
+  right: 0;         /* Adjust this */
+  width: 1.5em;
+  height: 1.5em;
+  transform: translate(-50%, 0%);  /* This might be better here after all */
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75em;
+  cursor: pointer;
+  z-index: 2;
+  
+  background: rgba(255, 255, 255, 0.40);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10.6px);
+  -webkit-backdrop-filter: blur(10.6px);
+}
+
+.constraint-main-delete:hover {
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .histogram {
