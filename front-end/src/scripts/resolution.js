@@ -31,16 +31,26 @@ export async function resolveConstraints(predictions, constraints, opening, sort
         else         { rejected.push(sequence); }
     }
 
+    let all = [...accepted, ...rejected];
+
     if (sort) {
         accepted = sortPredictions(accepted, comparator, sortByAttribute);
         rejected = sortPredictions(rejected, comparator, sortByAttribute);
+        all = sortPredictions(all, comparator, sortByAttribute);
     }
 
-    return [accepted, rejected];
+    return {
+        accepted,
+        rejected,
+        all
+    }
 }
 
-// todo
 export function sortPredictions(scoredPredictions, comparator, sortByAttribute) {
+    if(scoredPredictions == null || scoredPredictions.length == 0) {
+        return [];
+    }
+
     let sortedPredictions = scoredPredictions.sort((a, b) => {
         if (sortByAttribute) {
             // console.log('comparator', comparator, 'by attribute', a, b, a.getAttribute(comparator), b.getAttribute(comparator));

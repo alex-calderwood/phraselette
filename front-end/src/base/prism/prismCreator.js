@@ -81,7 +81,7 @@ export function makePrism(type, callbacks) {
       prism.description="A tool to view and constrain word's part of speech.";
       break;
     case 'context':
-      prism = new ContextPrism().setActive(true);
+      prism = new ContextPrism().setActive(false);
       prism.description="A tool to generate and constrain words based on the statistical probability they follow the previous context (GPT-2).";
       break;
     case 'reader':

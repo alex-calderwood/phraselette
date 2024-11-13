@@ -1,5 +1,17 @@
 const {sendClaudeReq, claudeReplyText} = require("./textgen.js");
 
+const getModeText = (mode) => { 
+    let modes = {
+        'contains': 'contain some of or all of the following',
+        'exactly': 'contain the following',
+        'starts with': 'start with the following',
+        'ends with': 'end with the following',
+        'in order': 'include the following sequence of'
+    }
+    let modeText = modes[mode] || 'contain the following';
+    return modeText;
+}
+
 const constraintRulez = (message) => {
     console.log('constraints', message, message.constraints)
     if (message == null || message.constraints == null || message.constraints.length == 0) {
@@ -7,20 +19,18 @@ const constraintRulez = (message) => {
     }
     let constraintText = ""
     for (let constraint of message.constraints) {
+        let modeText = getModeText(constraint.mode);
+        let target;
         switch(constraint.type) {
+            case "POSConstraint":
+                target = constraint.target.map(c => c.pos || "").join(" ")
+                constraintText += `- If possible, some responses should ${modeText} parts of speech ${target}. This is not as important as sticking to the provided style.\n`
+                break;
             case "WordLengthConstraint":
                 constraintText += `Attempt to limit each response to ${constraint.min} and ${constraint.max} words. `
                 break;
             case "SoundConstraint":
-                let modes = {
-                    'contains': 'contain some of or all of the following',
-                    'exactly': 'contain the following',
-                    'starts with': 'start with the following',
-                    'ends with': 'end with the following',
-                    'in order': 'include the following sequence of'
-                }
-                let modeText = modes[constraint.mode] || 'contain the following';
-                let target = constraint.target.map(c => c.sound).join(" ")
+                target = constraint.target.map(c => c.sound || "").join(" ")
                 constraintText += `- If possible, some responses should sound out such that they ${modeText} ARPAbet phonemes: ${target}. Do not be explicit about the phonetics. This is not as important as sticking to the provided style.\n`
                 break;
             }

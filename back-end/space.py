@@ -138,7 +138,7 @@ def stream_parse(text, extra_context, requests):
 def add_extra_request_data(requests, token_data):
     if requests:
         extra_data = {}
-        for request in requests:
+        for request in list(set(requests)):
             make_request = get_additional_word_data.get(request)
             if make_request:
                 extra_data[request] = make_request(token_data)

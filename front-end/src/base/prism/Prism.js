@@ -6,6 +6,7 @@ import { prismSettings } from './prismSettings.js';
 export class Prism {
   static TYPES = ['words', 'context', 'reader', 'thesaurus', 'sound', 'dictionary'];
   static SEARCH_TYPES = new Set(['context', 'reader', 'thesaurus', 'dictionary']);
+  static CONSTRAIN_TYPES = new Set(['context', 'sound', 'words']);
   static MAIN_TYPE = Prism.TYPES[0]; // the type that is used for holding misc data
   /**
    * Create a Prism.
@@ -25,6 +26,7 @@ export class Prism {
     // some prisms should not be removed
     this.undestroyable = Prism.isWordType(this.type);
     this.canSearch = Prism.SEARCH_TYPES.has(this.type);
+    this.canConstrain = Prism.CONSTRAIN_TYPES.has(this.type);
 
     // which tokens to look up in the tokenManager
     this.tokenType = tokenType ? tokenType : this.type;  
@@ -78,28 +80,25 @@ export class Prism {
       sequence.setAttribute('originPrism', this.type);
     }
 
-    // console.log('constraints: in prism ', constraints);
-
-    // constraints = Constraint.subsetByFeatures(constraints, this.features) // Do I need to do this? I also call it in onConstraintUpdate
+    constraints = Constraint.subsetByFeatures(constraints, this.features) // Do I need to do this? I also call it in onConstraintUpdate
     // const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
-    let [results, rejectedPredictions] = await resolveConstraints(
+    // TODO I'm not sure I need to actually do this here, if I do it in onSearchComplete also
+    let results = await resolveConstraints(
       predictions,
       constraints,
       opening,
-      false,
-      0,
+      true,
+      0.5,
+      this.sortBy,
+      this.sortBy
     );
-
-
-    results = sortPredictions(results, this.sortBy, true);
 
     let resolvedInsights = {...newInsights, results: results, summary: summary};
     this.insights[opening.id] = resolvedInsights;
-    console.log("prism: resolved insights", resolvedInsights);
+    console.log("prism: resolved insights", {resolvedInsights, results});
 
     this.isSearching = false;
-    this.onSearchComplete(opening);
-
+    this.onSearchComplete(opening); // call the prism's search complete callback
   }
 
   /* 

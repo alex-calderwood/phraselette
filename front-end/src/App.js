@@ -72,7 +72,7 @@ class App extends Component {
       isSearching: {},
       start: 0,
       end: 0,
-      localResults: [],
+      rephrasings: {},
       opening: undefined,
       showModal: true,
       userData: null,
@@ -192,18 +192,18 @@ class App extends Component {
   setSelection(selection) {
     let [start, end] = [selection.startTextIndex, selection.endTextIndex];
     let selectionText = this.state.selection ? this.state.selection.text : null;
-    let localResults = [];
+    let rephrasings = {};
     let opening = null;
-    ({start, end, localResults, selectionText, opening} = this.expandToOpening(start, end, localResults, opening));
+    ({start, end, rephrasings, selectionText, opening} = this.expandToOpening(start, end, rephrasings, opening));
 
-    console.log("app: setting selection", {selection, start, end, selectionText, localResults, opening});
+    console.log("app: setting selection", {selection, start, end, selectionText, rephrasings, opening});
 
     this.setState({
       selection: selection,
       selectionText: selectionText,
       start: start,
       end: end,
-      localResults: localResults,
+      rephrasings: rephrasings,
       opening: opening,
       tooltipState: {}
     });
@@ -340,44 +340,44 @@ class App extends Component {
   // }
 
   /*
-   * A callback that is triggered when a prism finishes its .search() operation
+   * A callback that is triggered when a prism finishes its .search() operation.
+   * Here we update App's the global search results.
    */
   async onSearchComplete(opening) {
     let constraints = this.state.constraints;
     let prisms = Prism.getActive(this.state.prisms);
     let predictions = prisms.map(
-      (p) => p?.insights[opening.id]?.results
+      (p) => p?.insights[opening.id]?.results?.all
     ).filter((r) => r && r.length > 0)
     .flat();
 
-    let [filteredPredictions, rejectedPredictions] = await resolveConstraints(
+    let resolved = await resolveConstraints(
       predictions,
       constraints,
-      opening, 
+      opening,
       true, 
-      1,
+      0.5
     );
 
     this.setState(prevState => {
       const newOpenings = prevState.openings.copy();
-      newOpenings.setById(opening.id, filteredPredictions); // Don't I want this to be the filtered ones?
+      newOpenings.setById(opening.id, resolved);
 
       this.addEvent({
         eventName: EVENT_NAMES.SearchResults,
         eventDetails: {
           openings: newOpenings,
-          filteredPredictions: filteredPredictions,
-          rejectedPredictions: rejectedPredictions
+          resolved,
         }
       });
 
       return { 
         openings: newOpenings,
-        localResults: filteredPredictions
+        rephrasings: resolved
       };
     });
 
-    console.log('app: search complete', opening, 'search results', filteredPredictions);
+    console.log('app: search complete', opening, 'search results', resolved);
     this.setSearchingState(opening.id, false); // UI update
   }
 
@@ -506,7 +506,7 @@ class App extends Component {
   }
 
   onConstraintUpdate(prism, opening) {
-    let predictions = prism?.insights[opening.id]?.results || [];
+    let predictions = prism?.insights[opening.id]?.results?.all || [];
     let document = this._currentDocument().updateToOpening(opening);
     // alex do the subsetting now
     // let constraints = Constraint.subsetByFeatures( // why are we subsetting?
@@ -592,7 +592,7 @@ class App extends Component {
       return {
         opening: undefined,
         openings: newOpenings,
-        localResults: [],
+        rephrasings: {},
       }
     })
   }
@@ -626,7 +626,7 @@ class App extends Component {
   /*
    * If the current selection is within a larger opening, use that opening.
   */
-  expandToOpening(start, end, localResults, opening) {
+  expandToOpening(start, end, rephrasings, opening) {
     if (start == end) {
       opening = this.state.openings.findEnclosingRange(start);
     } else {
@@ -634,15 +634,15 @@ class App extends Component {
     }
 
     if (opening == undefined) {
-      localResults = [];
+      rephrasings = {};
     } else {
-      localResults = opening.value;
+      rephrasings = opening.value;
       [start, end] = [opening.start, opening.end];
     }
 
     let selectionText = this.text.slice(start, end + 1);
 
-    return { start, end, localResults: localResults, selectionText, opening};
+    return { start, end, rephrasings: rephrasings, selectionText, opening};
   }
 
   render() {
@@ -652,7 +652,8 @@ class App extends Component {
 
     let [start, end] = [this.state.start, this.state.end];
     let selectionText = this.state.selectionText;
-    let localResults = this.state.localResults;
+    let results = this.state.rephrasings.accepted || [];
+    let additionalResults = this.state.rephrasings.rejected || [];
     let opening = this.state.opening;
     let openings = this.state.openings;
 
@@ -662,7 +663,7 @@ class App extends Component {
     const activePrisms = Prism.getActive(this.state.prisms);
     window.activePrisms = activePrisms; // for debugging
 
-    const renderData = {start, end, selectionText, localResults, opening}
+    const renderData = {start, end, selectionText, results, additionalResults, opening}
     window.renderData = renderData;
     window.state = this.state;
 
@@ -735,18 +736,6 @@ class App extends Component {
                     onTooltipUpdate={this.handleTooltipUpdate}
                     opening={opening}
                   />
-                  {/* Constrained search results */}
-                  {/* <SearchResults
-                    results={localResults}
-                    isSearching={this.state.isSearching[opening?.id]}
-                    extraPadding={true}
-                    wrap={false}
-                    verticalLayout={true}
-                    showLength={true}
-                    onClickSequence={this.handleSequenceClick}
-                    onTooltipUpdate={this.handleTooltipUpdate}
-                    colorBy={'origin'}
-                  /> */}
                   {/* Display the active prisms */}
                   {activePrisms.map((prism) => {
                     let constraints = Constraint.subsetByFeatures(
@@ -782,31 +771,16 @@ class App extends Component {
                 </div>
               )}
               {/* End inspector */}
-
-              {/* {hasSelection && (
-                <div className="fixed-results-container">
-                  <SearchResults
-                    results={localResults}
-                    isSearching={this.state.isSearching[opening?.id]}
-                    extraPadding={true}
-                    wrap={false}
-                    verticalLayout={true}
-                    showLength={true}
-                    onClickSequence={this.handleSequenceClick}
-                    onTooltipUpdate={this.handleTooltipUpdate}
-                    colorBy={'origin'}
-                  />
-                </div>
-              )} */}
-
           </div>
         </div>
 
         {hasSelection && (
           <div className="bottom-results glass-pane">
             <SearchResults
-              results={localResults}
+              results={results}
+              additionalResults={additionalResults}
               isSearching={this.state.isSearching[opening?.id]}
+              splitByFilter={true}
               extraPadding={true}
               wrap={false}
               verticalLayout={true}

@@ -56,10 +56,9 @@ export class ContextPrism extends Prism {
 
   async onSearchResults(opening, insights, document, constraints, numWordsCutoff) {
     let predictions = insights.predictions;
-    let numWords = numWordsCutoff !== null ? numWordsCutoff : null;
+    // let numWords = numWordsCutoff !== null ? numWordsCutoff : null;
 
     console.log('constraints: in llm', constraints)
-
     for (let prediction of predictions) {
       let wordTokens = await miscTokensToWordTokens(prediction, document, numWordsCutoff);
       prediction.span = wordTokens;

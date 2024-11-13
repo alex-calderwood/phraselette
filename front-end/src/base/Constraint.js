@@ -322,11 +322,12 @@ export class CategoricalConstraint extends Constraint {
   }
 
   toJSON() {
-    return {
+  let json = {
       type: this.constructor.name,
       mode: this.mode,
       target: this.targetSequence,
     };
+  return json;
   }
 }
 
@@ -490,7 +491,6 @@ export class NumericalRangeConstraint extends Constraint {
     }
 
     let value = sequence.getAttribute(this.feature.attribute, 0);
-    console.log('numerical score', this.feature.attribute, 'val', value, 'target', this.targetMin, this.targetMax)
     if (value < this.targetMin || value > this.targetMax) {
       return 0;
     }

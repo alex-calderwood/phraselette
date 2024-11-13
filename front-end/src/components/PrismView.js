@@ -59,14 +59,14 @@ class PrismEditableTextField extends Component {
     this.setState({ text: value });
     this.props.prism.updateTextField(this.props.field.name, value);
 
-    this.props.addEvent({
-      eventName: EVENT_NAMES.UpdateTextField,
-      eventDetails: {
-        userId: appState.userData?.userId,
-        prism: this.props.prism,
-        to: value
-      }
-    });
+    // this.props.addEvent({ // too slow to run this every time
+    //   eventName: EVENT_NAMES.UpdateTextField,
+    //   eventDetails: {
+    //     userId: appState.userData?.userId,
+    //     prism: this.props.prism,
+    //     to: value
+    //   }
+    // });
   }
 
   render() {
@@ -191,7 +191,8 @@ export class PrismView extends Component {
 
     let tokens = start !== null ? this.tokenManager.tokensAt(prism.tokenType, start, end) : [];
 
-    let results = prism?.insights[opening?.id]?.results || [];
+    let results = prism?.insights[opening?.id]?.results.accepted || [];
+    let additionalResults = prism?.insights[opening?.id]?.results.rejected || [];
     let text = prism?.insights[opening?.id]?.text || null;
 
     let activeNotHidden     = prism.active && !prism.hidden;
@@ -212,7 +213,6 @@ export class PrismView extends Component {
     }
 
     let textContent = showtext ? this.bulletedText(text) : "";
-
 
     return <div className={`prism`} style={styles.style}>
         <PrismTitle 
@@ -270,7 +270,9 @@ export class PrismView extends Component {
                       tokenType={prism.type}
                       onClickSequence={this.props.onClickSequence}
                       onTooltipUpdate={this.props.onTooltipUpdate}
-                      results={results} 
+                      results={results}
+                      additionalResults={additionalResults}
+                      splitByFilter={prism.canConstrain}
                       styles={styles}
                       colorBy={'origin'}
                       /> : ""}
