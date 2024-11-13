@@ -785,6 +785,7 @@ class App extends Component {
               wrap={false}
               verticalLayout={true}
               showLength={true}
+              fullHeight={true}
               onClickSequence={this.handleSequenceClick}
               onTooltipUpdate={this.handleTooltipUpdate}
               colorBy={'origin'}

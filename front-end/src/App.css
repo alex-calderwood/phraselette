@@ -437,6 +437,14 @@ select:hover::after {
   min-height: 100px;
 }
 
+.search-results.full-height {
+  /* get rid of the max-height, make it take up it's entire child height */
+  max-height: none;
+  /* get rid of scroll bar, instead make it expand */
+  overflow-y: visible;
+}
+
+
 .search-results.extra-padding {
   margin-bottom: var(--editor-margin);
 }

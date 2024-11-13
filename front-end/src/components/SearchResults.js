@@ -8,13 +8,15 @@ export class SearchResults extends Component {
     this.splitByFilter = this.props.splitByFilter == true;
     this.constraintType = this.props.tokenType || 'all';
     this.tokenType = this.props.tokenType || 'search';
+    this.fullHeight = this.props.fullHeight == true;
   }
 
   render() {
-    let wrap = this.props.wrap !== false; // default to true
+    let wrap = this.props.wrap !== false;              // default to true
     let vertical = this.props.verticalLayout === true; // default to false
     let short = this.props.short == true;
     let extraPadding = this.props.extraPadding && 'extra-padding';
+    let fullHeight = this.fullHeight ? 'full-height' : '';
 
     if (this.props.isSearching) {
       let searching = this.props.doAnimation && 'searching'
@@ -23,7 +25,6 @@ export class SearchResults extends Component {
 
     let results = this.props.results;
     let additionalResults = this.props.additionalResults;
-    
     let top, additional;
 
     if (this.splitByFilter) {
@@ -37,7 +38,7 @@ export class SearchResults extends Component {
       additional = null;
     }
 
-    return <div className={"search-results"}>
+    return <div className={`search-results ${fullHeight}`}>
       {top}
       {additional}
     </div>
