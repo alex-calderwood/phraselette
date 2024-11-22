@@ -24,8 +24,10 @@
   --rainbow-alpha: 0.2; /* Adjust this value between 0 (fully transparent) and 1 (fully opaque) */
 
   /* --editor-font: "Noto Serif", serif; */
-  --editor-font: "Open Sans", sans-serif;
   --ui-font: "Open Sans", sans-serif;
+  /* --editor-font: "Roboto"; */
+  /* --editor-font: "Open Sans", sans-serif; */ /*causes flickering*/
+  /* --editor-font: system-ui, -apple-system, Roboto, sans-serif; */
 
    /* Apply all UI font properties globally */
    font-family: var(--ui-font);
