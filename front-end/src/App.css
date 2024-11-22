@@ -501,6 +501,7 @@ select:hover::after {
 
 .token-range-parent.short {
   max-height: 25vh;
+  overflow: scroll;
 }
 
 .token-range {

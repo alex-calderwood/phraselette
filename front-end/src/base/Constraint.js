@@ -187,8 +187,6 @@ export class CategoricalConstraint extends Constraint {
   }
 
   async getScore(sequence, document) {
-    // console.log('constraint: score mode', this.mode, sequence.textContent);
-
     if (sequence === null || sequence.span.length === 0 || this.targetSequence === null || this.targetSequence.length === 0) {
       return 0;
     }
@@ -211,9 +209,8 @@ export class CategoricalConstraint extends Constraint {
     } else {
       console.error('constraint: invalid mode:', this.mode);
     }
-    
-    score = score ? 1 : 0;
-    // console.log('constraint: score', score)
+
+    console.log('scoring categorical: ', tokenFeatures, 'target', flattenedTargetFeatures, 'score', score)
     return score;
   }
 
@@ -224,53 +221,109 @@ export class CategoricalConstraint extends Constraint {
     return token[attribute];
   }
 
-  contains(arr, target) {
-    if (target.length === 0) return true;
-    for (let i = 0; i <= arr.length - target.length; i++) {
-      if (this.exactly(arr.slice(i, i + target.length), target)) {
-        return true;
-      }
-    }
-    return false;
-  }
+  // contains(arr, target) {
+  //   if (target.length === 0) return true;
+  //   for (let i = 0; i <= arr.length - target.length; i++) {
+  //     if (this.exactly(arr.slice(i, i + target.length), target)) {
+  //       return true;
+  //     }
+  //   }
+  //   return false;
+  // }
 
-  containsSubtokens(arr, target) {
-    return target.every(subarray => this.containsAll(arr, subarray));
-  }
+  // // containsSubtokens(arr, target) {
+  // //   return target.every(subarray => this.containsAll(arr, subarray));
+  // // }
 
   exactly(a, b) {
     return a.length === b.length && a.every((v, i) => v === b[i]);
   }
 
-  startsWith(arr, target) {
-    return this.exactly(arr.slice(0, target.length), target);
-  }
+  // startsWith(arr, target) {
+  //   return this.exactly(arr.slice(0, target.length), target);
+  // }
 
-  startsWithSubtokens(arr, target) {
-    let flattened = target.flat();
-    return this.startsWith(arr, flattened);
-  }
+  // startsWithSubtokens(arr, target) {
+  //   let flattened = target.flat();
+  //   return this.startsWith(arr, flattened);
+  // }
 
-  endsWith(arr, target) {
-    return this.exactly(arr.slice(-target.length), target);
-  }
+  // endsWith(arr, target) {
+  //   return this.exactly(arr.slice(-target.length), target);
+  // }
 
-  endsWithSubtokens(arr, target) {
-    let flattened = target.flat();
-    return this.endsWith(arr, flattened);
+  // endsWithSubtokens(arr, target) {
+  //   let flattened = target.flat();
+  //   return this.endsWith(arr, flattened);
+  // }
+
+  // inOrder(arr, target) {
+  //   let targetIndex = 0;
+  //   for (let i = 0; i < arr.length; i++) {
+  //     if (arr[i] === target[targetIndex]) {
+  //       targetIndex++;
+  //       if (targetIndex === target.length) {
+  //         return true;
+  //       }
+  //     }
+  //   }
+  //   return false;
+  // }
+
+  contains(arr, target) {
+      if (target.length === 0) return 1;
+      if (arr.length === 0) return 0;
+
+      let maxMatchLength = 0;
+
+      // For each position in array
+      for (let i = 0; i < arr.length; i++) {
+          // For each target position - try starting the match here
+          for (let targetStart = 0; targetStart < target.length; targetStart++) {
+              let currentMatchLength = 0;
+              
+              // Try matching target elements sequentially from these positions
+              for (let j = 0; 
+                  j < target.length - targetStart && i + j < arr.length; 
+                  j++) {
+                  if (arr[i + j] === target[targetStart + j]) {
+                      currentMatchLength++;
+                  } else {
+                      break;  // Stop on first non-match since we want contiguous
+                  }
+              }
+              maxMatchLength = Math.max(maxMatchLength, currentMatchLength);
+          }
+      }
+
+      return maxMatchLength / target.length;
   }
 
   inOrder(arr, target) {
-    let targetIndex = 0;
-    for (let i = 0; i < arr.length; i++) {
-      if (arr[i] === target[targetIndex]) {
-        targetIndex++;
-        if (targetIndex === target.length) {
-          return true;
-        }
+      if (target.length === 0) return 1;
+      if (arr.length === 0) return 0;
+      
+      let targetIndex = 0;
+      let matches = 0;
+      
+      for (let i = 0; i < arr.length && targetIndex < target.length; i++) {
+          if (arr[i] === target[targetIndex]) {
+              matches++;
+              targetIndex++;
+          }
       }
-    }
-    return false;
+      
+      return matches / target.length;
+  }
+
+  startsWith(arr, target) {
+    const overlap = arr.slice(0, target.length);
+    return this.exactly(overlap, target);
+  }
+
+  endsWith(arr, target) {
+    const overlap = arr.slice(-target.length);
+    return this.exactly(overlap, target);
   }
 
   updateTargetAtIndex(index, newValue) {
@@ -486,16 +539,30 @@ export class NumericalRangeConstraint extends Constraint {
 
   async getScore(sequence, document) {
     if (this.targetMin === null || this.targetMax === null) {
-      console.error('Must specify a target for constraint:', this);
-      return 0;
+        console.error('Must specify a target for constraint:', this);
+        return 0;
     }
 
     let value = sequence.getAttribute(this.feature.attribute, 0);
-    if (value < this.targetMin || value > this.targetMax) {
-      return 0;
+    
+    // If within range, perfect score
+    if (value >= this.targetMin && value <= this.targetMax) {
+        return 1;
     }
-    return 1;
-  }
+
+    // If outside range, calculate how far outside as a ratio
+    if (value < this.targetMin) {
+        // Distance from min as a ratio of the range
+        let distance = this.targetMin - value;
+        let rangeSize = this.targetMax - this.targetMin;
+        return 1 / (1 + (distance / rangeSize));
+    } else {
+        // Distance from max as a ratio of the range
+        let distance = value - this.targetMax;
+        let rangeSize = this.targetMax - this.targetMin;
+        return 1 / (1 + (distance / rangeSize));
+    }
+}
 
   getValue(token) {
     return token[this.feature] || 0;
@@ -532,8 +599,9 @@ export class WordLengthConstraint extends NumericalRangeConstraint {
   * 1 means the span perfectly coheres to the constraint
   */
   async getScore(sequence, document) {
-    if (sequence.numWords() <= this.targetMax) {
-      return 1;
+    let numWords = sequence.numWords();
+    if (numWords <= this.targetMax) {
+      return (this.targetMax - numWords) / this.targetMax;
     }
     return 0;
   }

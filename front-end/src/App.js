@@ -356,7 +356,7 @@ class App extends Component {
       constraints,
       opening,
       true, 
-      0.5
+      1
     );
 
     this.setState(prevState => {

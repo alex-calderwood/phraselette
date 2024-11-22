@@ -88,7 +88,7 @@ export class Prism {
       constraints,
       opening,
       true,
-      0.5,
+      1,
       this.sortBy,
       this.sortBy
     );
