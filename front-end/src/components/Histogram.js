@@ -19,12 +19,18 @@ export const LogHistogram = ({ data, onUpdate, hasData }) => {
     const resizeCanvas = () => {
       const parent = parentRef.current;
       if (parent && canvasRef.current) {
-        canvasRef.current.width = parent.clientWidth;
-        canvasRef.current.height = parent.clientHeight;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const scale = window.devicePixelRatio;
+        canvas.width = parent.clientWidth * scale;
+        canvas.height = parent.clientHeight * scale;
+        canvas.style.width = parent.clientWidth + 'px';
+        canvas.style.height = parent.clientHeight + 'px';
+        ctx.scale(scale, scale);
         drawHistogram();
       }
     };
-
+  
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
     
@@ -72,8 +78,8 @@ export const LogHistogram = ({ data, onUpdate, hasData }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    const width = canvas.getBoundingClientRect().width;
+    const height = canvas.getBoundingClientRect().height;
 
     ctx.clearRect(0, 0, width, height);
 
@@ -84,8 +90,10 @@ export const LogHistogram = ({ data, onUpdate, hasData }) => {
   
       data.counts.forEach((count, index) => {
         const binEdge = data.bin_edges[index];
-        const x = Math.floor(linearScale(binEdge, dataMin, dataMax, 0, width));
-        const barWidth = Math.ceil(width / data.counts.length);
+
+        const x = linearScale(binEdge, dataMin, dataMax, 0, width);
+        const barWidth = Math.ceil(width / data.counts.length);   
+
         const scaledBarHeight = Math.ceil((count / maxCount) * (height - DEFAULT_HEIGHT - GAP_HEIGHT));
         const y = height - scaledBarHeight - DEFAULT_HEIGHT - GAP_HEIGHT;
 
@@ -107,22 +115,30 @@ export const LogHistogram = ({ data, onUpdate, hasData }) => {
       });
     }
 
-    // Draw min and max lines
-    ctx.strokeStyle = 'red';
+    // Draw min and max lines with decoration
+    ctx.strokeStyle = 'rgba(230, 40, 40, 0.8)';
     ctx.lineWidth = 2;
+
+    const drawLine = (x) => {
+        // Main line
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+
+        // Little circle at top
+        ctx.beginPath();
+        ctx.arc(x, 0, 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(230, 40, 40, 0.8)';
+        ctx.fill();
+    };
+
 
     const minX = linearScale(minValue, hasData ? data.bin_edges[0] : defaultRange[0], hasData ? data.bin_edges[data.bin_edges.length - 1] : defaultRange[1], 0, width);
     const maxX = linearScale(maxValue, hasData ? data.bin_edges[0] : defaultRange[0], hasData ? data.bin_edges[data.bin_edges.length - 1] : defaultRange[1], 0, width);
 
-    ctx.beginPath();
-    ctx.moveTo(minX, 0);
-    ctx.lineTo(minX, height);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(maxX, 0);
-    ctx.lineTo(maxX, height);
-    ctx.stroke();
+    drawLine(minX);
+    drawLine(maxX);
 
     ctx.fillStyle = gray;
     let min = humanLog(minValue);
@@ -134,10 +150,11 @@ export const LogHistogram = ({ data, onUpdate, hasData }) => {
   const handleMouseDown = (e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
+    const width = rect.width;
     const x = e.clientX - rect.left;
 
-    const minX = linearScale(minValue, hasData ? data.bin_edges[0] : defaultRange[0], hasData ? data.bin_edges[data.bin_edges.length - 1] : defaultRange[1], 0, canvas.width);
-    const maxX = linearScale(maxValue, hasData ? data.bin_edges[0] : defaultRange[0], hasData ? data.bin_edges[data.bin_edges.length - 1] : defaultRange[1], 0, canvas.width);
+    const minX = linearScale(minValue, hasData ? data.bin_edges[0] : defaultRange[0], hasData ? data.bin_edges[data.bin_edges.length - 1] : defaultRange[1], 0, width);
+    const maxX = linearScale(maxValue, hasData ? data.bin_edges[0] : defaultRange[0], hasData ? data.bin_edges[data.bin_edges.length - 1] : defaultRange[1], 0, width);
 
     const minDistance = Math.abs(x - minX);
     const maxDistance = Math.abs(x - maxX);
@@ -153,10 +170,11 @@ export const LogHistogram = ({ data, onUpdate, hasData }) => {
     if (isDraggingRef.current) {
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
+      const width = rect.width;
       const x = e.clientX - rect.left;
 
       const range = hasData ? [data.bin_edges[0], data.bin_edges[data.bin_edges.length - 1]] : defaultRange;
-      const newValue = inverseLinearScale(x, range[0], range[1], 0, canvas.width);
+      const newValue = inverseLinearScale(x, range[0], range[1], 0, width);
 
       if (isDraggingRef.current === 'min') {
         const updatedMin = Math.min(Math.max(range[0], newValue), maxValue);

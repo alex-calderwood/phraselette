@@ -693,6 +693,13 @@ label {
   background: rgba(255, 255, 255, 0.55);
 }
 
+.histogram-container {
+  width: 100%;  /* Take full width of parent */
+  height: 70px; /* Match the max-height of histogram */ 
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
 .histogram {
   width: 100%;
   height: 100%;

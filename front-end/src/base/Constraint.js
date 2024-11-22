@@ -8,7 +8,7 @@ import { Sequence } from './Sequence.js'
 // feature -> constraint mapping
 // TODO: refactor such that target is a sequence (need to refactor constraint target...)
 export function makeConstraint(feature, target, opening) {
-  console.log("constraint: making constraint", {feature, target, opening});
+  // console.log("constraint: making constraint", {feature, target, opening});
   if (opening == null) {
     console.warn("constraint: Warning, making a constraint with no opening");
   }
@@ -130,28 +130,6 @@ export class Constraint {
   }
 }
 
-export class AlliterationConstraint extends Constraint {
-  constructor(targetToken, opening) {
-    super('test', 'test', opening);
-    this.targetLetter = this.firstLetterInToken(targetToken);
-  }
-
-  firstLetterInToken(token) {
-    let letter = token.text && token.text.length > 0 ? token.text.trim()[0] : '';
-    return letter;
-  }
-
-  async getScore(sequence, document) {
-    // this is a placeholder
-    let token = sequence.span[0];
-    let letter = this.firstLetterInToken(token);
-    if (letter === this.targetLetter) {
-      return 1;
-    }
-    return 0;
-  }
-}
-
 /*
  * A categorical constraint is one that can restrict text based on a token's 'category'
  * such as part of speech or rhyme scheme
@@ -201,8 +179,6 @@ export class CategoricalConstraint extends Constraint {
     let flattenedTargetFeatures = this.flatten ? targetFeatures.flat() : targetFeatures;
     flattenedTargetFeatures = flattenedTargetFeatures.filter(val => !this.ignore.includes(val))
 
-    // console.log('constraint: scoring token', tokenFeatures, 'target', flattenedTargetFeatures)
-
     let score = 0;
     if (this.modes[this.mode]) {
       score = this.modes[this.mode](tokenFeatures, flattenedTargetFeatures);
@@ -210,7 +186,6 @@ export class CategoricalConstraint extends Constraint {
       console.error('constraint: invalid mode:', this.mode);
     }
 
-    console.log('scoring categorical: ', tokenFeatures, 'target', flattenedTargetFeatures, 'score', score)
     return score;
   }
 
@@ -423,11 +398,10 @@ export class BetterRhymeConstraint extends CategoricalConstraint {
   rhymes(tokenFeatures, targetFeatures) {
     const getRhymingPart = (phones) => {
       const lastVowelIndex = phones.findLastIndex((p) => {
-        let pDeepCopy = JSON.parse(JSON.stringify(p));
-        console.log('constraint: last vowel index', pDeepCopy, this.vowelSounds.includes(pDeepCopy));
+        // let pDeepCopy = JSON.parse(JSON.stringify(p));
+        // console.log('constraint: last vowel index', pDeepCopy, this.vowelSounds.includes(pDeepCopy));
         return this.vowelSounds.includes(p)
       });
-      console.log('constraint: last vowel index', lastVowelIndex, phones);
       if (lastVowelIndex === -1) {
         return phones.slice(1);
       }
@@ -435,7 +409,6 @@ export class BetterRhymeConstraint extends CategoricalConstraint {
     };
     const tokenRhymes  = getRhymingPart(tokenFeatures);
     const targetRhymes = getRhymingPart(targetFeatures);
-    console.log("constraint: rhyming parts", tokenRhymes, targetRhymes, "full", tokenFeatures, targetFeatures);
     return this.endsWith(tokenRhymes, targetRhymes);
   }
 
@@ -468,7 +441,6 @@ export class BetterRhymeConstraint extends CategoricalConstraint {
       return token[attribute];
     }
     
-    console.log('constraint: token', token)
     // This handles the case where we're dealing with actual tokens
     let phonemes = token.getAttribute('phonemes', []);
     if (phonemes.length > 0) {
