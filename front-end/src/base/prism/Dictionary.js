@@ -39,6 +39,7 @@ export class DictionaryPrism extends Prism {
 
     // let predictions = await ThesaurusPrism.processRevisions(revisions, document);
     console.log("dictionary definitions", definitions)
+    constraints = Constraint.subsetByOpening(this.state.constraints, opening);
 
     super.onSearchResults(opening, {predictions: [], text: definitions}, document, constraints);
   }

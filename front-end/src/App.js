@@ -14,6 +14,7 @@ import { SearchResults } from "./components/SearchResults";
 import ControlButtons from "./components/ControlButtons";
 import InstructionsView from "./components/InstructionsView";
 import { PrismBar } from "./components/PrismBar";
+// import { ConstraintBar } from "./components/ConstraintBar";
 import { Tooltip } from "./components/Tooltip";
 import { Modal } from "./components/Modal";
 import { EVENT_NAMES } from './base/Logging';
@@ -90,12 +91,12 @@ class App extends Component {
 
     function handleThesResponse(msg) {
       let thesaurus = Prism.getByID(this.state.prisms, msg.prism);
-      let constraints = this.state.constraints;
       // let constraints = Constraint.subsetByFeatures(
       //   this.state.constraints,
       //   thesaurus.features
       // );
       let opening = this.state.openings.findRangeById(msg.opening);
+      let constraints = Constraint.subsetByOpening(this.state.constraints, opening);
       let doc = this._currentDocument().updateToOpening(opening);
       // console.log('thesaurus: handleThesResponse', {doc, thesaurus, constraints, opening});
       thesaurus.onSearchResults(opening, { message: msg }, doc, constraints);
@@ -103,12 +104,12 @@ class App extends Component {
 
     function handleReaderResponse(msg) {
       let reader = Prism.getByID(this.state.prisms, msg.prism);
-      let constraints = this.state.constraints;
       // let constraints = Constraint.subsetByFeatures(
       //   this.state.constraints,
       //   reader.features
       // );
       let opening = this.state.openings.findRangeById(msg.opening);
+      let constraints = Constraint.subsetByOpening(this.state.constraints, opening);
       let doc = this._currentDocument().updateToOpening(opening);
       // console.log('reader: handleReaderResponse', {doc, reader, constraints, opening});
       reader.onSearchResults(opening, { message: msg }, doc, constraints);
@@ -116,12 +117,12 @@ class App extends Component {
 
     function handleDictionaryResponse(msg) {
       let dict = Prism.getByID(this.state.prisms, msg.prism);
-      let constraints = this.state.constraints;
       // let constraints = Constraint.subsetByFeatures(
       //   this.state.constraints,
       //   dict.features
       // );
       let opening = this.state.openings.findRangeById(msg.opening);
+      let constraints = Constraint.subsetByOpening(this.state.constraints, opening);
       let doc = this._currentDocument().updateToOpening(opening);
       dict.onSearchResults(opening, { message: msg }, doc, constraints);
     }
@@ -214,6 +215,11 @@ class App extends Component {
       isSearching: { ...this.state.isSearching, [openingID]: isSearching },
     });
   }
+
+  // // Helper method to check if any searches are active for an opening
+  // isSearching(openingId) {
+  //   return this.state.activeSearches[openingId]?.size > 0;
+  // }
 
   setText(text) {
     this.text = text;
@@ -312,7 +318,7 @@ class App extends Component {
    */
   async searchPrisms(prisms, opening, document) {
     this.setSearchingState(opening.id, true); // UI update
-    let constraints = this.state.constraints;
+    let constraints = Constraint.subsetByOpening(this.state.constraints, opening);
 
     this.addEvent({
       eventName: EVENT_NAMES.RunSearch,
@@ -333,24 +339,18 @@ class App extends Component {
     }
   }
 
-  // async searchOnePrism(prism, opening, document) {
-  //   this.setSearchingState(opening.id, true); // UI update
-  //   let constraints = this.state.constraints;
-  //   prism.search(opening, document, constraints);
-  // }
-
   /*
    * A callback that is triggered when a prism finishes its .search() operation.
    * Here we update App's the global search results.
    */
   async onSearchComplete(opening) {
-    let constraints = this.state.constraints;
+    let constraints = Constraint.subsetByOpening(this.state.constraints, opening);
     let prisms = Prism.getActive(this.state.prisms);
     let predictions = prisms.map(
       (p) => p?.insights[opening.id]?.results?.all
     ).filter((r) => r && r.length > 0)
     .flat();
-
+  
     let resolved = await resolveConstraints(
       predictions,
       constraints,
@@ -358,11 +358,11 @@ class App extends Component {
       true, 
       1
     );
-
+  
     this.setState(prevState => {
       const newOpenings = prevState.openings.copy();
       newOpenings.setById(opening.id, resolved);
-
+  
       this.addEvent({
         eventName: EVENT_NAMES.SearchResults,
         eventDetails: {
@@ -370,13 +370,13 @@ class App extends Component {
           resolved,
         }
       });
-
+  
       return { 
         openings: newOpenings,
         rephrasings: resolved
       };
     });
-
+  
     console.log('app: search complete', opening, 'search results', resolved);
     this.setSearchingState(opening.id, false); // UI update
   }
@@ -505,6 +505,9 @@ class App extends Component {
     }
   }
 
+  /* 
+   *
+  */
   onConstraintUpdate(prism, opening) {
     let predictions = prism?.insights[opening.id]?.results?.all || [];
     let document = this._currentDocument().updateToOpening(opening);
@@ -513,7 +516,7 @@ class App extends Component {
     //   this.state.constraints,
     //   prism.features
     // );
-    let constraints = this.state.constraints;
+    let constraints = Constraint.subsetByOpening(this.state.constraints, opening);
     console.log(
       "app: updating constraints",
       {
@@ -543,7 +546,6 @@ class App extends Component {
     let opening = null;
     this.setState(prevState => {
       const newOpenings = prevState.openings.copy();
-
       let resetTo = [];
       if (!doReset) {
         let oldResult = newOpenings.get(this.state.start, this.state.end);
@@ -551,7 +553,6 @@ class App extends Component {
       }
 
       opening = newOpenings.set(this.state.start, this.state.end, resetTo, true); // create a new opening or reset what is there
-      console.log('app: handle search reset results', newOpenings, 'prev results', prevState.openings);
       return {
         opening: opening,
         openings: newOpenings 
@@ -708,6 +709,13 @@ class App extends Component {
                 onTooltipUpdate={this.handleTooltipUpdate}
                 onRemovePrism={this.handleRemovePrism.bind(this)}
                 />
+              {/* <ConstraintBar
+                prisms={this.state.prisms} 
+                activePrisms={this.state.activePrisms}
+                onAddPrism={this.handleAddPrism.bind(this)}
+                onTooltipUpdate={this.handleTooltipUpdate}
+                onRemovePrism={this.handleRemovePrism.bind(this)}
+                /> */}
             </div>
 
               {!hasSelection && (

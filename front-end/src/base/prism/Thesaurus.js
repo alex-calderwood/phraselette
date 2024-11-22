@@ -38,7 +38,7 @@ export class ThesaurusPrism extends Prism {
     console.log('thesaurus: thesaurus got words', words)
 
     let predictions = await ThesaurusPrism.processRevisions(words, document);
-    
+
     super.onSearchResults(opening, {predictions: predictions}, document, constraints);
   }
 

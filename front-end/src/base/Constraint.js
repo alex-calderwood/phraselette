@@ -87,30 +87,29 @@ export class Constraint {
   }
 
   applies(opening) {
-    if (this.opening == null) {
-      console.warn("constraint: opening is null", this, this.opening)
+    if (this.opening == null || opening == null) {
+      console.warn("constraint: opening is null", this, this.opening, opening)
       return false;
     }
 
-    let over = this.opening.id == opening.id;
-    // console.log("constraint: overlaps", this.opening, opening, over)
-    return over;
+    let doesApply = this.opening.id == opening.id;
+    console.log("constraint: overlaps", 'this.opening', this.opening.id, 'opening', opening.id, doesApply)
+    return doesApply;
   }
 
-  static subsetByFeatures(constraints, features, opening=null, requireOpening = false) {
-    if (opening === null && requireOpening) {
-      return [];
+  static subsetByFeatures(constraints, features, opening=null, requireOpening=false) {
+    let returnConstraints = constraints;
+    if (opening === null && requireOpening) { return []; }
+    if (opening !== null) { returnConstraints = Constraint.subsetByOpening(returnConstraints, opening) }
+     // could also hard code the mapping for a speedup
+    return returnConstraints.filter((constraint) => { return features.includes(constraint.feature); });
+  }
+
+  static subsetByOpening(constraints, opening) {
+    if (opening === null) {
+      return constraints;
     }
-    
-    if (opening !== null) {
-      constraints = constraints.filter((constraint) => {
-        return constraint.applies(opening);
-      });
-    }
-    
-    return constraints.filter((constraint) => { // could also hard code the mapping for a speedup
-      return features.includes(constraint.feature);
-    });
+    return constraints.filter((constraint) => { return constraint.applies(opening); });
   }
 
   toJSON() {

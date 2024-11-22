@@ -18,7 +18,7 @@ export class SearchResults extends Component {
     let extraPadding = this.props.extraPadding && 'extra-padding';
     let fullHeight = this.fullHeight ? 'full-height' : '';
 
-    if (this.props.isSearching) {
+    if (this.props.isSearching == true) {
       let searching = this.props.doAnimation && 'searching'
       return <div className={`search-results  ${searching} ${extraPadding}`}></div>
     }

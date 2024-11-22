@@ -28,9 +28,7 @@ export class Prism {
     this.canSearch = Prism.SEARCH_TYPES.has(this.type);
     this.canConstrain = Prism.CONSTRAIN_TYPES.has(this.type);
 
-    // which tokens to look up in the tokenManager
-    this.tokenType = tokenType ? tokenType : this.type;  
-    
+    this.tokenType = tokenType ? tokenType : this.type; // which tokens to look up in the tokenManager
     this.features = features || [];
 
     this.duplicatable = false; // some prisms can be duplicated (have more than one of them because they will have different responses), such as any with textFields
@@ -80,7 +78,7 @@ export class Prism {
       sequence.setAttribute('originPrism', this.type);
     }
 
-    constraints = Constraint.subsetByFeatures(constraints, this.features) // Do I need to do this? I also call it in onConstraintUpdate
+    constraints = Constraint.subsetByFeatures(constraints, this.features, opening=opening) // Do I need to do this? I also call it in onConstraintUpdate
     // const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
     // TODO I'm not sure I need to actually do this here, if I do it in onSearchComplete also
     let results = await resolveConstraints(

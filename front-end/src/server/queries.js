@@ -12,6 +12,60 @@ const getModeText = (mode) => {
     return modeText;
 }
 
+const explain = (phoneme) => {
+    let explanations = {
+        "AA": "b(o)t",
+        "AE": "b(a)t",
+        "AH": "b(u)tt",
+        "AO": "c(augh)t, st(o)ry",
+        "AW": "b(ou)t",
+        "AX": "comm(a)",
+        "AY": "b(i)te",
+        "EH": "b(e)t",
+        "ER": "b(i)rd, forew(or)d",
+        "EY": "b(ai)t",
+        "IH": "b(i)t",
+        "IX": "ros(e)s, rabb(i)t",
+        "IY": "b(ea)t",
+        "OW": "b(oa)t",
+        "OY": "b(o)y",
+        "UH": "b(oo)k",
+        "UW": "b(oo)t",
+        "b": "(b)uy",
+        "CH": "(Ch)ina",
+        "D": "(d)ie",
+        "DH": "(th)y",
+        "DX": "bu(tt)er",
+        "EL": "bott(le)",
+        "EM": "rhyth(m)",
+        "EN": "butto(n)",
+        "F": "(f)ight",
+        "G": "(g)uy",
+        "HH": "(h)igh",
+        "JH": "(j)ive",
+        "K": "(k)ite",
+        "L": "(l)ie",
+        "M": "(m)y",
+        "N": "(n)igh",
+        "NG": "si(ng)",
+        "P": "(p)ie",
+        "Q": "uh-oh",
+        "R": "(r)ye",
+        "S": "(s)igh",
+        "SH": "(sh)y",
+        "T": "(t)ie",
+        "TH": "(th)igh",
+        "V": "(v)ie",
+        "W": "(w)ise",
+        "WH": "(wh)y",
+        "Y": "(y)acht",
+        "Z": "(z)oo",
+        "ZH": "plea(s)ure"
+    }
+    let explanation = explanations[phoneme] != null ? (" as in " + explanations[phoneme]) : '';
+    return phoneme + explanation;
+}
+
 const constraintRulez = (message) => {
     console.log('constraints', message, message.constraints)
     if (message == null || message.constraints == null || message.constraints.length == 0) {
@@ -30,8 +84,8 @@ const constraintRulez = (message) => {
                 constraintText += `Attempt to limit each response to ${constraint.min} and ${constraint.max} words. `
                 break;
             case "SoundConstraint":
-                target = constraint.target.map(c => c.sound || "").join(" ")
-                constraintText += `- If possible, some responses should sound out such that they ${modeText} ARPAbet phonemes: ${target}. Do not be explicit about the phonetics. This is not as important as sticking to the provided style.\n`
+                target = constraint.target.map(c => c.sound || "").map(p => explain(p) + " ").join(" ")
+                constraintText += `- If possible, some responses should contain words which ${modeText} ARPAbet phonemes: ${target}. For instance 'song' contains the phonemes S AO NG. So if asked to contain AO, you might include the word song, but wouldn't highlight it as sAOng or make any allusion to this constraint. Following this constraint is not as important as sticking to the provided style.\n`
                 break;
             }
     }
