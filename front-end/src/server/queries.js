@@ -81,7 +81,7 @@ const constraintRulez = (message) => {
                 constraintText += `- If possible, some responses should ${modeText} parts of speech ${target}. This is not as important as sticking to the provided style.\n`
                 break;
             case "WordLengthConstraint":
-                constraintText += `Attempt to limit each response to ${constraint.min} and ${constraint.max} words. `
+                constraintText += `Attempt for each response to contain at least ${constraint.min} (min) words and no more than ${constraint.max} (max) words. `
                 break;
             case "SoundConstraint":
                 target = constraint.target.map(c => c.sound || "").map(p => explain(p) + " ").join(" ")

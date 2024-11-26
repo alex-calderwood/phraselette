@@ -7,7 +7,7 @@
  * d.) ignore them if they are not words
 */
 export async function resolveConstraints(predictions, constraints, opening, sort=true, threshold=1, comparator='total', sortByAttribute='total') {
-    const postConstraints = constraints.filter((constraint) => { return !constraint.isPre; });
+    const postConstraints = constraints.filter((constraint) => { return constraint.isPost; });
     let accepted = [];
     let rejected = [];
 
@@ -46,15 +46,15 @@ export async function resolveConstraints(predictions, constraints, opening, sort
 }
 
 export function sortPredictions(scoredPredictions, comparator, sortByAttribute) {
-    // console.log('sorting: comparator', {scoredPredictions, comparator,sortByAttribute});
+    console.log('sorting: a', {scoredPredictions, comparator,sortByAttribute});
     if(scoredPredictions == null || scoredPredictions.length == 0) {
         return [];
     }
 
     let sortedPredictions = scoredPredictions.sort((a, b) => {
-        // console.log('sorting: scores', sortByAttribute, a.scores[comparator]?.value, b.scores[comparator]?.value, a.getAttribute(comparator), b.getAttribute(comparator));
+        console.log('sorting: scores', sortByAttribute, a.scores[comparator]?.value, b.scores[comparator]?.value, a.getAttribute(comparator), b.getAttribute(comparator));
         if (sortByAttribute) {
-            // console.log('comparator', comparator, 'by attribute', a, b, a.getAttribute(comparator), b.getAttribute(comparator));
+            console.log('sorting: comparator', comparator, 'by attribute', a, b, a.getAttribute(comparator), b.getAttribute(comparator));
             let aScore = a.getAttribute(comparator);
             let bScore = b.getAttribute(comparator);
             return bScore - aScore;

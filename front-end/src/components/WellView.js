@@ -14,17 +14,21 @@ import { IoColorPaletteOutline } from "react-icons/io5";
 import { appState } from "../index"
 import { EVENT_NAMES } from "../base/Logging";
 
-const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTooltipUpdate, isSearching, styles}) => {
+const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTooltipUpdate, isSearching, styles }) => {
   const { handleMouseEnter, handleMouseLeave, handleMouseMove } = useTooltip(onTooltipUpdate);
 
-  
   const prismDescriptionText = `Click to ${rotated ? 'collapse' : 'expand'}. ` + prism.description;
   let searching = isSearching ? "searching-light" : "";
 
-  let type = <div className={`prism-type-text ${rotated}`} style={{color: styles.style.color}} >
-    {prism.type} 
-    {/* <IoColorPaletteOutline className="prism-icon small" /> */}
-  </div>
+  let type = <div className={`prism-type-text ${rotated}`} style={{color: styles.style.color}}>
+    {prism.type}
+  </div>;
+
+  const handleCloseClick = (e) => {
+    // e.stopPropagation();
+    handleMouseLeave(); // Hide tooltip when clicking close
+    onRemovePrism(prism);
+  };
 
   return (
     <div 
@@ -35,14 +39,22 @@ const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTool
       onMouseMove={handleMouseMove}
       style={styles.titleStyle}
     >
-      {prism.undestroyable ? <div></div> : (
-        <button className={`light-button`} onClick={() => onRemovePrism(prism)}>×</button>
+      {!prism.undestroyable && (
+        <button 
+          className="light-button"
+          onMouseEnter={(e) => handleMouseEnter("Delete well.", e)}
+          onMouseLeave={handleMouseLeave}
+          onMouseMove={handleMouseMove}
+        >
+          ×
+        </button>
       )}
       {title && <div style={styles.titleStyle} className="colorless-subtitle">{title}</div>}
       {type}
     </div>
   );
 };
+
 
 class PrismEditableTextField extends Component {
   constructor(props) {
@@ -77,20 +89,20 @@ class PrismEditableTextField extends Component {
 }
 
 /**
- * @typedef {Object} PrismViewProps
+ * @typedef {Object} WellViewProps
  * @property {TokenManager} tokenManager - The global token manager used by the App
  * @property {Prism} prism - the prism instance 
  */
 
 
 /**
- * PrismView component
- * @extends {Component<PrismViewProps>}
+ * WellView component
+ * @extends {Component<WellViewProps>}
  */
-export class PrismView extends Component {
+export class WellView extends Component {
 
   /**
-   * @param {PrismViewProps} props
+   * @param {WellViewProps} props
    */
   constructor(props) {
     super(props);
@@ -172,7 +184,7 @@ export class PrismView extends Component {
         </ul>
       );
     } catch (error) {
-      console.warn("prismview:", error)
+      console.warn("WellView:", error)
     }
   }
 

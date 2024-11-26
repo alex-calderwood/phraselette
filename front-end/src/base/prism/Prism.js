@@ -80,7 +80,7 @@ export class Prism {
 
     constraints = Constraint.subsetByFeatures(constraints, this.features, opening=opening) // Do I need to do this? I also call it in onConstraintUpdate
     // const preConstraints  = constraints.filter((constraint) => { return  constraint.isPre; });
-    // TODO I'm not sure I need to actually do this here, if I do it in onSearchComplete also
+    // TODO I'm not sure I need to actually resolve constraints here since I do it in onSearchComplete also...
     let results = await resolveConstraints(
       predictions,
       constraints,

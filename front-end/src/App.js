@@ -9,7 +9,7 @@ import { Constraint } from "./base/Constraint";
 
 import { PrismEditor } from "./components/PrismEditor";
 import { EditorControls } from "./components/EditorControls";
-import { PrismView } from "./components/PrismView";
+import { WellView } from "./components/WellView";
 import { SearchResults } from "./components/SearchResults";
 import ControlButtons from "./components/ControlButtons";
 import InstructionsView from "./components/InstructionsView";
@@ -725,26 +725,18 @@ class App extends Component {
               )}
               {hasSelection && (
                 <div className={`inspector`}>
-                  {selectionText && selectionText.length > 0 ? (
-                    <div className="selection-display glass-pane">{selectionText}</div>
-                  ) : (
-                    ""
-                  )}
-                  {showSelection ? (
-                    <div className="selection-info">
-                      {start} - {end}
-                    </div>
-                  ) : (
-                    ""
-                  )}
                   <ControlButtons
                     onRetokenize={this.handleRetokenize}
                     onSearch={this.triggerSearchAll}
                     onDelete={this.deleteOpening}
                     onTooltipUpdate={this.handleTooltipUpdate}
                     opening={opening}
-                  />
-                  {/* Display the active prisms */}
+                    selectionText={selectionText}
+                    showSelection={showSelection}
+                    start={start}
+                    end={end}
+                    />
+
                   {activePrisms.map((prism) => {
                     let constraints = Constraint.subsetByFeatures(
                       this.state.constraints,
@@ -754,7 +746,7 @@ class App extends Component {
                     )
 
                     return (
-                      <PrismView
+                      <WellView
                         key={prism.id}
                         tokenManager={this.tokenManager}
                         prism={prism}

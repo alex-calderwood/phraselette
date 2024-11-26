@@ -3,8 +3,6 @@ import { Feature } from './Feature.js';
 import { POS } from '../../data/pos.js';
 import { Sequence } from './Sequence.js'
 
-
-
 // feature -> constraint mapping
 // TODO: refactor such that target is a sequence (need to refactor constraint target...)
 export function makeConstraint(feature, target, opening) {
@@ -69,6 +67,7 @@ export class Constraint {
     this.opening = opening;
     this.dataType = feature.dataType;
     this.isPre = false;         // can the constraint be computed during the generation process?
+    this.isPost = true;         // can the constraint be computed as a filter after generation has produced revisions
     this.range = null;          // what are the possible values of the constraint
     this.filterThreshold = 0;   // what is the minimum score to consider the constraint satisfied
   }
@@ -194,55 +193,9 @@ export class CategoricalConstraint extends Constraint {
     }
     return token[attribute];
   }
-
-  // contains(arr, target) {
-  //   if (target.length === 0) return true;
-  //   for (let i = 0; i <= arr.length - target.length; i++) {
-  //     if (this.exactly(arr.slice(i, i + target.length), target)) {
-  //       return true;
-  //     }
-  //   }
-  //   return false;
-  // }
-
-  // // containsSubtokens(arr, target) {
-  // //   return target.every(subarray => this.containsAll(arr, subarray));
-  // // }
-
   exactly(a, b) {
     return a.length === b.length && a.every((v, i) => v === b[i]);
   }
-
-  // startsWith(arr, target) {
-  //   return this.exactly(arr.slice(0, target.length), target);
-  // }
-
-  // startsWithSubtokens(arr, target) {
-  //   let flattened = target.flat();
-  //   return this.startsWith(arr, flattened);
-  // }
-
-  // endsWith(arr, target) {
-  //   return this.exactly(arr.slice(-target.length), target);
-  // }
-
-  // endsWithSubtokens(arr, target) {
-  //   let flattened = target.flat();
-  //   return this.endsWith(arr, flattened);
-  // }
-
-  // inOrder(arr, target) {
-  //   let targetIndex = 0;
-  //   for (let i = 0; i < arr.length; i++) {
-  //     if (arr[i] === target[targetIndex]) {
-  //       targetIndex++;
-  //       if (targetIndex === target.length) {
-  //         return true;
-  //       }
-  //     }
-  //   }
-  //   return false;
-  // }
 
   contains(arr, target) {
       if (target.length === 0) return 1;
@@ -506,6 +459,8 @@ export class NumericalRangeConstraint extends Constraint {
     this.range = this.defaultRange;
     this.targetMin = this.range[0];
     this.targetMax = this.range[1];
+    this.isPre = false // ALEX we finish this
+    this.isPost = true 
   }
 
   async getScore(sequence, document) {
@@ -557,6 +512,7 @@ export class WordLengthConstraint extends NumericalRangeConstraint {
     const feature = Feature.Length;
     super(feature.attribute, feature, opening); // name, feature, opening
     this.isPre = true;
+    this.isPost = true;
     this.range = this.defaultRange;
     this.targetMin = this.range[0];
     this.sequence = new Sequence(target); // eventually want target to be a sequence
@@ -569,13 +525,19 @@ export class WordLengthConstraint extends NumericalRangeConstraint {
   * 0 means the span does not match the constraint
   * 1 means the span perfectly coheres to the constraint
   */
-  async getScore(sequence, document) {
-    let numWords = sequence.numWords();
-    if (numWords <= this.targetMax) {
-      return (this.targetMax - numWords) / this.targetMax;
-    }
-    return 0;
-  }
+ async getScore(sequence, document) {
+   let numWords = sequence.numWords();
+   
+   if (numWords >= this.targetMin && numWords <= this.targetMax) {
+       return 1.0;
+   }
+   
+   if (numWords > this.targetMax) {
+       return Math.max(0, this.targetMax / numWords); 
+   }
+   
+   return Math.max(0, numWords / this.targetMin);
+}
 
   evaluate(score, threshold=this.filterThreshold) {
     return score >= threshold;

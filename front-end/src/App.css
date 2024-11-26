@@ -154,18 +154,29 @@ select::-ms-expand {
 
 button {
   font-size: 12px;
-  background-color: var(--accent-color);
+  background-color: rgba(255, 255, 255, 0.2); /* More subtle background */
   color: var(--darker-text-color);
   border: none;
   outline: none;
   height: var(--button-height);
+  backdrop-filter: blur(10.6px);
+  -webkit-backdrop-filter: blur(10.6px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer; /* Add this line */
 }
+
+button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
 
 button, select {
   position: relative;  /* Needed for the absolute positioning of the pseudo-element */
 }
 
-button:hover::after,
 select:hover::after {
   content: '';
   position: absolute;
@@ -449,6 +460,50 @@ select:hover::after {
 
 .search-results.extra-padding {
   margin-bottom: var(--editor-margin);
+}
+
+.inlet {
+  color: var(--primary-text-color);
+  font-size: 14px;
+  padding: 8px;
+  margin-bottom: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10.6px);
+  -webkit-backdrop-filter: blur(10.6px);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Header row with text and buttons */
+.inlet > :first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Selection text */
+.inlet .selection-display {
+  flex: 1;
+  margin: 0;
+}
+
+/* Buttons */
+.inlet button {
+  padding: 0 8px;
+}
+
+/* Wells text */
+.wells-title {
+  text-align: center;
+}
+
+/* Add a small arrow indicator */
+.wells-title::after {
+  content: '↓';
+  font-size: 12px;
+  opacity: 0.6;
 }
 
 .title {
@@ -738,7 +793,7 @@ label {
   animation: fadeIn 0.3s ease;
 
   button {
-    margin-right: 4px;   
+    margin-right: 4px;
   }
 }
 
