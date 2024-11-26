@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTooltip } from './Tooltip';
 
-const ControlButtons = ({ onRetokenize, onSearch, onDelete, opening, onTooltipUpdate, selectionText, showSelection, start, end }) => {
+const InletHeader = ({ onRetokenize, onSearch, onDelete, opening, onTooltipUpdate, selectionText, showSelection, start, end }) => {
   const { handleMouseEnter, handleMouseLeave, handleMouseMove } = useTooltip(onTooltipUpdate);
 
   if (!opening) {
@@ -40,4 +40,4 @@ const ControlButtons = ({ onRetokenize, onSearch, onDelete, opening, onTooltipUp
   );
 };
 
-export default ControlButtons;
+export default InletHeader;

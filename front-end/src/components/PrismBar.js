@@ -43,15 +43,13 @@ export const PrismBar = ({ prisms, activePrisms, onAddPrism, onTooltipUpdate, on
             onMouseMove={handleMouseMove}
           >
           <div className="prism-info">
-            <div className="title" style={titleStyle}>{prism.type}</div>
-            {/* <IoColorPaletteOutline className="prism-icon small" /> */}
+          <div className="title" style={titleStyle}>{prism.type}</div>
           </div>
           <div className="prism-bar-buttons">
           {showDeleteButton && (<button style={buttonStyle} className={`light-button big-button`} onClick={() => onRemovePrism(prism)}>×</button>)}
-          {/* <button disabled={canAdd(prism)} onClick={() => onAddPrism(prism.type)}>add</button> */}
           {showAddButton && <button style={buttonStyle} className='big-button' onClick={() => onAddPrism(prism.type)}>+</button>}
           </div>
-          
+          {prism.active && <div className="subtitle" style={titleStyle}>{prism.title}</div>}
         </div>
   }
 

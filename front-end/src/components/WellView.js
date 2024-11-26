@@ -25,7 +25,7 @@ const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTool
   </div>;
 
   const handleCloseClick = (e) => {
-    // e.stopPropagation();
+    e.stopPropagation();
     handleMouseLeave(); // Hide tooltip when clicking close
     onRemovePrism(prism);
   };
@@ -45,6 +45,7 @@ const PrismTitle = ({ prism, rotated, title, onRemovePrism, toggleHidden, onTool
           onMouseEnter={(e) => handleMouseEnter("Delete well.", e)}
           onMouseLeave={handleMouseLeave}
           onMouseMove={handleMouseMove}
+          onClick={handleCloseClick}
         >
           ×
         </button>

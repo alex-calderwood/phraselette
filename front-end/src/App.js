@@ -11,7 +11,7 @@ import { PrismEditor } from "./components/PrismEditor";
 import { EditorControls } from "./components/EditorControls";
 import { WellView } from "./components/WellView";
 import { SearchResults } from "./components/SearchResults";
-import ControlButtons from "./components/ControlButtons";
+import InletHeader from "./components/InletHeader";
 import InstructionsView from "./components/InstructionsView";
 import { PrismBar } from "./components/PrismBar";
 // import { ConstraintBar } from "./components/ConstraintBar";
@@ -725,7 +725,7 @@ class App extends Component {
               )}
               {hasSelection && (
                 <div className={`inspector`}>
-                  <ControlButtons
+                  <InletHeader
                     onRetokenize={this.handleRetokenize}
                     onSearch={this.triggerSearchAll}
                     onDelete={this.deleteOpening}

@@ -492,6 +492,8 @@ select:hover::after {
 /* Buttons */
 .inlet button {
   padding: 0 8px;
+  /* center the text */
+  justify-content: center;
 }
 
 /* Wells text */
