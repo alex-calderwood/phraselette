@@ -20,14 +20,16 @@ const InletHeader = ({ onRetokenize, onSearch, onDelete, opening, onTooltipUpdat
     <>
       <div className="inlet">
         <div style={{ marginBottom: '8px' }}>
-          Inlet for 
-          <div className="selection-display glass-pane">{selectionText}</div>
-          {showSelection && <div className="selection-info">{start} - {end}</div>}
-          <button 
+        <button 
             onMouseEnter={(e) => handleMouseEnter("Remove Inlet", e)}
             onMouseLeave={handleMouseLeave}
             onMouseMove={handleMouseMove}
             onClick={onDelete}>×</button>
+            
+          Inlet for 
+          <div className="selection-display glass-pane">{selectionText}</div>
+          {showSelection && <div className="selection-info">{start} - {end}</div>}
+          
           <button 
             onMouseEnter={(e) => handleMouseEnter("Run all Wells. ⌘ + Enter", e)}
             onMouseLeave={handleMouseLeave}
