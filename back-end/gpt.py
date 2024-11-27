@@ -15,47 +15,8 @@ from transformers.generation.beam_constraints import PhrasalConstraint, Disjunct
 import numpy as np
 
 gpu = True
-# ZERO_PROB = -3.4028235931503486e+35 # threshold at which we consider something infinitely unlikely
 ZERO_LOG_PROB = np.log(1e-12)
 NEG_INF = -1e300
-
-
-# def estimate_histogram(beam_output):
-#     scores = beam_output.scores
-
-#     # Flatten all log probabilities
-#     all_log_probs = []
-#     for score in scores:
-#         log_probs = tf.nn.log_softmax(score).numpy()
-#         all_log_probs.extend(log_probs.flatten())
-
-#     all_log_probs = np.array(all_log_probs)
-
-#     # Remove values below some threshold
-#     all_log_probs = all_log_probs[all_log_probs > ZERO_LOG_PROB]
-
-#     # Remove extreme outliers
-#     low = np.percentile(all_log_probs, 0.05)
-#     all_log_probs = all_log_probs[all_log_probs >= low]
-
-#     # Create linear bin edges in log space
-#     num_bins = 100
-#     min_log_prob = np.min(all_log_probs)
-#     max_log_prob = 0  # The maximum log probability is 0
-#     bin_edges = np.linspace(min_log_prob, max_log_prob, num_bins + 1)
-#     counts, _ = np.histogram(all_log_probs, bins=bin_edges)
-
-#     summary = {
-#         'counts': counts.tolist(),
-#         'bin_edges': bin_edges.tolist(),
-#     }
-#     print("summary", summary)
-#     return summary
-
-# import torch
-# import torch.nn.functional as F
-
-
 
 # Set the environment variable to use GPU 1
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -71,16 +32,10 @@ if torch.cuda.is_available():
 else:
     print("CUDA is not available. Using CPU.")
 
-# tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
-# # add the EOS token as PAD token to avoid warnings
-# model = TFGPT2LMHeadModel.from_pretrained("gpt2", pad_token_id=tokenizer.eos_token_id)
-
+# Setup model, put it on the GPU if available
 model = AutoModelForCausalLM.from_pretrained("gpt2")
 tokenizer = AutoTokenizer.from_pretrained("gpt2")
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# move your model to the GPU
 model = model.to(device)
 
 # JSON can't handle -Infinity
@@ -99,16 +54,6 @@ def fix_infinity(d):
                 fix_infinity(d[key])
 
     return d
-
-# TODO uncomment?
-# with tf.device('/GPU:1'):
-#     # Create the LogitsProcessors
-#     space_aware_processor = SpaceAwareLogitsProcessor(tokenizer);
-#     endless_processor = EndlessLogitsProcessor(tokenizer)
-#     logits_processor = TFLogitsProcessorList([
-#         space_aware_processor, 
-#         endless_processor,
-#     ])
 
 space_aware_processor = SpaceAwareLogitsProcessor(tokenizer);
 logits_processor = LogitsProcessorList([

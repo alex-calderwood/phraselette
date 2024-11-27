@@ -489,16 +489,6 @@ class App extends Component {
     });
   }
 
-  // onKeyDown(event) {
-  //   // if (event.metaKey && event.key === "k") {
-  //   //   return this.handleRetokenize();
-  //   // }
-
-  //   if (event.metaKey && event.key === "'") {
-  //     return this.triggerSearchAll();
-  //   }
-  // }
-
   onKeyDown(event) {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       return this.triggerSearchAll();
@@ -511,7 +501,7 @@ class App extends Component {
   onConstraintUpdate(prism, opening) {
     let predictions = prism?.insights[opening.id]?.results?.all || [];
     let document = this._currentDocument().updateToOpening(opening);
-    // alex do the subsetting now
+    // alex do the subsetting now?
     // let constraints = Constraint.subsetByFeatures( // why are we subsetting?
     //   this.state.constraints,
     //   prism.features

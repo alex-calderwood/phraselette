@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { TokenRange } from "./TokenRange";
 import { TokenAlternates } from "./Alternates";
 import { ConstraintRender } from "./constraints/ConstraintRender";
-import { PrismControls } from "./PrismControls";
+import { WellControls } from "./WellControls";
 import { SearchResults } from "./SearchResults";
 import { TokenManager } from "../base/TokenManager";
 import { Prism } from "../base/prism/Prism";
@@ -263,7 +263,7 @@ export class WellView extends Component {
               onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)}/>}) : ""
           }
 
-          {showOpeningElements ? <PrismControls
+          {showOpeningElements ? <WellControls
             tokens={tokens}
             opening={opening}
             onSearch={this.props.onSearch}
@@ -271,8 +271,8 @@ export class WellView extends Component {
             prism={prism}
             onAdd={this.onAddConstraint.bind(this)}
             styles={styles}
-            onTooltipUpdate={this.props.onTooltipUpdate}
-            onConstraintUpdate={this.prismHandleOnConstraintUpdate.bind(this)} /> : "" }
+            onTooltipUpdate={this.props.onTooltipUpdate} /> : ""
+          }
           
           {showResults ? <SearchResults
                       showLength={true}

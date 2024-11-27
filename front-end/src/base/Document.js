@@ -58,6 +58,11 @@ export class Document {
     }
 
     updateToOpening(opening) {
+        if (opening == null || opening.start == null || opening.end == null) {
+            console.error("doc: updateToOpening called with invalid opening", opening);
+            return this;
+        }
+
         let copy = this.clone();
         copy.selection = {
             ...this.selection,

@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { makeConstraint } from "../base/Constraint";
 
-export class PrismControls extends Component {
+export class WellControls extends Component {
   constructor(props) {
     super(props);
     this.state = {
