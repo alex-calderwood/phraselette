@@ -70,6 +70,11 @@ export class Prism {
    * @param {Constraint[]} constraints - the constraints applicable to the current prism
   */
   async onSearchResults(opening, newInsights, document, constraints) {
+    if (opening == null) {
+      console.error("prism: onSearchResults opening is null, maybe it was deleted?", {opening, newInsights, document, constraints});
+      return;
+    }
+
     let oldInsights = this.insights[opening.id];
     let predictions = newInsights?.predictions || [];
     let summary     = newInsights?.summary || oldInsights?.summary;
