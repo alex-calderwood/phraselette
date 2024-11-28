@@ -53,14 +53,20 @@ const roles = {
     "Mark Leyner. Leyner employs an intense and unconventional style in his works of fiction. His stories are generally humorous and absurd: In The Tetherballs of Bougainville, Mark's father survives a lethal injection at the hands of the New Jersey penal system, and so is freed but must live the remainder of his life in fear of being executed, at New Jersey's discretion, in any situation and regardless of collateral damage. They frequently incorporate elements of meta-fiction: In the same novel, an adolescent Mark produces a film adaptation of the story of his father's failed execution, although he reads a newspaper review of the movie to the prison's warden, and then dies, before even leaving the prison. At the sentence level, Leyner uses sprawling imagery and an extravagant vocabulary, bordering on prose poetry.",
   ],
   'dictionary': [
-    "a gothic dictionary",
-    "a subtly incorrect dictionary",
+    "a romantic era dictionary",
+    "an incorrect dictionary",
     "a historical dictionary, which deals not only with the latterday meanings of words but also the historical development of their forms and meanings",
     "an etymology dictionary",
-    "a linguistics dictionary",
-    "your father's dictionary",
-    "your mother's dictionary",
-    "an incorrect dictionary with definititons that might be Dutch, or Swedish?"
+    "a joke dictionary",
+    "an English to Greek dictionary",
+    "a defining dictionary (which provides a core glossary of the simplest meanings of the simplest concepts)",
+    "a psychoanalytic dictionary",
+    "a prescriptive dictionary (highly opinionated on words and their meanings)",
+    "a descriptive dictionary (20th-century dictionaries such as the Oxford English Dictionary and Webster's Third are descriptive, and attempt to describe the actual use of words)",
+    "a psychologist's dictionary",
+    "a 14th century English dictionary",
+    "a 17th century Irish dictionary",
+    "The Dictionary El Otro, the English language descriptive dictionary put together by students of Borges, who noted \"It is often forgotten that (dictionaries) are artificial repositories, put together well after the languages they define.\"",
   ]
 }
 
