@@ -149,7 +149,7 @@ export class WellView extends Component {
           tokenType={prism.type}
           startIndex={start} endIndex={end}
           debugMode={this.props.debugMode} 
-          expandMode={'reduce'} 
+          expandMode={'expand'}
           onTooltipUpdate={this.props.onTooltipUpdate}
           />
         {/* {tokens.map((token) => { 

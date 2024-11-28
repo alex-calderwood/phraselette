@@ -436,7 +436,7 @@ select:hover::after {
 
 .bottom-results {
   padding: 8px;
-  max-height: 16vh;
+  max-height: 25vh;
   overflow-y: auto;
 }
 
