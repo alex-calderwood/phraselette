@@ -498,7 +498,16 @@ select:hover::after {
 
 /* Wells text */
 .wells-title {
+  font-size: 14px;
   text-align: center;
+  color: var(--primary-text-color);
+  padding: 8px;
+  margin-bottom: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10.6px);
+  -webkit-backdrop-filter: blur(10.6px);
+  border-radius: var(--radius);
+  gap: 8px;
 }
 
 /* Add a small arrow indicator */
@@ -884,6 +893,74 @@ div.searching-light {
   margin: var(--editor-margin);
 }
 
+.constraint-bar {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: fit-content; /* Changed to fit-content */
+  min-height: 5em;     /* Added min-height */
+  gap: 0.5em;
+  padding: 0.5em;
+  overflow-anchor: none;
+  overscroll-behavior-y: contain;
+}
+
+.constraint-bar-item {
+  flex: 0 0 auto;
+  min-width: 100px;
+  padding: 0.5em;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.constraint-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+  padding-right: 1.5em; /* Make room for delete button */
+}
+
+.constraint-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+  font-size: var(--small-font-size);
+  color: var(--primary-text-color);
+}
+
+.constraint-details span {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.2em 0.4em;
+  border-radius: var(--radius);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.constraint-delete-btn {
+  position: absolute;
+  top: 0.25em;
+  right: 0.25em;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.constraint-delete-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
 .prism-bar {
   display: flex;
   overflow-x: auto;  /* Enable horizontal scrolling */
@@ -907,6 +984,7 @@ div.searching-light {
   padding-left: 0.5em;
   padding-right: 0.5em;
 }
+
 
 
 @keyframes plonk {

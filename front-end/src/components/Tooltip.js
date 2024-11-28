@@ -51,7 +51,7 @@ export const useTooltip = (onTooltipUpdate) => {
   const updateTooltip = (content, event, options={}) => {
     onTooltipUpdate({
       content,
-      position: { x: event.clientX + 4, y: event.clientY + 4 },
+      position: { x: event.clientX + 10, y: event.clientY + 10 },
       options,
     });
   };

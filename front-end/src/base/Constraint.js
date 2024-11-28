@@ -92,7 +92,6 @@ export class Constraint {
     }
 
     let doesApply = this.opening.id == opening.id;
-    console.log("constraint: overlaps", 'this.opening', this.opening.id, 'opening', opening.id, doesApply)
     return doesApply;
   }
 

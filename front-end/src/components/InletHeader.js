@@ -36,7 +36,6 @@ const InletHeader = ({ onRetokenize, onSearch, onDelete, opening, onTooltipUpdat
             onMouseMove={handleMouseMove}
             onClick={onSearch}>Run Wells 🖌️</button>
         </div>
-        <div className='wells-title'>Wells</div>
       </div>
     </>
   );

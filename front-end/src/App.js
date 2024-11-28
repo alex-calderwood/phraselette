@@ -14,7 +14,7 @@ import { SearchResults } from "./components/SearchResults";
 import InletHeader from "./components/InletHeader";
 import InstructionsView from "./components/InstructionsView";
 import { PrismBar } from "./components/PrismBar";
-// import { ConstraintBar } from "./components/ConstraintBar";
+import { ConstraintBar } from "./components/ConstraintBar"
 import { Tooltip } from "./components/Tooltip";
 import { Modal } from "./components/Modal";
 import { EVENT_NAMES } from './base/Logging';
@@ -648,6 +648,8 @@ class App extends Component {
     let opening = this.state.opening;
     let openings = this.state.openings;
 
+    const openingConstraints = Constraint.subsetByOpening(this.state.constraints, opening);
+
     const hasSelection = selectionText && selectionText.length > 1;
     const showSelection = debugMode && this.state.start !== null && this.state.end !== null;
 
@@ -699,13 +701,6 @@ class App extends Component {
                 onTooltipUpdate={this.handleTooltipUpdate}
                 onRemovePrism={this.handleRemovePrism.bind(this)}
                 />
-              {/* <ConstraintBar
-                prisms={this.state.prisms} 
-                activePrisms={this.state.activePrisms}
-                onAddPrism={this.handleAddPrism.bind(this)}
-                onTooltipUpdate={this.handleTooltipUpdate}
-                onRemovePrism={this.handleRemovePrism.bind(this)}
-                /> */}
             </div>
 
               {!hasSelection && (
@@ -727,8 +722,18 @@ class App extends Component {
                     end={end}
                     />
 
+                <ConstraintBar
+                  constraints={openingConstraints} 
+                  onTooltipUpdate={this.handleTooltipUpdate}
+                  removeConstraint={this.removeConstraint.bind(this)}
+                  />
+
+                <div className='wells-title'>
+                  Wells
+                </div>
+
                   {activePrisms.map((prism) => {
-                    let constraints = Constraint.subsetByFeatures(
+                    let wellConstraints = Constraint.subsetByFeatures(
                       this.state.constraints,
                       prism.features,
                       opening,
@@ -744,7 +749,7 @@ class App extends Component {
                         startIndex={start}
                         endIndex={end}
                         opening={opening}
-                        constraints={constraints}
+                        constraints={wellConstraints}
                         onSearch={() => this.triggerSingleSearch(prism)}
                         onRandomize={() => this.reRole(prism)}
                         onClickSequence={this.handleSequenceClick}
