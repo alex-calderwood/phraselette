@@ -496,18 +496,15 @@ select:hover::after {
   justify-content: center;
 }
 
-/* Wells text */
-.wells-title {
-  font-size: 14px;
+.top-title {
+  font-size: 12px;
   text-align: center;
   color: var(--primary-text-color);
+}
+
+.wells-title {
   padding: 8px;
   margin-bottom: 4px;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10.6px);
-  -webkit-backdrop-filter: blur(10.6px);
-  border-radius: var(--radius);
-  gap: 8px;
 }
 
 /* Add a small arrow indicator */
@@ -521,6 +518,7 @@ select:hover::after {
   color: var(--primary-text-color);
   font-size: 14px;
   padding: 2px;
+  text-align: center;
 }
 
 .subtitle {
@@ -889,63 +887,76 @@ div.searching-light {
   }
 }
 
-.lenses {
-  margin: var(--editor-margin);
+.constraint-bar-container {
+  gap: 0.5em;
+  margin-bottom: 4px;
+  position: relative;
 }
 
 .constraint-bar {
   display: flex;
+  flex-direction: row;
+  flex-grow: 1;
   overflow-x: auto;
   overflow-y: hidden;
   height: fit-content; /* Changed to fit-content */
-  min-height: 5em;     /* Added min-height */
-  gap: 0.5em;
-  padding: 0.5em;
+  gap: 0.75em;
   overflow-anchor: none;
   overscroll-behavior-y: contain;
+  margin-bottom: 10px;
+}
+
+.constraint-title {
+  font-size: 10px;
+  /* padding: 0.5em; */
+  height: 10px;
+  position: absolute;
+  bottom: -12px;
+
+  /* 
+  position: absolute;
+  bottom: 0px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  z-index: 1000; */
 }
 
 .constraint-bar-item {
   flex: 0 0 auto;
-  min-width: 100px;
-  padding: 0.5em;
+  min-width: 3em;
+  min-height: 30px;
+  padding-top: 3px;
+  /* padding-right: 10px; */
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  font-size: 5px;
 }
 
 .constraint-info {
   display: flex;
   flex-direction: column;
   gap: 0.25em;
-  padding-right: 1.5em; /* Make room for delete button */
+  padding: 0.25em;
 }
 
 .constraint-details {
-  display: flex;
-  flex-direction: column;
+  /* display: flex;
+  flex-direction: column; */
   gap: 0.25em;
   font-size: var(--small-font-size);
   color: var(--primary-text-color);
 }
 
-.constraint-details span {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 0.2em 0.4em;
-  border-radius: var(--radius);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
 .constraint-delete-btn {
   position: absolute;
-  top: 0.25em;
-  right: 0.25em;
-  width: 20px;
-  height: 20px;
+  top: 0px;
+  right: -10px;
+  width: 10px;
+  height: 10px;
   padding: 0;
   display: flex;
   align-items: center;
@@ -958,7 +969,26 @@ div.searching-light {
 }
 
 .constraint-delete-btn:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(217, 244, 254, 0.4);
+}
+
+.constraint-info > .title {
+  color: var(--primary-text-color);
+  font-size: 10px;
+}
+
+.constraint-details > span {
+  color: var(--primary-text-color);
+  padding: 2px;
+}
+
+.constraint-details > .label {
+  color: var(--primary-text-color);
+}
+
+.constraint-details > .value {
+  color: var(--primary-text-color);
+  background-color: rgba(157, 198, 213, 0.4);
 }
 
 .prism-bar {
@@ -985,8 +1015,6 @@ div.searching-light {
   padding-right: 0.5em;
 }
 
-
-
 @keyframes plonk {
   0% {
     transform: translateY(-50px) scale(0.95);
@@ -1002,6 +1030,10 @@ div.searching-light {
   100% {
     transform: translateY(0) scale(1);
   }
+}
+
+.lenses {
+  margin: var(--editor-margin);
 }
 
 .prism-icon {

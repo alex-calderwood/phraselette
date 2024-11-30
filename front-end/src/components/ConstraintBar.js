@@ -30,30 +30,29 @@ export const ConstraintBar = ({ constraints, onTooltipUpdate, removeConstraint }
     return (
       <div className="constraint-bar-item glass-pane" >
         <div className="constraint-info">
-          <div className="title">{constraint.feature?.plain}</div>
           
           <div className="constraint-details">
             {constraint.mode && (
-              <span className="mode">
+              <span className="label">
                 {constraint.mode}
+              </span>
+            )}
+            {constraint.targetSequence && (
+              <span className="value">
+                {displayTargetSequence()}
               </span>
             )}
             
             {constraint.targetMin !== undefined && (
-              <span className="range">
+              <>
                 <span className="label">min</span>
                 <span className="value">{formatNumber(constraint.targetMin)}</span>
                 <span className="label">max</span>
                 <span className="value">{formatNumber(constraint.targetMax)}</span>
-              </span>
-            )}
-            
-            {constraint.targetSequence && (
-              <span className="target">
-                {displayTargetSequence()}
-              </span>
+              </>
             )}
           </div>
+          <div className="title">{constraint.feature?.plain}</div>
         </div>
 
         <button
@@ -80,12 +79,11 @@ export const ConstraintBar = ({ constraints, onTooltipUpdate, removeConstraint }
   };
 
   return (
-    <div className="flex flex-col w-full">
-      <div className='wells-title'>
-        Constraints ({constraints.length})
-      </div>
-      
+    <div className="constraint-bar-container">
       <div className="constraint-bar" onWheel={handleWheel}>
+        <div className='top-title constraint-title'>
+          constraints ({constraints.length})
+        </div>
         {constraints.map((constraint) => (
           <ConstraintItem 
             key={constraint.id} 

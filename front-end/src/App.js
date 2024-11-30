@@ -728,7 +728,7 @@ class App extends Component {
                   removeConstraint={this.removeConstraint.bind(this)}
                   />
 
-                <div className='wells-title'>
+                <div className='top-title wells-title'>
                   Wells
                 </div>
 
