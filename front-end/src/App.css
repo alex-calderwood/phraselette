@@ -644,11 +644,6 @@ select:hover::after {
   border-radius: var(--radius);
 }
 
-/* on hover make the token a bit darker */
-/* .token:hover {
-  background-color: #e1e1e1;
-} */
-
 .token .heading {
   font-size: 12px;
   min-height: 100%;

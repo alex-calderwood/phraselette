@@ -13,7 +13,7 @@ const roles = {
     "Deleuze and Guattari's thesaurus",
     "Derrida's catch phrases and deep cuts",
     "a romance novel's lexicon",
-    "Emily Dickenson's playful lexicon (extremely playful Dickenson thesaurus)",
+    "Emily Dickinson's playful lexicon (extremely playful Dickinson thesaurus)",
     "Jane Austen's country house 'free indirect discourse' or 'free indirect style' lexicon",
     "the thesaurus James Joyce used for Ulysses",
     "an everyday English thesaurus",
