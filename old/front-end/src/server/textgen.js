@@ -9,9 +9,33 @@ const https = require("https");
 const {groupBy, capitalizeFirst, fetchJSONResponse, apiCreds} = require("./utils.js");
 const {authorizeGoogle, createSheet, appendSheetItem} = require("./textgen_logging.js");
 
+const provider = 'local' // local, anthropic
+
 /// *** non-handler functions ***
 const anthropicHostname = "api.anthropic.com";
 const openaiHostname = "api.openai.com";
+
+
+function sendLocalRequest(partialPayload) {
+  // (base) λ ~/code/mj/prism-editor/ main* curl http://localhost:11434/api/generate -d '{
+//   "model": "llama2",
+//   "prompt":"Why is the sky blue?"
+// }'
+
+  let opts = {
+    hostname: 'localhost:11434',
+    path: '/api/generate',
+    method: 'POST',
+    model: "llama2",
+    prompt: "Why is the sky blue?"
+  }
+
+  console.log(opts)
+  let response = fetchJSONResponse(opts)
+  
+
+  console.log("local response", response)
+}
 
 // make a request to Claude on the Anthropic API with proper headers.
 // partialPayload should include "prompt".
@@ -23,6 +47,13 @@ const openaiHostname = "api.openai.com";
 // messages API with arbitrary chat context" behavior that exposes the API's
 // full capabilities.
 async function sendClaudeReq(partialPayload) {
+
+  // if (provider == 'local') {
+  //   let response = sendLocalRequest(partialPayload);
+  //   return response;
+  // }
+
+
   console.log("sv->claude", partialPayload);
   // construct headers
   const opts = {
