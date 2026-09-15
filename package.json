@@ -1,0 +1,28 @@
+{
+  "name": "phraselette",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/copy-ort.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/copy-ort.mjs",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "node server.mjs",
+    "static": "npm run build && node server.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
+    "chroma-js": "^3.1.2",
+    "cmu-pronouncing-dictionary": "^3.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "wink-eng-lite-web-model": "^1.8.1",
+    "wink-nlp": "^2.3.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.5.0",
+    "vite": "^6.3.5"
+  }
+}

@@ -122,3 +122,11 @@ front-end/google_client.json
 
 # Data
 front-end/events/*
+
+# Phraselette (Vite app)
+node_modules/
+dist/
+public/ort/
+.vite/
+.model-cache/
+.build-check/

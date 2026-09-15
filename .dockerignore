@@ -1,0 +1,11 @@
+node_modules
+dist
+old
+docs
+.git
+.claude
+.vscode
+*.pdf
+*.log
+.DS_Store
+public/ort
