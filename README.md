@@ -36,14 +36,6 @@ The image is a two-stage build (Node builds `dist/`, then a slim Node image runs
 
 Model weights are downloaded by the browser directly from the Hugging Face Hub and cached in the browser's Cache Storage, so nothing large flows through the server.
 
-## What runs where
-
-| Landing card | Task | Default | Alternatives |
-| --- | --- | --- | --- |
-| Probabilities | context well, probability colouring, scoring of suggestions | GPT-2 (the paper's model) | GPT-Neo 125M, Gemma 3 270M, Qwen3 0.6B |
-| Advice Generation | thesaurus, reader and dictionary wells (one download serves all three) | Qwen2.5 0.5B Instruct | SmolLM2 135M/360M, Gemma 3 270M/1B, Llama 3.2 1B, Qwen2.5 1.5B |
-| Part of speech | words well and its constraints | wink-nlp (bundled, instant) | MobileBERT POS tagger |
-
 Pronunciations for the sound well come from the CMU Pronouncing Dictionary, bundled as a lazily loaded chunk.
 
 ### The context well without beam search
