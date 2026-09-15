@@ -58,6 +58,7 @@ export const ROLES = {
     'a prescriptive dictionary (highly opinionated on words and their meanings)',
     "a descriptive dictionary (20th-century dictionaries such as the OED and Webster's Third are descriptive, and attempt to describe the actual use of words)",
     "a psychologist's dictionary",
+    "a dictionary where every word in the definition contains the letter 'e'",
     'a 14th century English dictionary',
     'a 17th century Irish dictionary',
     'The Dictionary El Otro, the English language descriptive dictionary put together by students of Borges, who noted "It is often forgotten that (dictionaries) are artificial repositories, put together well after the languages they define."',

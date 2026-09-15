@@ -16,7 +16,7 @@ export function initialState() {
     probTokens: null,     // [{start,end,logProb}] sub-token probabilities of the document
     probPending: false,
     wells,
-    highlightWellId: null,   // which view well colours the editor; null = plain text
+    highlightWellId: null,   // which view well colors the editor; null = plain text
     inlets: [],           // [{id,start,end}]
     selection: { start: 0, end: 0 },
     constraints: [],      // see core/constraints.js
@@ -61,6 +61,16 @@ export function reducer(state, action) {
       }
       return { ...state, wells };
     }
+    case 'moveWell': {
+      const wells = state.wells.filter((w) => w.id !== action.id);
+      const moving = state.wells.find((w) => w.id === action.id);
+      if (!moving) return state;
+      let idx = wells.findIndex((w) => w.id === action.targetId);
+      if (idx === -1) return state;
+      if (action.after) idx += 1;
+      wells.splice(idx, 0, moving);
+      return { ...state, wells };
+    }
     case 'addWellObject':
       return { ...state, wells: [...state.wells.filter((w) => w.id !== action.well.id), action.well] };
     case 'removeWell': {
@@ -70,7 +80,7 @@ export function reducer(state, action) {
     }
     case 'patchWell':
       return { ...state, wells: state.wells.map((w) => (w.id === action.id ? { ...w, ...action.patch } : w)) };
-    case 'highlight': // toggle: the same well again switches colouring off
+    case 'highlight': // toggle: the same well again switches coloring off
       return { ...state, highlightWellId: state.highlightWellId === action.id ? null : action.id };
     case 'createInlet': {
       const inlet = action.inlet;

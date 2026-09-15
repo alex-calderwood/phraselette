@@ -327,6 +327,7 @@ export function createActions(dispatch, getState, session) {
     addWell(type, role = null) { dispatch({ type: 'addWell', wellType: type, role }); },
     removeWell(id) { dispatch({ type: 'removeWell', id }); },
     patchWell(id, patch) { dispatch({ type: 'patchWell', id, patch }); },
+    moveWell(id, targetId, after) { dispatch({ type: 'moveWell', id, targetId, after }); },
     highlight(id) { dispatch({ type: 'highlight', id }); scheduleProbs(0); },
     createInlet(start, end) {
       // Heal to token boundaries: drop trailing whitespace, then grow backwards

@@ -24,6 +24,7 @@ Legend: [ ] todo · [~] in progress · [x] done
 ## 4. Constraints
 - [x] Part of speech (contains / exactly / starts with / ends with / in order), word count, sound (with "borrow a word's sound" box), probability window on the histogram; per inlet; chips in the constraint bar
 - [x] Scoring + accepted/rejected split (port of `resolution.js` + `Constraint.js`)
+- [x] Rhyme (rhymes / assonance / consonance / alliteration with a reference word, port of the unported `BetterRhymeConstraint`), syllable count, stress pattern (0/1, secondary folded into stressed), letters (acrostic / lipogram) and character count; **must / must not** toggle on every category and rhyme constraint. Syllable and character caps also bound the context well's search depth.
 
 ## 5. Wells
 - [x] Context well, fast mode: prefix pass → top-K first tokens → greedy continuation with the original `no_repeat_ngram_size=2` rule, trailing-space rule, per-token log-probs, histogram
@@ -54,10 +55,10 @@ Legend: [ ] todo · [~] in progress · [x] done
 
 ## 5b. Testing platform
 - [x] `scripts/lm-test.mjs`: Node/CPU harness for `src/models/lm.js` (search, probs, scoring; NaN + distinct-first-token checks). Verified GPT-2 fp32 gives sensible continuations ("should do about this?", "can learn from this?")
-- [x] In-browser **model lab** (`?lab`, linked from the landing disclaimer): load any probability / advice model at any dtype on webgpu or wasm, run search / probs / score / thesaurus prompt / raw chat, inspect raw output, entries, timings, histogram
+- [x] ~~In-browser model lab~~ removed; the Node harness is the only test surface
 - [x] Root cause of the "the , ," context results: GPT-2 fp16 overflows to NaN on WebGPU → top-k picked vocabulary order. Now: fp32 default for GPT-2 on WebGPU + a non-finite-logits guard that reports the dtype
 - [x] Inlets heal to token boundaries (absorb the preceding space, never text); candidates carry the leading space so scoring and swapping line up with BPE tokens
-- [ ] Try the other probability models in the lab at fp16/q4f16 to see which overflow
+- [ ] Try the other probability models with `scripts/lm-test.mjs` at fp16/q4f16 to see which overflow
 
 ## 6. Deployment
 - [x] `server.mjs` static server on 3027 serving under `/phraselette/` (SPA fallback, wasm MIME, cache headers) — smoke-tested

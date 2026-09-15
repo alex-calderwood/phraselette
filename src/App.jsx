@@ -1,22 +1,16 @@
 import React, { useState } from 'react';
 import Landing from './components/Landing.jsx';
 import Workspace from './components/Workspace.jsx';
-import Lab from './components/Lab.jsx';
-
-const wantsLab = () => new URLSearchParams(window.location.search).has('lab');
+import { request } from './models/client.js';
 
 export default function App() {
   const [session, setSession] = useState(null); // { device, cards, slots } once models are loaded
-  const [lab, setLab] = useState(wantsLab);
-
-  const setLabUrl = (on) => {
-    const url = new URL(window.location.href);
-    if (on) url.searchParams.set('lab', ''); else url.searchParams.delete('lab');
-    window.history.replaceState(null, '', url);
-    setLab(on);
+  if (!session) return <Landing onReady={setSession} />;
+  // Going back to the landing page frees every loaded model so a new choice
+  // does not stack on top of the old one in GPU / wasm memory.
+  const changeModels = async () => {
+    setSession(null);
+    try { await request('unloadAll'); } catch (e) { console.warn('unload failed', e); }
   };
-
-  if (lab) return <Lab onExit={() => setLabUrl(false)} />;
-  if (!session) return <Landing onReady={setSession} onLab={() => setLabUrl(true)} />;
-  return <Workspace session={session} onChangeModels={() => setSession(null)} />;
+  return <Workspace session={session} onChangeModels={changeModels} />;
 }

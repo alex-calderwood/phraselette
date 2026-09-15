@@ -68,7 +68,7 @@ export const AGGREGATE_COLOR = palette[6];
 
 export const VIEW_WELLS = new Set(['words', 'context', 'sound']);
 
-export const FEATURE_LABELS = { pos: 'part of speech', length: 'word count', sound: 'sound', prob: 'probability' };
+export const FEATURE_LABELS = { pos: 'part of speech', length: 'word count', sound: 'sound', prob: 'probability', rhyme: 'rhyme', syllables: 'syllables', stress: 'stress', letters: 'letters', chars: 'characters' };
 
 export function makeWell(type) {
   const def = WELL_DEFS[type];

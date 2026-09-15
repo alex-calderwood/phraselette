@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MODES } from '../core/constraints.js';
+import { MODES, RHYME_MODES, phonesOfTokens, referenceSound } from '../core/constraints.js';
 import { tagWithWink, attachPhones } from '../lang/tagger.js';
-import { phonesOfTokens } from '../core/constraints.js';
 import { logProbColor, humanLog } from '../lib/colors.js';
 
 function Wrapper({ styles, onDelete, children }) {
@@ -13,11 +12,23 @@ function Wrapper({ styles, onDelete, children }) {
   );
 }
 
-/** POS or sound: a mode select plus an editable list of categories. */
+/** "must" / "must not": flips the constraint's score. */
+function NegateSelect({ constraint, styles, onPatch }) {
+  return (
+    <select style={styles.button} value={constraint.negate ? 'not' : 'must'} onChange={(e) => onPatch({ negate: e.target.value === 'not' })} title="require or forbid">
+      <option value="must">must</option>
+      <option value="not">must not</option>
+    </select>
+  );
+}
+
+/** POS, sound, stress or letters: a mode select plus an editable list of categories. */
 export function CategoryConstraintView({ constraint, styles, onPatch, onDelete }) {
   const setTarget = (target) => onPatch({ target });
   const [ref, setRef] = useState(constraint.reference ?? '');
   const isSound = constraint.kind === 'sound';
+  const labelFor = (r) => constraint.labels?.[r] ?? r;
+  const defaultItem = constraint.range[isSound ? 0 : constraint.kind === 'pos' ? 7 : 0];
 
   const useReference = () => {
     const toks = attachPhones(tagWithWink(ref));
@@ -34,6 +45,7 @@ export function CategoryConstraintView({ constraint, styles, onPatch, onDelete }
         </form>
       )}
       <div className="constraint-line">
+        <NegateSelect constraint={constraint} styles={styles} onPatch={onPatch} />
         <select style={styles.button} value={constraint.mode} onChange={(e) => onPatch({ mode: e.target.value })}>
           {MODES.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
@@ -41,15 +53,40 @@ export function CategoryConstraintView({ constraint, styles, onPatch, onDelete }
           {constraint.target.map((v, i) => (
             <span className="constraint-target" key={i}>
               <select style={styles.button} value={v} onChange={(e) => setTarget(constraint.target.map((x, j) => (j === i ? e.target.value : x)))}>
-                {constraint.range.map((r) => <option key={r} value={r}>{r}</option>)}
+                {constraint.range.map((r) => <option key={r} value={r}>{labelFor(r)}</option>)}
               </select>
               <button className="mini-delete" onClick={() => setTarget(constraint.target.filter((_, j) => j !== i))}>×</button>
             </span>
           ))}
         </div>
-        <button style={styles.button} title="add" onClick={() => setTarget([...constraint.target, constraint.range[isSound ? 0 : 7]])}>＋</button>
+        <button style={styles.button} title="add" onClick={() => setTarget([...constraint.target, defaultItem])}>＋</button>
         <button style={styles.button} title="remove last" onClick={() => setTarget(constraint.target.slice(0, -1))}>−</button>
       </div>
+    </Wrapper>
+  );
+}
+
+/** Rhyme: a reference word, a mode (rhyme / assonance / consonance / alliteration) and the sound it resolves to. */
+export function RhymeConstraintView({ constraint, styles, onPatch, onDelete }) {
+  const [ref, setRef] = useState(constraint.reference ?? '');
+  const useReference = () => onPatch({ reference: ref.trim(), sound: referenceSound(ref) });
+  const snd = constraint.sound;
+  const shown = snd
+    ? (constraint.mode === 'rhymes with' ? snd.rhymingPart[0] : snd.phonemes[0])
+    : (constraint.reference ? 'no pronunciation known for this word' : 'type a word');
+  return (
+    <Wrapper styles={styles} onDelete={onDelete}>
+      <div className="constraint-line">
+        <NegateSelect constraint={constraint} styles={styles} onPatch={onPatch} />
+        <select style={styles.button} value={constraint.mode} onChange={(e) => onPatch({ mode: e.target.value })}>
+          {RHYME_MODES.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+        <form className="constraint-ref" onSubmit={(e) => { e.preventDefault(); useReference(); }}>
+          <input style={styles.button} placeholder="a word to rhyme with…" value={ref} onChange={(e) => setRef(e.target.value)} onBlur={useReference} />
+          <button type="submit" style={styles.button}>›</button>
+        </form>
+      </div>
+      <div className="constraint-line"><span className="text constraint-hint">{shown}</span></div>
     </Wrapper>
   );
 }
@@ -78,7 +115,7 @@ export function HistogramConstraintView({ constraint, histogram, styles, onPatch
   );
 }
 
-export function LogHistogram({ data, min, max, onChange }) {
+export function LogHistogram({ data, min, max, onChange, readOnly = false }) {
   const canvasRef = useRef(null);
   const dragging = useRef(null);
   const [local, setLocal] = useState({ min, max });
@@ -106,10 +143,10 @@ export function LogHistogram({ data, min, max, onChange }) {
         const edge = data.binEdges[i];
         const x = toX(edge, w);
         const bh = Math.ceil((c / maxC) * (h - base - gap));
-        const colour = logProbColor(edge);
-        ctx.fillStyle = edge >= local.min && edge <= local.max ? colour : '#c9c4cf';
+        const color = logProbColor(edge);
+        ctx.fillStyle = edge >= local.min && edge <= local.max ? color : '#c9c4cf';
         ctx.fillRect(x, h - base - gap - bh, Math.ceil(bw), bh);
-        ctx.fillStyle = colour;
+        ctx.fillStyle = color;
         ctx.fillRect(x, h - base, Math.ceil(bw), base);
       });
     } else {
@@ -117,7 +154,7 @@ export function LogHistogram({ data, min, max, onChange }) {
       ctx.font = '10px sans-serif';
       ctx.fillText('run the context well to see the distribution', 6, h / 2);
     }
-    ctx.strokeStyle = 'rgba(230,40,40,0.85)'; ctx.fillStyle = 'rgba(230,40,40,0.85)'; ctx.lineWidth = 2;
+    ctx.strokeStyle = readOnly ? 'rgba(60,44,72,0.35)' : 'rgba(230,40,40,0.85)'; ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = readOnly ? 1 : 2;
     for (const v of [local.min, local.max]) {
       const x = Math.max(1, Math.min(w - 1, toX(v, w)));
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
@@ -126,10 +163,11 @@ export function LogHistogram({ data, min, max, onChange }) {
     ctx.fillStyle = '#2f2f2f'; ctx.font = '9px sans-serif';
     ctx.fillText(humanLog(local.min), Math.min(w - 24, toX(local.min, w) + 4), h - 8);
     ctx.fillText(humanLog(local.max), Math.max(2, toX(local.max, w) - 22), h - 8);
-  }, [data, local]);
+  }, [data, local, readOnly]);
 
   const pos = (e) => { const r = canvasRef.current.getBoundingClientRect(); return { x: e.clientX - r.left, w: r.width }; };
   const down = (e) => {
+    if (readOnly) return;
     const { x, w } = pos(e);
     const dMin = Math.abs(x - toX(local.min, w)); const dMax = Math.abs(x - toX(local.max, w));
     dragging.current = dMin <= dMax ? 'min' : 'max';
@@ -144,7 +182,7 @@ export function LogHistogram({ data, min, max, onChange }) {
   const up = () => { if (dragging.current) { dragging.current = null; onChange(local.min, local.max); } };
 
   return (
-    <div className="histogram">
+    <div className={`histogram ${readOnly ? 'readonly' : ''}`}>
       <canvas ref={canvasRef} onMouseDown={down} onMouseMove={move} onMouseUp={up} onMouseLeave={up} />
     </div>
   );
@@ -152,8 +190,9 @@ export function LogHistogram({ data, min, max, onChange }) {
 
 export function ConstraintView(props) {
   const { constraint } = props;
-  if (constraint.kind === 'pos' || constraint.kind === 'sound') return <CategoryConstraintView {...props} />;
-  if (constraint.kind === 'length') return <RangeConstraintView {...props} />;
+  if (['pos', 'sound', 'stress', 'letters'].includes(constraint.kind)) return <CategoryConstraintView {...props} />;
+  if (constraint.kind === 'rhyme') return <RhymeConstraintView {...props} />;
+  if (['length', 'syllables', 'chars'].includes(constraint.kind)) return <RangeConstraintView {...props} />;
   if (constraint.kind === 'prob') return <HistogramConstraintView {...props} />;
   return null;
 }

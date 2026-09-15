@@ -55,9 +55,13 @@ export function SequenceChip({ seq, wellType, expanded = false, onClick, setTool
   const showItems = wellType && WELL_DEFS[wellType] ? WELL_DEFS[wellType].showItems : ['pos', 'sound', 'prob'];
   const origin = wellColor(seq.origin);
   const bg = colorBy === 'prob' && typeof seq.logProbMean === 'number' ? logProbColor(seq.logProbMean) : `color-mix(in srgb, ${origin} 30%, white)`;
+  // Collapsed and colored by source: the chip is just the text, no per-word boxes.
+  const plain = !expanded && colorBy === 'origin';
   const body = (
-    <span className={`sequence ${expanded ? 'expanded' : ''}`} style={{ borderColor: origin, backgroundColor: bg }} onClick={onClick ? () => onClick(seq) : undefined}>
-      {seq.tokens.filter((t, i) => !(i === 0 && t.isSpace)).map((t) => <TokenChip key={t.id} token={t} showItems={showItems} expanded={expanded} colorBy={expanded ? null : colorBy} originColor={origin} />)}
+    <span className={`sequence ${expanded ? 'expanded' : ''} ${plain ? 'plain' : ''}`} style={{ borderColor: origin, backgroundColor: bg }} onClick={onClick ? () => onClick(seq) : undefined}>
+      {plain
+        ? <span className="sequence-text">{seq.text.replace(/^[ \t]+/, '').replace(/\n+/g, ' ⏎ ').replace(/\s{2,}/g, ' ')}</span>
+        : seq.tokens.filter((t, i) => !(i === 0 && t.isSpace)).map((t) => <TokenChip key={t.id} token={t} showItems={showItems} expanded={expanded} colorBy={expanded ? null : colorBy} originColor={origin} />)}
       {expanded && typeof seq.logProbMean === 'number' && <span className="item tag" style={{ backgroundColor: logProbColor(seq.logProbMean) }}>{humanLog(seq.logProbMean)}</span>}
       {expanded && <span className="item tag" style={{ backgroundColor: origin }}>{seq.origin}</span>}
     </span>

@@ -18,39 +18,30 @@ function groupModels(models) {
   return out;
 }
 
-function Card({ card, color, choice, onChoose, progress, disabled, loaded, device }) {
+function ModelRow({ card, color, choice, onChoose, progress, disabled, loaded, device }) {
   const model = findModel(card, choice);
   const dtype = dtypeFor(model, device.device, device.fp16);
-  const size = sizeFor(model, dtype);
   const pct = progress ? Math.round(progress.fraction * 100) : null;
   return (
-    <div className={`slot glass ${loaded ? 'loaded' : ''}`} style={{ '--slot-color': color }}>
-      <div className="slot-head">
-        <span className="slot-title">{card.title}</span>
-        <span className="slot-emoji">{card.emoji}</span>
-      </div>
-      <p className="slot-blurb">{card.blurb}</p>
-      <select value={model.id} disabled={disabled} onChange={(e) => onChoose(card.id, e.target.value)}>
-        {groupModels(card.models).map(([group, models]) => {
-          const opts = models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}{m.recommended ? ' ★' : ''} · {formatMB(sizeFor(m, dtypeFor(m, device.device, device.fp16)))}
-            </option>
-          ));
-          return group ? <optgroup key={group} label={group}>{opts}</optgroup> : opts;
-        })}
-      </select>
-      <div className="slot-note">
-        <span>{model.note}</span>
-        <span className="slot-size">{dtype ? `${dtype} · ${formatMB(size)}` : 'no download'}</span>
-      </div>
-      <div className="used-for">
-        <div className="used-for-title">Used for</div>
-        <ul>
-          {card.usedFor.map((u) => (
-            <li key={u.name}><b>{u.name}</b> <span>{u.desc}</span></li>
-          ))}
-        </ul>
+    <div className={`model-row ${loaded ? 'loaded' : ''}`} style={{ '--slot-color': color }}>
+      <div className="model-row-main">
+        <div className="model-row-text">
+          <span className="model-row-title">{card.title}</span>
+          <span className="model-row-uses">{card.usedFor.map((u) => u.name).join(' · ')}</span>
+        </div>
+        <div className="model-row-pick">
+          <select value={model.id} disabled={disabled} onChange={(e) => onChoose(card.id, e.target.value)} aria-label={`${card.title} model`}>
+            {groupModels(card.models).map(([group, models]) => {
+              const opts = models.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}{m.recommended ? ' ★' : ''} · {formatMB(sizeFor(m, dtypeFor(m, device.device, device.fp16)))}
+                </option>
+              ));
+              return group ? <optgroup key={group} label={group}>{opts}</optgroup> : opts;
+            })}
+          </select>
+          <span className="model-row-note" title={card.blurb}>{model.note}{dtype ? ` · ${dtype}` : ''}</span>
+        </div>
       </div>
       {progress && (
         <>
@@ -62,7 +53,7 @@ function Card({ card, color, choice, onChoose, progress, disabled, loaded, devic
   );
 }
 
-export default function Landing({ onReady, onLab }) {
+export default function Landing({ onReady }) {
   const saved = useMemo(() => loadSettings(), []);
   const [device, setDevice] = useState(null);
   const [choices, setChoices] = useState(() => {
@@ -124,16 +115,8 @@ export default function Landing({ onReady, onLab }) {
         <div className="landing-rule" aria-hidden="true" />
         <p className="landing-tagline">A poet's procedural palette.</p>
         <p className="landing-intro">
-          Phraselette is a text editor with a row of <em>wells</em>: small language models that each look at a phrase
-          differently. One knows how likely each word is, one knows how words sound, one plays whatever thesaurus you
-          describe, one reads your line as a particular kind of reader would. You point them at a phrase; they hand back
-          rephrasings; you keep what's good.
+          Phraselette is a word and phrase search toolbox. It is centered on the idea of 'word wells'. Each well is a customizable word search tool that gives you a new lens on your language choices, and provides alternative or other insight for you to use while composing.
         </p>
-        <ol className="landing-steps">
-          <li><b>Write or paste</b> a poem into the editor.</li>
-          <li><b>Highlight a phrase</b> (or just put the cursor on a word) and press <b>Search</b>, or ⌘↵.</li>
-          <li><b>Sift the rephrasings.</b> Click one to swap it into the text. Lock a constraint, such as the part of speech, word count, or a sound, to steer the next search.</li>
-        </ol>
         <p className="landing-links">
           <a href="https://arxiv.org/abs/2503.06335" target="_blank" rel="noreferrer">Read the paper</a>
           <span aria-hidden="true"> · </span>
@@ -143,77 +126,68 @@ export default function Landing({ onReady, onLab }) {
         </p>
       </header>
 
-      <section className="landing-models-intro">
-        <h2>Choose the models</h2>
-        <p>
-          Everything runs inside your browser. The choices below decide which small models do each job; they are downloaded
-          once from the Hugging Face Hub and cached, so later visits start instantly.
-        </p>
-      </section>
-
-      {device ? (
-        <span className={`device-badge glass ${device.device === 'wasm' ? 'cpu' : ''}`}>
-          <span className="dot" /> {device.label}{device.device === 'webgpu' && !device.fp16 ? ' (no fp16)' : ''}
-        </span>
-      ) : (
-        <span className="device-badge glass"><span className="dot" style={{ background: '#bbb' }} /> detecting hardware…</span>
-      )}
-
-      {device && (
-        <div className="presets">
-          {PRESETS.map((p) => (
-            <button key={p.id} className={`preset ${activePreset === p.id ? 'active' : ''}`} disabled={loading} title={p.hint} onClick={() => setChoices({ ...p.cards })}>
-              {p.label}
-            </button>
-          ))}
-          <span className="preset-hint">{PRESETS.find((p) => p.id === activePreset)?.hint ?? 'custom mix'}</span>
-        </div>
-      )}
-
-      {device && (
-        <div className="slots">
-          {CARDS.map((card, i) => (
-            <Card key={card.id} card={card} color={cardColors[i]} choice={choices[card.id]} onChoose={choose}
-              progress={progress[card.id]} loaded={!!loaded[card.id]} disabled={loading} device={device} />
-          ))}
-        </div>
-      )}
-
       <div className="landing-actions">
         <button className="big-button" disabled={!device || loading} onClick={begin}>
           {loading ? 'Loading…' : hasSaved ? 'Continue' : 'Begin'}
         </button>
-        {device && (
-          <div className="budget glass">
-            <div>
-              <span className="budget-num">{formatMB(uniqueMB)}</span>
-              <span className="budget-label">to download once</span>
-            </div>
-            <div>
-              <span className="budget-num">
-                ≈ {formatMB(estMB)}
-                {memInfo.deviceGB && <span className="budget-of"> / {memInfo.deviceGB} GB</span>}
-              </span>
-              <span className="budget-label">memory while running{memInfo.deviceGB ? ', of what this browser reports' : ''}</span>
-              {memInfo.deviceGB && (
-                <span className="budget-gauge" aria-hidden="true">
-                  <span style={{ width: `${Math.min(100, (estMB / 1000 / memInfo.deviceGB) * 100)}%` }} className={estMB / 1000 / memInfo.deviceGB > 0.5 ? 'warn' : ''} />
-                </span>
-              )}
-            </div>
+        {device ? (
+          <div className="budget-line">
+            <span>{formatMB(uniqueMB)} to download once</span>
+            <span aria-hidden="true">·</span>
+            <span>≈ {formatMB(estMB)}{memInfo.deviceGB ? ` / ${memInfo.deviceGB} GB` : ''} memory while running</span>
+            <span aria-hidden="true">·</span>
+            <span className={`device-inline ${device.device === 'wasm' ? 'cpu' : ''}`}><span className="dot" /> {device.label}{device.device === 'webgpu' && !device.fp16 ? ' (no fp16)' : ''}</span>
           </div>
+        ) : (
+          <div className="budget-line">detecting hardware…</div>
         )}
-        <div className="landing-fineprint">
-          Downloads come from the Hugging Face Hub and stay in this browser's cache.
-          {device?.device === 'wasm' && ' No WebGPU detected: generation will be slower; prefer the Light preset.'}
-          {estMB > 3000 && ' This is a heavy set; if the tab crashes, choose a lighter preset.'}
-        </div>
         {error && <div className="landing-error">{error}</div>}
       </div>
+
+      {device && (
+        <section className="models-panel glass" aria-label="model selection">
+          <div className="models-panel-head">
+            <div>
+              <div className="models-panel-title">Models</div>
+              <div className="models-panel-note">Phraselette uses small language models that each run in your browser. If you are on a system without a GPU you 
+                
+                These choices decide which small models do each job; they download once from the Hugging Face Hub and are cached.</div>
+            </div>
+            <div className="presets compact">
+              {PRESETS.map((p) => (
+                <button key={p.id} className={`preset ${activePreset === p.id ? 'active' : ''}`} disabled={loading} title={p.hint} onClick={() => setChoices({ ...p.cards })}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="model-rows">
+            {CARDS.map((card, i) => (
+              <ModelRow key={card.id} card={card} color={cardColors[i]} choice={choices[card.id]} onChoose={choose}
+                progress={progress[card.id]} loaded={!!loaded[card.id]} disabled={loading} device={device} />
+            ))}
+          </div>
+          {(device.device === 'wasm' || estMB > 3000) && (
+            <div className="landing-fineprint">
+              {device.device === 'wasm' && 'No WebGPU detected: generation will be slower; prefer the Light preset. '}
+              {estMB > 3000 && 'This is a heavy set; if the tab crashes, choose a lighter preset.'}
+            </div>
+          )}
+        </section>
+      )}
+
+      <section className="howto" aria-label="how to use">
+        <div className="howto-title">How to use it</div>
+        <ol className="landing-steps">
+          <li><b>Write</b> a poem with the text editor.</li>
+          <li><b>Highlight a phrase</b> and press <b>Search</b></li>
+          <li><b>Sift the rephrasings.</b> Click one to swap it into the text. Lock a constraint, such as the part of speech, word count, or a sound, to steer the next search.</li>
+        </ol>
+      </section>
+
       <div className="landing-disclaimer">
         Phraselette 2.0 · re-vibecoded by Claude Fable 5.1 from the DIS ’25 paper and the original study build.
         Hosted models were replaced by models that run entirely in your browser via Transformers.js; expect rougher edges than the paper's version.
-        {onLab && <> · <button className="text-link" onClick={onLab}>model lab</button></>}
       </div>
     </div>
   );

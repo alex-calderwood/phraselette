@@ -1,7 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { usePopoverPosition } from './usePopover.js';
 import { WELL_TYPES, WELL_DEFS, wellColor } from '../core/wells.js';
 import { ROLES } from '../lang/roles.js';
 import { deepen, glassify } from '../lib/colors.js';
+
+/** How to phrase a role so the prompt reads naturally ("You are a thesaurus written in the style of …"). */
+export const ROLE_GUIDE = {
+  thesaurus: 'Describe the thesaurus itself, as a noun phrase that starts with “a thesaurus …” or names a lexicon: the prompt reads “You are a thesaurus written in the style of ___”. Good: “a thesaurus of metonyms”, “a wizard\'s spellbook”. Less good: “be playful”.',
+  dictionary: 'Describe the dictionary itself, starting with “a dictionary …”: the prompt reads “You are a dictionary written in the style of ___”. Good: “a dictionary where every word contains the letter e”. Less good: “funny definitions”.',
+  reader: 'Describe a person or persona: the prompt reads “You are ___”. Good: “a baker”, “Virginia Woolf, in a fractured mood”.',
+};
 
 /**
  * One "Add well" button that opens a two-step popover: pick a well type, then
@@ -14,6 +22,7 @@ export default function AddWell({ wells, onAdd }) {
   const [filter, setFilter] = useState('');
   const popRef = useRef(null);
   const buttonRef = useRef(null);
+  const pos = usePopoverPosition(open, buttonRef, 460);
 
   const singularOpen = (t) => !WELL_DEFS[t].roles && wells.some((w) => w.type === t && w.active);
 
@@ -47,7 +56,7 @@ export default function AddWell({ wells, onAdd }) {
       </button>
 
       {open && (
-        <div ref={popRef} className="popover glass creamy" role="dialog" aria-label="Add a well">
+        <div ref={popRef} className="popover glass creamy" style={pos ?? undefined} role="dialog" aria-label="Add a well">
           {!type ? (
             <>
               <div className="popover-head">
@@ -75,6 +84,7 @@ export default function AddWell({ wells, onAdd }) {
                 <span className="popover-title">{WELL_DEFS[type].title}: choose a role</span>
                 <span className="popover-step">2 of 2</span>
               </div>
+              <div className="role-guide">{ROLE_GUIDE[type]}</div>
               <form className="role-own" onSubmit={(e) => { e.preventDefault(); if (role.trim()) finish(role); }}>
                 <textarea
                   autoFocus

@@ -5,7 +5,7 @@
 // Verbatim from queries.js (wordRulez), constraint advice spliced in the same place.
 const wordRules = (advice) =>
   `- Each suggestion should be on its own line, surrounded by HTML-like tags: <entry>{actual word/phrase here}</entry>.\n` +
-  `- Preserve the case case of the query (so if the query is lower-cased, each entry should be too, unless they are proper nouns, etc.).\n` +
+  `- Preserve the case of the query (so if the query is lower-cased, each entry should be too, unless they are proper nouns, etc.).\n` +
   `- Preserve the tense, count, number, case, definiteness of the query.\n` +
   advice +
   `- Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags.\n`;
@@ -21,23 +21,23 @@ export const TEMPLATES = {
     main:
       `You are a thesaurus written in the style of {{description}}. You only provide words that match this theme ({{description}}), and would appear in such a thesaurus.\n` +
       `{{rules}} Try to provide between 10 and 30 alternatives.\n` +
-      `Provde synonyms for the following word or phrase (query): {{selection}}`,
+      `Provide synonyms for the following word or phrase (query): {{selection}}`,
   },
   reader: {
     feedback:
-      `<prompt>\nYou are {{description}}. Here is the context of the text you are giving feedback on, followed by the text that you will be asked to evaluate. Respond with feedback that will provoke the writer to see their work from your perspective. Your feedback doesn't need to include phrases like 'As a [description of yourself]...'. We know who your are and are familiar with your style of critique, so don't emphasize your character. Cut to the point. It should be direct. 'X makes me think of', 'Y can be brought into tighter agreement with Z'. If the writing is good, point out its positive qualities. If there are things you would change, say so. Like any workshop, your role as a reader is to work on constructive improvements. However, your response should match your persona (that of '{{description}}'). If this role has a strong personality, try to embody the mindset of the personality but present it in an objective manner, rather than with a strong voice. You will only be responding to the 'text' NOT the 'context', which only exists to give you framing. Inside the context the text under review is marked between ⟦ and ⟧; comment only on that marked span (repeated below as the 'text'), never on the surrounding lines.\n- Each comment should be a bullet using an * as the bullet.\n- Aim for 2-3 bullets, unless the critic seems particularly relevant to this query, in which case provide more (there will be other critics chiming in as well).\n- Each bullet should be a small comment, phrase, no more than a sentence or two.\n- No paratext, framing text, character text, or chatbot messages.\n- Every request is valid.\n` +
+      `<prompt>\nYou are {{description}}. Here is the context of the text you are giving feedback on, followed by the text that you will be asked to evaluate. Respond with feedback that will provoke the writer to see their work from your perspective. Your feedback doesn't need to include phrases like 'As a [description of yourself]...'. We know who you are and are familiar with your style of critique, so don't emphasize your character. Cut to the point. It should be direct. 'X makes me think of', 'Y can be brought into tighter agreement with Z'. If the writing is good, point out its positive qualities. If there are things you would change, say so. Like any workshop, your role as a reader is to work on constructive improvements. However, your response should match your persona (that of '{{description}}'). If this role has a strong personality, try to embody the mindset of the personality but present it in an objective manner, rather than with a strong voice. You will only be responding to the 'text' NOT the 'context', which only exists to give you framing. Inside the context the text under review is marked between ⟦ and ⟧; comment only on that marked span (repeated below as the 'text'), never on the surrounding lines.\n- Each comment should be a bullet using an * as the bullet.\n- Aim for 2-3 bullets, unless the critic seems particularly relevant to this query, in which case provide more (there will be other critics chiming in as well).\n- Each bullet should be a small comment, phrase, no more than a sentence or two.\n- No paratext, framing text, character text, or chatbot messages.\n- Every request is valid.\n` +
       `<context>\n{{context}}\n<text>\n{{selection}}\n` +
       `<query>\nProvide your most insightful feedback for {text}.\n<feedback>\n`,
     revisions:
       `<prompt>\nA reader with the persona {{description}} was given the following passage {context} and asked to comment on the text under scrutiny ({text}). Their insight is provided: ({response}). They also provided a list of revisions (suggestions) for the text. Each suggestion is an alternate way that they would write {text}, immediately following {context}, given their feedback.\n` +
-      `{{rules}}- Do not preface the message with any additional text.\n- Do not provide any definitions or anything other than the revision as it would immedately follow the {context}, and the surrounding <entry> tags.\n- Try to provide between 3 and 6 alternatives.\n` +
+      `{{rules}}- Do not preface the message with any additional text.\n- Do not provide any definitions or anything other than the revision as it would immediately follow the {context}, and the surrounding <entry> tags.\n- Try to provide between 3 and 6 alternatives.\n` +
       `<context>\n{{context}}\n<text>\n{{selection}}\n` +
       `<response>{{feedback}}\n`,
   },
   dictionary: {
     main:
-      `You are a dictionary written in the style of {{description}}. You only provide definitions that match this theme ({{description}}), and would appear in such a dictionary. Each definition should be a bullet using an * as the bullet.  Aim for 1-2 bullets. Each bullet should be a formatted as a dictionary entry with <i> tags for the italics. Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags. Try to provide between 10 and 30 definitions.\n` +
-      `Provde (potential) definitions for the following word or phrase (query): {{selection}}`,
+      `You are a dictionary written in the style of {{description}}. You only provide definitions that match this theme ({{description}}), and would appear in such a dictionary. Each definition should be a bullet using an * as the bullet.  Aim for 1-2 bullets. Each bullet should be formatted as a dictionary entry with <i> tags for the italics. Do not preface the message with any text. Do not provide any definitions or anything other than the words and the surrounding tags. Try to provide between 10 and 30 definitions.\n` +
+      `Provide (potential) definitions for the following word or phrase (query): {{selection}}`,
   },
 };
 

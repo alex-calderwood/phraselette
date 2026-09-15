@@ -68,11 +68,11 @@ Transformers.js does not implement beam search (its `generate()` takes the top t
 
 ## Testing the models
 
-Two harnesses run the same code the wells use:
+One harness runs the same code the wells use:
 
 - `node scripts/lm-test.mjs --model Xenova/gpt2 --dtype fp32 --k 8 --depth 6 --prefix "…" --text " word to score"` runs the context search, existing-text probabilities and candidate scoring on the CPU and prints per-token log-probs, with checks for non-finite values and duplicate first tokens. Models it downloads are cached in `.model-cache/` (git-ignored).
 - `node scripts/lm-test.mjs --well thesaurus --model onnx-community/Qwen2.5-0.5B-Instruct --dtype q8 --role "a thesaurus of metonyms|an everyday English thesaurus" --query "following day" --runs 2` runs the thesaurus prompt exactly as the app does (same messages, reply prefix and sampling, via `src/models/chat.js`) for each `|`-separated role and prints the raw reply and the parsed entries. Swap `--model` to compare advice models.
-- The **model lab** in the app (`/phraselette/?lab`, also linked from the landing page) loads any probability or advice model at any precision on WebGPU or WebAssembly and runs the search, scoring, the thesaurus prompt and raw chat, showing raw output, parsed entries and timings. Use it to find which precisions a GPU handles: GPT-2 in fp16, for instance, overflows to NaN on WebGPU, which is why the app loads it in fp32.
+- GPT-2 in fp16 overflows to NaN on WebGPU, which is why the app loads it in fp32; check other precisions with the harness above before adding them to the catalogue.
 
 ## Layout
 

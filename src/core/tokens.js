@@ -15,7 +15,7 @@ export const uid = (prefix = 'id') => `${prefix}-${(++counter).toString(36)}-${M
  * @property {string[]} [phonemes]  ARPAbet pronunciations without stress
  * @property {string[]} [rhymingPart]
  * @property {number} [logProb]     summed log-prob of the sub-tokens that formed this word
- * @property {number} [logProbMean] per-sub-token mean, used for colouring
+ * @property {number} [logProbMean] per-sub-token mean, used for coloring
  */
 
 export function makeToken(fields) {

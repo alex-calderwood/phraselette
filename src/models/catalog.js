@@ -137,7 +137,7 @@ export const INSTRUCT_MODELS = [
 /** Bidirectional (masked) language models: fill the inlet from both sides. */
 const maskedDtype = { webgpu: 'fp32', webgpuNoF16: 'fp32', wasm: 'q8' };
 export const MASKED_MODELS = [
-  { id: 'Xenova/distilbert-base-cased', name: 'DistilBERT · 66M', note: 'Fast, keeps capitalisation. Good first choice.', params: 66e6, dtype: maskedDtype, size: { fp32: 260, q8: 66 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)', recommended: true },
+  { id: 'Xenova/distilbert-base-cased', name: 'DistilBERT · 66M', note: 'Fast, keeps capitalization. Good first choice.', params: 66e6, dtype: maskedDtype, size: { fp32: 260, q8: 66 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)', recommended: true },
   { id: 'Xenova/albert-base-v2', name: 'ALBERT · 12M', note: 'Tiny download; lower-case only.', params: 12e6, dtype: maskedDtype, size: { fp32: 47, q8: 12 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)' },
   { id: 'Xenova/distilroberta-base', name: 'DistilRoBERTa · 82M', note: 'Web-trained vocabulary, cased.', params: 82e6, dtype: maskedDtype, size: { fp32: 330, q8: 83 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)' },
   { id: 'Xenova/bert-base-cased', name: 'BERT base · 110M', note: 'The classic; a little slower.', params: 110e6, dtype: maskedDtype, size: { fp32: 430, q8: 110 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)' },
@@ -177,7 +177,7 @@ export const CARDS = [
     blurb: 'A plain language model that says how likely each word is. Bidirectional models judge a word by the text on both sides of it; left-to-right models see only what comes before.',
     usedFor: [
       { name: 'Context well', desc: 'rephrasings for the inlet: words that fit both sides (bidirectional) or the likeliest continuations of the preceding text (left-to-right), with a histogram of their probabilities' },
-      { name: 'Probability colouring', desc: 'tints every word in the editor by how expected it was' },
+      { name: 'Probability coloring', desc: 'tints every word in the editor by how expected it was' },
       { name: 'Scoring', desc: 'ranks the thesaurus and reader suggestions by how well they fit' },
     ],
     defaultModel: 'Xenova/distilbert-base-cased',
@@ -206,8 +206,8 @@ export const CARDS = [
     slots: ['pos'],
     blurb: 'Tags nouns, verbs and friends.',
     usedFor: [
-      { name: 'Words well', desc: 'shows each word\'s part of speech and colours the editor by it' },
-      { name: 'Constraints', desc: 'lock a part-of-speech pattern that rephrasings must follow' },
+      { name: 'Words well', desc: 'shows each word\'s part of speech and colors the editor by it' },
+      { name: 'Constraints', desc: 'lock a part-of-speech or stress pattern that rephrasings must follow' },
     ],
     defaultModel: 'wink',
   },

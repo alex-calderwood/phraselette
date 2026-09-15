@@ -134,6 +134,7 @@ const handlers = {
   async unloadAll() {
     for (const inst of instances.values()) {
       try { await inst.model.dispose?.(); } catch { /* ignore */ }
+      inst.masks = null; inst.mlmVocab = null;
     }
     instances.clear();
     slotToKey.clear();

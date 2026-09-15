@@ -1,5 +1,5 @@
 // Landing-page choices, remembered per browser.
-const KEY = 'phraselette.settings.v1';
+const KEY = 'phraselette.settings.v2'; // v2: bidirectional Probabilities default (DistilBERT); older saved choices are ignored
 
 export function loadSettings() {
   try {

@@ -1,15 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { usePopoverPosition } from './usePopover.js';
 import { ConstraintView } from './ConstraintViews.jsx';
-import { makePosConstraint, makeSoundConstraint, makeLengthConstraint, makeProbConstraint } from '../core/constraints.js';
+import {
+  makePosConstraint, makeSoundConstraint, makeLengthConstraint, makeProbConstraint,
+  makeRhymeConstraint, makeSyllableConstraint, makeStressConstraint, makeLettersConstraint, makeCharsConstraint,
+} from '../core/constraints.js';
 import { wellStyles, FEATURE_LABELS } from '../core/wells.js';
 
-/** Which well's colours a constraint kind borrows, so the two stay visually related. */
-const KIND_WELL = { pos: 'words', length: 'words', sound: 'sound', prob: 'context' };
+/** Which well's colors a constraint kind borrows, so the two stay visually related. */
+const KIND_WELL = { pos: 'words', length: 'words', letters: 'words', chars: 'words', sound: 'sound', rhyme: 'sound', syllables: 'sound', stress: 'sound', prob: 'context' };
 
 const KINDS = [
   { id: 'pos', title: 'Part of speech', desc: 'Rephrasings must contain, start with, end with, or follow a pattern of parts of speech. Starts from the selection\'s own pattern.' },
   { id: 'length', title: 'Word count', desc: 'A minimum and maximum number of words. Starts at the selection\'s length.' },
   { id: 'sound', title: 'Sound', desc: 'Phonemes the rephrasing should contain or start/end with. Starts from the selection\'s pronunciation; type another word to borrow its sound.' },
+  { id: 'rhyme', title: 'Rhyme', desc: 'End on a word that rhymes with a reference word, or echo its vowels (assonance), consonants (consonance) or opening sound (alliteration). Starts from the selection\'s last word.' },
+  { id: 'syllables', title: 'Syllables', desc: 'A minimum and maximum number of syllables, counted from the pronouncing dictionary. Starts at exactly the selection\'s count.' },
+  { id: 'stress', title: 'Stress pattern', desc: 'A rhythm of stressed and unstressed syllables the rephrasing should follow, contain, or start/end with. Starts from the selection\'s own scansion.' },
+  { id: 'letters', title: 'Letters', desc: 'Letters the rephrasing must start with (acrostics), contain, or avoid (lipograms: switch to “must not”). Starts from the selection\'s first letter.' },
+  { id: 'chars', title: 'Characters', desc: 'A minimum and maximum number of letters, spaces and punctuation not counted, for lines that must fit a shape.' },
   { id: 'prob', title: 'Probability', desc: 'A window on the probability histogram; only rephrasings inside it match. Fill it by running the context well.' },
 ];
 
@@ -18,19 +27,22 @@ function make(kind, inletId, tokens) {
     case 'pos': return makePosConstraint(inletId, tokens);
     case 'length': return makeLengthConstraint(inletId, tokens);
     case 'sound': return makeSoundConstraint(inletId, tokens);
+    case 'rhyme': return makeRhymeConstraint(inletId, tokens);
+    case 'syllables': return makeSyllableConstraint(inletId, tokens);
+    case 'stress': return makeStressConstraint(inletId, tokens);
+    case 'letters': return makeLettersConstraint(inletId, tokens);
+    case 'chars': return makeCharsConstraint(inletId, tokens);
     case 'prob': return makeProbConstraint(inletId);
     default: return null;
   }
 }
 
-/**
- * Constraints for the current inlet, independent of any well: a list of
- * editors plus one "+ Constraint" button that opens a chooser.
- */
-export default function ConstraintsPanel({ inlet, inletTokens, constraints, histogram, actions }) {
+/** "+ Constraint" button with its chooser popover; lives next to "+ Add well". */
+export function AddConstraint({ inlet, inletTokens, onAdd }) {
   const [open, setOpen] = useState(false);
   const popRef = useRef(null);
   const btnRef = useRef(null);
+  const pos = usePopoverPosition(open, btnRef, 460);
 
   useEffect(() => {
     if (!open) return;
@@ -43,55 +55,84 @@ export default function ConstraintsPanel({ inlet, inletTokens, constraints, hist
 
   const add = (kind) => {
     const c = make(kind, inlet.id, inletTokens);
-    if (c) actions.addConstraint(c);
+    if (c) onAdd(c);
     setOpen(false);
   };
 
   return (
-    <section className="constraints-panel">
-      <div className="constraints-head">
-        <span className="constraints-title">Constraints{constraints.length ? ` · ${constraints.length}` : ''}</span>
-        <div className="add-well">
-          <button ref={btnRef} className={`add-well-button ${open ? 'open' : ''}`} onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="dialog">
-            <span aria-hidden="true">＋</span> Constraint
-          </button>
-          {open && (
-            <div ref={popRef} className="popover glass creamy right" role="dialog" aria-label="Add a constraint">
-              <div className="popover-head"><span className="popover-title">Constrain the rephrasings by</span></div>
-              <div className="well-choices">
-                {KINDS.map((k) => {
-                  const st = wellStyles(KIND_WELL[k.id], true);
-                  return (
-                    <button key={k.id} className="well-choice" style={{ '--well': st.color, '--well-deep': st.textColor, '--well-glass': st.solid }} onClick={() => add(k.id)}>
-                      <span className="well-choice-title">{k.title}</span>
-                      <span className="well-choice-desc">{k.desc}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {constraints.length === 0 && (
-        <div className="subtitle">No constraints. Add one to steer what counts as a match; rephrasings that miss it are listed separately, not hidden.</div>
-      )}
-      {constraints.map((c) => {
-        const st = wellStyles(KIND_WELL[c.kind], true);
-        return (
-          <div key={c.id} className="constraint-card" style={{ '--well': st.color }}>
-            <div className="constraint-card-title" style={{ color: st.textColor }}>{FEATURE_LABELS[c.kind]}</div>
-            <ConstraintView
-              constraint={c}
-              styles={st}
-              histogram={histogram}
-              onPatch={(patch) => actions.patchConstraint(c, patch)}
-              onDelete={() => actions.removeConstraint(c)}
-            />
+    <div className="add-well">
+      <button
+        ref={btnRef}
+        className={`add-well-button ${open ? 'open' : ''}`}
+        disabled={!inlet}
+        title={inlet ? 'constrain the rephrasings for this inlet' : 'select a phrase and search first'}
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+      >
+        <span aria-hidden="true">＋</span> Constraint
+      </button>
+      {open && inlet && (
+        <div ref={popRef} className="popover glass creamy" style={pos ?? undefined} role="dialog" aria-label="Add a constraint">
+          <div className="popover-head"><span className="popover-title">Constrain the rephrasings by</span></div>
+          <div className="well-choices">
+            {KINDS.map((k) => {
+              const st = wellStyles(KIND_WELL[k.id], true);
+              return (
+                <button key={k.id} className="well-choice" style={{ '--well': st.color, '--well-deep': st.textColor, '--well-glass': st.solid }} onClick={() => add(k.id)}>
+                  <span className="well-choice-title">{k.title}</span>
+                  <span className="well-choice-desc">{k.desc}</span>
+                </button>
+              );
+            })}
           </div>
-        );
-      })}
-    </section>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Short label for a constraint chip: "part of speech · contains ADJ ADP". */
+export function constraintSummary(c) {
+  const fmt = (n) => (Number.isInteger(n) ? n : Number(n).toFixed(1));
+  const span = (unit) => (c.min === c.max ? `${c.min} ${unit}` : `${c.min}–${c.max} ${unit}`);
+  if (c.kind === 'length') return span('words');
+  if (c.kind === 'syllables') return span('syllables');
+  if (c.kind === 'chars') return span('characters');
+  if (c.kind === 'prob') return `probability ${fmt(c.min)} → ${fmt(c.max)}`;
+  const not = c.negate ? 'not ' : '';
+  if (c.kind === 'rhyme') {
+    const negated = { 'rhymes with': 'does not rhyme with', 'assonance with': 'no assonance with', 'consonance with': 'no consonance with', 'alliterates with': 'does not alliterate with' };
+    return `${c.negate ? negated[c.mode] : c.mode} “${c.reference || '?'}”`;
+  }
+  if (c.kind === 'stress') return `stress · ${not}${c.mode} ${c.target.map((x) => (x === '1' ? 'ˈ' : '˘')).join('') || '∅'}`;
+  if (c.kind === 'letters') return `letters · ${not}${c.mode} ${c.target.join('') || '∅'}`;
+  return `${FEATURE_LABELS[c.kind]} · ${not}${c.mode} ${c.target.join(' ') || '∅'}`;
+}
+
+export const constraintWellType = (c) => KIND_WELL[c.kind];
+
+/**
+ * One constraint as a card of the same shape as a well: rotated title on the
+ * left, editor on the right. Rendered in the same column as the wells.
+ */
+export function ConstraintCard({ constraint, histogram, actions }) {
+  const st = wellStyles(KIND_WELL[constraint.kind], true);
+  return (
+    <div className="constraint-well" style={{ '--well': st.color, '--well-deep': st.textColor }}>
+      <div className="constraint-well-title" style={{ color: st.textColor }} title="a constraint on this inlet's rephrasings">
+        <span className="well-kind-tag">constraint</span>
+        <span className="constraint-well-name">{FEATURE_LABELS[constraint.kind]}</span>
+      </div>
+      <div className="well-content">
+        <ConstraintView
+          constraint={constraint}
+          styles={st}
+          histogram={histogram}
+          onPatch={(patch) => actions.patchConstraint(constraint, patch)}
+          onDelete={() => actions.removeConstraint(constraint)}
+        />
+      </div>
+    </div>
   );
 }

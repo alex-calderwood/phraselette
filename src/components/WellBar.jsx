@@ -2,15 +2,17 @@ import React from 'react';
 import { WELL_DEFS, VIEW_WELLS, wellColor } from '../core/wells.js';
 import { deepen, glassify } from '../lib/colors.js';
 import AddWell from './AddWell.jsx';
+import { AddConstraint, constraintSummary, constraintWellType } from './ConstraintsPanel.jsx';
 
 /**
  * Strip of open wells (one chip per instance) plus the single Add well button.
- * Chips carry the colour-the-editor toggle for view wells and a close action.
+ * Chips carry the color-the-editor toggle for view wells and a close action.
  */
-export default function WellBar({ wells, highlightWellId, onAdd, onRemove, onHighlight }) {
+export default function WellBar({ searchButton = null, wells, highlightWellId, onAdd, onRemove, onHighlight, inlet, inletTokens, constraints = [], onAddConstraint, onRemoveConstraint }) {
   const open = wells.filter((w) => w.active);
   return (
     <div className="well-strip">
+      {searchButton}
       {open.map((w) => {
         const def = WELL_DEFS[w.type];
         const color = wellColor(w.type);
@@ -21,14 +23,27 @@ export default function WellBar({ wells, highlightWellId, onAdd, onRemove, onHig
             {w.role && <span className="well-chip-role">{w.role}</span>}
             <span className="well-chip-actions">
               {VIEW_WELLS.has(w.type) && (
-                <button className={`icon-button ${highlighted ? 'on' : ''}`} aria-pressed={highlighted} title={highlighted ? 'stop colouring the editor' : `colour the editor by ${def.title}`} onClick={() => onHighlight(w.id)}>🎨</button>
+                <button className={`icon-button ${highlighted ? 'on' : ''}`} aria-pressed={highlighted} title={highlighted ? 'stop coloring the editor' : `color the editor by ${def.title}`} onClick={() => onHighlight(w.id)}>🎨</button>
               )}
               {!def.undestroyable && <button className="icon-button remove" title="close this well" onClick={() => onRemove(w.id)}>×</button>}
             </span>
           </div>
         );
       })}
+      {constraints.map((c) => {
+        const color = wellColor(constraintWellType(c));
+        return (
+          <div key={c.id} className="well-chip constraint-chip" style={{ '--well': color, '--well-deep': deepen(color), '--well-glass': glassify(color, 0.55) }} title="a constraint on this inlet's rephrasings">
+            <span className="well-chip-kind">constraint</span>
+            <span className="well-chip-title">{constraintSummary(c)}</span>
+            <span className="well-chip-actions">
+              <button className="icon-button remove" title="remove this constraint" onClick={() => onRemoveConstraint(c)}>×</button>
+            </span>
+          </div>
+        );
+      })}
       <AddWell wells={wells} onAdd={onAdd} />
+      <AddConstraint inlet={inlet} inletTokens={inletTokens} onAdd={onAddConstraint} />
     </div>
   );
 }
