@@ -149,9 +149,7 @@ export default function Landing({ onReady }) {
           <div className="models-panel-head">
             <div>
               <div className="models-panel-title">Models</div>
-              <div className="models-panel-note">Phraselette uses small language models that each run in your browser. If you are on a system without a GPU you 
-                
-                These choices decide which small models do each job; they download once from the Hugging Face Hub and are cached.</div>
+              <div className="models-panel-note">Phraselette uses small language models that each run in your browser. If you are on a system without a GPU or smaller RAM, you may want to choose a smaller model.</div>
             </div>
             <div className="presets compact">
               {PRESETS.map((p) => (
