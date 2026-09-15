@@ -6,8 +6,6 @@ This is a 'revibecoded' version of the system used for the paper:
 
 Every model runs inside the visitor's browser through [Transformers.js](https://huggingface.co/docs/transformers.js) (WebGPU when available, WebAssembly otherwise). There is no API, no server-side inference, and no telemetry; the server only ships static files.
 
-Phraselette 2.0 was re-vibecoded by Claude Fable 5.1 from the paper and the original study build (kept under `old/` during the port).
-
 ## Develop
 
 ```bash
@@ -73,6 +71,17 @@ server.mjs      static server for production
 scripts/        copies ONNX Runtime wasm files into public/ort at dev/build time
 ```
 
+## Development
+
+Phraselette 1.0 was developed with Max Kreminski, John Joon Young Chung, Yuqian Sun, Melissa Roemmele, and Taewook Kim.
+
+Phraselette 2.0 was re-vibecoded by Claude Fable 5.1 from the paper and the original study build (kept under `old/` during the port).
+
+"Revibe" borrowed from Revibing Code from Eytan Adar, Yoonjoo Lee, Nina Lei, Q. Vera Liao, Weirui Peng. Reimplementing HCI Artifacts https://arxiv.org/abs/2608.00450
+
+
 ## Attribution
 
 Prompts, personas, colour scheme and interaction design follow the original Phraselette study build. Any code derived from Transformers.js PR #1539 (Apache-2.0) must carry an attribution comment.
+
+
