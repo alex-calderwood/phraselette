@@ -36,22 +36,6 @@ docker run --rm -p 3027:3027 phraselette
 
 The image is a two-stage build (Node builds `dist/`, then a slim Node image runs `server.mjs`). It listens on 3027 inside and outside the container and answers `/healthz`.
 
-## nginx (nonsens.ing)
-
-The server accepts requests both with the `/phraselette/` prefix and without it, and never redirects, so either proxy style works:
-
-- **Prefix stripped** (Nginx Proxy Manager location `/phraselette` with `rewrite ^/phraselette(/.*)$ $1 break;`): nothing more to do.
-- **Prefix passed through** (plain nginx):
-
-```nginx
-location /phraselette/ {
-    proxy_pass http://127.0.0.1:3027;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
-```
-
 Model weights are downloaded by the browser directly from the Hugging Face Hub and cached in the browser's Cache Storage, so nothing large flows through the server.
 
 ## What runs where
