@@ -5,6 +5,7 @@ import { env, AutoTokenizer, AutoModelForCausalLM, AutoModelForTokenClassificati
 import { fillMask, mlmProbsForText, mlmScoreCandidates } from './mlm.js';
 import { chatGenerate } from './chat.js';
 import { probsForText, searchContinuations, scoreCandidates, Cancelled } from './lm.js';
+import { beamContinuations, beamEntries } from './beam.js';
 
 // Self-hosted ONNX Runtime wasm files (copied by scripts/copy-ort.mjs).
 env.backends.onnx.wasm.wasmPaths = new URL('ort/', self.location.origin + import.meta.env.BASE_URL).href;
@@ -51,9 +52,9 @@ const handlers = {
     return fn(inst, { ...args, checkCancel: () => checkCancel(id) });
   },
 
-  async search({ id, slot = 'context', ...args }) {
+  async search({ id, slot = 'context', mode = 'fast', ...args }) {
     const inst = instanceFor(slot);
-    const fn = inst.task === 'fill-mask' ? fillMask : searchContinuations;
+    const fn = inst.task === 'fill-mask' ? fillMask : mode === 'beam' ? beamContinuations : searchContinuations;
     return fn(inst, {
       ...args,
       checkCancel: () => checkCancel(id),
@@ -68,12 +69,25 @@ const handlers = {
   },
 
   // --- instruct models ----------------------------------------------------
+  /** Beam-search the first entry of a chat reply; see beam.js beamEntries. */
+  async beamEntries({ id, slot, ...args }) {
+    const inst = instanceFor(slot);
+    return beamEntries(inst, {
+      ...args,
+      checkCancel: () => checkCancel(id),
+      onProgress: (p) => post({ id, type: 'partial', data: { progress: p } }),
+      onPrompt: (prompt) => post({ id, type: 'partial', data: { prompt } }),
+      onText: (text) => post({ id, type: 'partial', data: { text } }),
+    });
+  },
+
   async chat({ id, slot, messages, ...opts }) {
     const inst = instanceFor(slot);
     try {
       const { text } = await chatGenerate(inst, {
         messages, ...opts,
         onStopper: (st) => stoppers.set(id, st),
+        onPrompt: (prompt) => post({ id, type: 'partial', data: { prompt } }),
         onText: (text) => post({ id, type: 'partial', data: { text } }),
       });
       if (cancelled.has(id)) { cancelled.delete(id); throw new Cancelled(); }

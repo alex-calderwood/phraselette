@@ -4,7 +4,7 @@
 
 // Verbatim from queries.js (wordRulez), constraint advice spliced in the same place.
 const wordRules = (advice) =>
-  `- Each suggestion should be on its own line, surrounded by HTML-like tags: <entry>{actual word/phrase here}</entry>.\n` +
+  `- Each suggestion should be on its own line, surrounded by HTML-like tags: <entry>word or phrase</entry>.\n` +
   `- Preserve the case of the query (so if the query is lower-cased, each entry should be too, unless they are proper nouns, etc.).\n` +
   `- Preserve the tense, count, number, case, definiteness of the query.\n` +
   advice +
@@ -14,14 +14,50 @@ const wordRules = (advice) =>
  * Editable prompt templates, one set per role well. Placeholders:
  * {{description}} the role text · {{selection}} the inlet · {{context}} surrounding text with the inlet marked ⟦…⟧
  * {{advice}} constraint advice (may be empty) · {{rules}} the entry-format rules · {{feedback}} the reader's comments
- * Text is verbatim from old/front-end/src/server/queries.js unless noted.
+ * Text is verbatim from old/front-end/src/server/queries.js unless noted (the thesaurus prompt was revised).
  */
 export const TEMPLATES = {
   thesaurus: {
+    // Revised by Alex (Sept 2026) for small local models: standing instructions
+    // in the system turn, then user/assistant example turns, then the request.
+    // The original queries.js wording is in git history.
+    system:
+      `StyleThesaurus (you) provides synonyms that match a given lexicon.\n` +
+      `- Each suggestion on its own line, as <entry>word or phrase</entry>.\n` +
+      `- Preserve the query's part of speech, case, tense, count and definiteness: an adjective phrase stays an adjective phrase, a noun phrase stays a noun phrase.\n` +
+      `{{advice}}\n` +
+      `- Nothing but the entries: no preface, no definitions.\n` +
+      `Provide between 10 and 30 synonyms. Each must swap in for the full query inside an existing sentence. Stick to the given lexicon's style and vocabulary: draw each phrase from the vocabulary, imagery and idiom of the lexicon's subject.`,
+    // two-shot demonstration: a verb phrase in a plain-ish lexicon, then a
+    // noun phrase in a sharply defined register whose entries are exact
+    // synonyms (only the vocabulary changes, never the meaning). Kept short for small models.
+    example:
+      `<thesaurus>a thesaurus of the sea</thesaurus>\n` +
+      `<query>walked slowly</query>`,
+    exampleReply:
+      `<entry>drifted lazily</entry>\n` +
+      `<entry>waded through</entry>\n` +
+      `<entry>ebbed away</entry>\n` +
+      `<entry>coasted past</entry>\n` +
+      `<entry>swam sluggishly</entry>\n` +
+      `<entry>sailed at half tilt</entry>\n` +
+      // `<entry>drifted ploddingly</entry>\n` +
+      // `<entry>walked with even keel</entry>\n` +
+      `<entry>lapped in</entry>\n` +
+      // `<entry>ripple paced</entry>\n` +
+      `<entry>swam with the tide</entry>`,
+    example2:
+      `<thesaurus>a Victorian gentleman's thesaurus</thesaurus>\n` +
+      `<query>bad idea</query>`,
+    exampleReply2:
+      `<entry>ill-advised notion</entry>\n` +
+      `<entry>most unwise scheme</entry>\n` +
+      `<entry>thoroughly imprudent proposal</entry>\n` +
+      `<entry>regrettable fancy</entry>\n` +
+      `<entry>ill-conceived plan</entry>`,
     main:
-      `You are a thesaurus written in the style of {{description}}. You only provide words that match this theme ({{description}}), and would appear in such a thesaurus.\n` +
-      `{{rules}} Try to provide between 10 and 30 alternatives.\n` +
-      `Provide synonyms for the following word or phrase (query): {{selection}}`,
+      `<thesaurus>{{description}}</thesaurus>\n` +
+      `<query>{{selection}}</query>`,
   },
   reader: {
     feedback:
@@ -41,16 +77,25 @@ export const TEMPLATES = {
   },
 };
 
-export const TEMPLATE_LABELS = { main: 'prompt', feedback: 'feedback prompt', revisions: 'revisions prompt' };
+export const TEMPLATE_LABELS = { system: 'system prompt', example: 'example request', exampleReply: 'example reply', example2: 'second example request', exampleReply2: 'second example reply', main: 'prompt', feedback: 'feedback prompt', revisions: 'revisions prompt' };
 
-/** Fill {{placeholders}}; {{rules}} expands to the entry-format rules with the advice spliced in. */
+/**
+ * Fill {{placeholders}}; {{rules}} expands to the entry-format rules with the
+ * advice spliced in. The rules and advice blocks end in their own newline (or
+ * are empty), so a line break written after them in a template is absorbed
+ * rather than doubled, and an empty advice line disappears.
+ */
 export function renderTemplate(template, vars) {
   const all = { ...vars, rules: wordRules(vars.advice ?? '') };
-  return template.replace(/\{\{(\w+)\}\}/g, (_, k) => (all[k] ?? ''));
+  return template.replace(/\{\{(rules|advice)\}\}\n/g, '{{$1}}').replace(/\{\{(\w+)\}\}/g, (_, k) => (all[k] ?? ''));
 }
 
 export function thesaurusPrompt({ description, selection, advice, template = TEMPLATES.thesaurus.main }) {
   return renderTemplate(template, { description, selection, advice });
+}
+
+export function thesaurusSystem({ description, advice, template = TEMPLATES.thesaurus.system }) {
+  return renderTemplate(template, { description, advice });
 }
 
 /**
@@ -119,17 +164,27 @@ export function parseBullets(response) {
 }
 
 // ---------------------------------------------------------------------------
-// One-shot chat messages. Small local models follow a format far better after
-// seeing one worked example, so each well's request is preceded by a short
-// demonstration exchange. The real prompt (last user turn) is the original text.
+// Chat messages per well. The reader and dictionary requests are preceded by a
+// one-shot demonstration exchange (small local models follow a format far
+// better after one worked example); the real prompt is the last user turn.
 
 const ENTRIES = (words) => words.map((w) => `<entry>${w}</entry>`).join('\n');
 
+// The thesaurus: system turn with the standing instructions, then (unless the
+// well turns them off) two short user/assistant exchanges, then the real request. Gemma has no system role;
+// its chat template folds the system text into the first user turn.
 export function thesaurusMessages(args) {
+  const t = { ...TEMPLATES.thesaurus, ...(args.templates ?? {}) };
+  const examples = args.examples === false ? [] : [
+    { role: 'user', content: t.example },
+    { role: 'assistant', content: t.exampleReply },
+    { role: 'user', content: t.example2 },
+    { role: 'assistant', content: t.exampleReply2 },
+  ];
   return [
-    { role: 'user', content: thesaurusPrompt({ description: 'a thesaurus of the sea', selection: 'walked slowly', advice: '' }) },
-    { role: 'assistant', content: ENTRIES(['drifted lazily', 'waded through', 'sailed along', 'floated by', 'ebbed away', 'trawled onward', 'coasted past', 'paddled softly', 'moored a while', 'swam with the tide']) },
-    { role: 'user', content: thesaurusPrompt({ ...args, template: args.templates?.main }) },
+    { role: 'system', content: thesaurusSystem({ ...args, template: t.system }) },
+    ...examples,
+    { role: 'user', content: thesaurusPrompt({ ...args, template: t.main }) },
   ];
 }
 

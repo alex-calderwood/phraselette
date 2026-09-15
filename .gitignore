@@ -15,14 +15,10 @@ Thumbs.db
 *.swp
 *.swo
 
-# --- secrets from the original study build (old/) -------------------------
+# --- secrets from the original study build (kept as a guard) ---------------
 credentials.json
 credentials copy.json
 google_client.json
 google_client copy.json
 token.json
 token copy.json
-old/front-end/events/
-old/**/__pycache__/
-old/**/.ipynb_checkpoints/
-old/**/output.log

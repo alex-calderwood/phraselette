@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CARDS, PRESETS, findModel, dtypeFor, sizeFor, formatMB, estimateMemoryMB, deviceMemoryInfo } from '../models/catalog.js';
+import { CARDS, PRESETS, findModel, dtypeFor, sizeFor, formatMB, estimateMemoryMB, deviceMemoryInfo, benchLabel, BENCHMARK_NOTE } from '../models/catalog.js';
+import { listCachedModels, deleteCachedModel, clearModelCache } from '../models/cache.js';
 import { detectDevice } from '../models/client.js';
 import { loadCard } from '../models/session.js';
 import { loadSettings, saveSettings } from '../state/settings.js';
@@ -18,7 +19,7 @@ function groupModels(models) {
   return out;
 }
 
-function ModelRow({ card, color, choice, onChoose, progress, disabled, loaded, device }) {
+function ModelRow({ card, color, choice, onChoose, progress, disabled, loaded, device, cachedIds }) {
   const model = findModel(card, choice);
   const dtype = dtypeFor(model, device.device, device.fp16);
   const pct = progress ? Math.round(progress.fraction * 100) : null;
@@ -34,13 +35,14 @@ function ModelRow({ card, color, choice, onChoose, progress, disabled, loaded, d
             {groupModels(card.models).map(([group, models]) => {
               const opts = models.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name}{m.recommended ? ' ★' : ''} · {formatMB(sizeFor(m, dtypeFor(m, device.device, device.fp16)))}
+                  {m.name}{m.recommended ? ' ★' : ''} · {formatMB(sizeFor(m, dtypeFor(m, device.device, device.fp16)))}{benchLabel(m) ? ` · ${benchLabel(m)}` : ''}{cachedIds.has(m.id) ? ' · cached' : ''}
                 </option>
               ));
               return group ? <optgroup key={group} label={group}>{opts}</optgroup> : opts;
             })}
           </select>
           <span className="model-row-note" title={card.blurb}>{model.note}{dtype ? ` · ${dtype}` : ''}</span>
+          {model.bench && <span className="model-row-note" title={`${model.bench.about} Source: ${model.bench.note}.`}>Benchmark {model.bench.score} ({model.bench.name})</span>}
         </div>
       </div>
       {progress && (
@@ -65,8 +67,18 @@ export default function Landing({ onReady }) {
   const [progress, setProgress] = useState({});
   const [loaded, setLoaded] = useState({});
   const [error, setError] = useState(null);
+  const [cached, setCached] = useState([]);
 
   useEffect(() => { detectDevice().then(setDevice); }, []);
+  const refreshCache = () => listCachedModels().then(setCached);
+  useEffect(() => { refreshCache(); }, []);
+  const cachedIds = useMemo(() => new Set(cached.map((c) => c.id)), [cached]);
+  const cachedMB = cached.reduce((a, c) => a + c.bytes, 0) / 1e6;
+
+  async function forget(id) {
+    if (id) await deleteCachedModel(id); else await clearModelCache();
+    refreshCache();
+  }
 
   const choose = (cardId, modelId) => setChoices((c) => ({ ...c, [cardId]: modelId }));
   const memInfo = useMemo(() => deviceMemoryInfo(), []);
@@ -97,6 +109,7 @@ export default function Landing({ onReady }) {
         setProgress((p) => ({ ...p, [card.id]: { fraction: 1, label: 'loaded' } }));
         setLoaded((l) => ({ ...l, [card.id]: true }));
       }
+      refreshCache();
       onReady({ device, cards: { ...choices }, slots });
     } catch (err) {
       console.error(err);
@@ -132,7 +145,7 @@ export default function Landing({ onReady }) {
         </button>
         {device ? (
           <div className="budget-line">
-            <span>{formatMB(uniqueMB)} to download once</span>
+            <span>{formatMB(uniqueMB)} to download once{CARDS.every((c) => { const m = findModel(c, choices[c.id]); return m.bundled || cachedIds.has(m.id); }) ? ' (already cached)' : ''}</span>
             <span aria-hidden="true">·</span>
             <span>≈ {formatMB(estMB)}{memInfo.deviceGB ? ` / ${memInfo.deviceGB} GB` : ''} memory while running</span>
             <span aria-hidden="true">·</span>
@@ -149,7 +162,8 @@ export default function Landing({ onReady }) {
           <div className="models-panel-head">
             <div>
               <div className="models-panel-title">Models</div>
-              <div className="models-panel-note">Phraselette uses small language models that each run in your browser. If you are on a system without a GPU or smaller RAM, you may want to choose a smaller model.</div>
+              <div className="models-panel-note">Phraselette uses small language models that each run in your browser. If you are on a system without a GPU or smaller RAM, you may want to choose a smaller model.</div> 
+              {/*  {BENCHMARK_NOTE} used to be here but it is obviously not meant to be in the main description of Phraselette */}
             </div>
             <div className="presets compact">
               {PRESETS.map((p) => (
@@ -162,9 +176,28 @@ export default function Landing({ onReady }) {
           <div className="model-rows">
             {CARDS.map((card, i) => (
               <ModelRow key={card.id} card={card} color={cardColors[i]} choice={choices[card.id]} onChoose={choose}
-                progress={progress[card.id]} loaded={!!loaded[card.id]} disabled={loading} device={device} />
+                progress={progress[card.id]} loaded={!!loaded[card.id]} disabled={loading} device={device} cachedIds={cachedIds} />
             ))}
           </div>
+          <details className="cached" onToggle={(e) => e.currentTarget.open && refreshCache()}>
+            <summary title="Model files this browser has stored so they are not downloaded again (Cache Storage). Deleting only frees disk space; the model re-downloads next time it is chosen.">
+              Cached models{cached.length ? ` · ${formatMB(cachedMB)}` : ' · none yet'}
+            </summary>
+            {cached.length > 0 ? (
+              <ul className="cached-list">
+                {cached.map((c) => (
+                  <li key={c.id} title={`${c.id} · ${c.files} files`}>
+                    <span className="cached-name">{c.name}</span>
+                    <span className="cached-size">{formatMB(c.bytes / 1e6)}</span>
+                    <button className="cached-remove" disabled={loading} title={`Delete ${c.name} from the cache`} onClick={() => forget(c.id)}>delete</button>
+                  </li>
+                ))}
+                {cached.length > 1 && <li className="cached-all"><button className="cached-clear" disabled={loading} onClick={() => forget(null)}>delete all</button></li>}
+              </ul>
+            ) : (
+              <div className="cached-empty">Nothing stored on this address yet. Each address (localhost, 127.0.0.1, your LAN IP) keeps its own cache.</div>
+            )}
+          </details>
           {(device.device === 'wasm' || estMB > 3000) && (
             <div className="landing-fineprint">
               {device.device === 'wasm' && 'No WebGPU detected: generation will be slower; prefer the Light preset. '}

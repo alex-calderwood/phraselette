@@ -2,8 +2,8 @@
 // Test harness for the probability-model routines in src/models/lm.js, run in
 // Node on the CPU so the algorithm can be checked independently of WebGPU.
 //
-//   node scripts/lm-test.mjs [--model Xenova/gpt2] [--dtype fp32] [--k 8] [--depth 6] [--prefix "text"] [--text "text to score"]
-//   node scripts/lm-test.mjs --well thesaurus [--model onnx-community/Qwen2.5-0.5B-Instruct] [--dtype q8] --role "a thesaurus of metonyms" --query "following day" [--runs 2]
+//   node scripts/lm-test.mjs [--model Xenova/gpt2] [--dtype fp32] [--k 8] [--depth 6] [--prefix "text"] [--text "text to score"] [--beam [--groups 2] [--diversity 1.0]]
+//   node scripts/lm-test.mjs --well thesaurus [--model onnx-community/Qwen2.5-0.5B-Instruct] [--dtype q8] --role "a thesaurus of metonyms" --query "following day" [--runs 2] [--beam [--k 4] [--per 4]]
 //   node scripts/lm-test.mjs --well fill [--model Xenova/distilbert-base-cased] --prefix "text before the inlet" --after "text after" --n 2 --k 12
 //
 // Probability mode prints the search results with per-token log-probs, the
@@ -14,6 +14,7 @@
 import { AutoTokenizer, AutoModelForCausalLM, AutoModelForMaskedLM, env } from '@huggingface/transformers';
 import { probsForText, searchContinuations, scoreCandidates } from '../src/models/lm.js';
 import { chatGenerate } from '../src/models/chat.js';
+import { beamContinuations, beamEntries } from '../src/models/beam.js';
 import { fillMask } from '../src/models/mlm.js';
 import { thesaurusMessages, parseEntries, ENTRY_PREFIX } from '../src/models/prompts.js';
 
@@ -62,6 +63,16 @@ if (well === 'thesaurus') {
   const temperature = Number(args.temperature ?? 1.0);
   for (const role of roles) {
   console.log(`\n=== thesaurus · role ${JSON.stringify(role)} · query ${JSON.stringify(query)} · temperature ${temperature}`);
+  if (args.beam === 'true') {
+    t0 = t();
+    const beams = Number(args.k ?? 4);
+    const { entries, texts } = await beamEntries(inst, { messages: thesaurusMessages({ description: role, selection: query, advice: '' }), assistantPrefix: ENTRY_PREFIX, numBeams: beams, numBeamGroups: Number(args.groups ?? beams), entriesPerBeam: Number(args.per ?? 4), diversityPenalty: Number(args.diversity ?? 1.0) });
+    console.log(`\n--- beam search · ${((t() - t0) / 1000).toFixed(1)}s · ${beams} beams · ${entries.length} entries`);
+    texts.forEach((x, i) => console.log(`\nbeam ${i}:\n${x}`));
+    console.log('\nENTRIES:');
+    for (const e of entries) console.log(`  ${JSON.stringify(e.text).padEnd(36)} beam ${e.beam} score ${fmt(e.score)}`);
+    continue;
+  }
   for (let i = 0; i < runs; i++) {
     t0 = t();
     const { text: raw } = await chatGenerate(inst, {
@@ -78,7 +89,11 @@ if (well === 'thesaurus') {
 // 1. search
 console.log(`=== search: K=${K} depth=${depth}\nprefix: ${JSON.stringify(prefix)}`);
 t0 = t();
-const { sequences, histogram, endsWithSpace } = await searchContinuations(inst, { prefix, k: K, depth, window: 256 });
+const beam = args.beam === 'true';
+const { sequences, histogram, endsWithSpace } = beam
+  ? await beamContinuations(inst, { prefix, k: K, depth, window: 256, numBeamGroups: args.groups ? Number(args.groups) : null, diversityPenalty: Number(args.diversity ?? 1.0) })
+  : await searchContinuations(inst, { prefix, k: K, depth, window: 256 });
+if (beam) console.log('(diverse beam search)');
 console.log(`took ${((t() - t0) / 1000).toFixed(1)}s · endsWithSpace=${endsWithSpace} · histogram bins=${histogram.counts.length} total=${histogram.counts.reduce((a, b) => a + b, 0)}`);
 let nan = 0;
 for (const s of sequences) {

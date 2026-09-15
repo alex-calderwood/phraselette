@@ -577,12 +577,20 @@ select {
 .entries dd b { font-weight: 600; color: var(--primary-text); }
 .well.status-error { box-shadow: 0 0 0 1.5px rgba(180,42,42,0.5); }
 .well-menu { position: relative; }
-.well-menu-list { position: absolute; right: 0; top: calc(100% + 4px); z-index: 40; min-width: 200px; display: flex; flex-direction: column; padding: 4px; box-shadow: 0 8px 24px rgba(40,30,60,0.2); }
+.well-menu-list { position: absolute; right: 0; top: calc(100% + 4px); z-index: 1000; min-width: 220px; display: flex; flex-direction: column; padding: 4px; box-shadow: 0 8px 24px rgba(40,30,60,0.2); max-height: 70vh; overflow-y: auto; }
+.well-menu-list.glass.creamy { background: rgba(255, 255, 255, 0.94); } /* the knobs sit over well content; keep them legible */
+/* the well's backdrop-filter makes it a stacking context, so raise the whole well while its menu is open */
+.well:has(.well-menu-list) { z-index: 60; }
 .well-menu-item { text-align: left; height: auto; padding: 6px 8px; background: none; box-shadow: none; backdrop-filter: none; border-radius: var(--radius); font-size: var(--font-sm); color: var(--primary-text); }
 .well-menu-item:hover { background: rgba(255,255,255,0.8); }
 .well-menu-item.danger { color: #b42a2a; }
 .well-menu-static { font-size: var(--font-xs); color: var(--muted-text); padding: 4px 8px; }
 .well-menu-divider { height: 1px; background: rgba(0,0,0,0.08); margin: 3px 4px; }
+.well-menu-fields { display: flex; flex-direction: column; gap: 3px; padding: 2px 8px 4px; }
+.well-menu-fields label { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: var(--font-xs); color: var(--darker-text); }
+.well-menu-fields input { width: 58px; height: 20px; font-size: var(--font-xs); text-align: right; padding: 0 4px; border: none; border-radius: var(--radius); background: rgba(255,255,255,0.7); color: var(--primary-text); }
+.well-menu-fields .well-menu-static { padding: 2px 0 0; }
+.well-menu-fields label.check input { width: auto; height: auto; margin: 0 4px; accent-color: var(--darker-text); }
 .well-title.rotated { display: none; }
 
 /* well: full-height drag rail on the left; header + body on the right */
@@ -633,6 +641,24 @@ select {
 .model-row-pick { display: flex; flex-direction: column; gap: 2px; align-items: flex-end; min-width: 260px; flex: 1; }
 .model-row-pick select { width: 100%; max-width: 420px; font-size: var(--font-sm); }
 .model-row-note { font-size: 9px; color: var(--muted-text); text-align: right; }
+.model-row-note + .model-row-note { margin-top: -1px; }
+
+/* what Transformers.js has stored in Cache Storage, with a way to forget it */
+.cached { font-size: var(--font-xs); color: var(--muted-text); border-top: 1px dashed rgba(0,0,0,0.08); padding-top: 6px; }
+.cached summary { cursor: pointer; color: var(--darker-text); width: max-content; list-style: none; }
+.cached summary::-webkit-details-marker { display: none; }
+.cached summary::before { content: '▸ '; opacity: 0.6; }
+.cached[open] summary::before { content: '▾ '; }
+.cached-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-width: 420px; }
+.cached-list li { display: flex; align-items: center; gap: 8px; height: 22px; padding: 0 2px 0 8px; border-radius: var(--radius); background: rgba(255,255,255,0.3); color: var(--darker-text); }
+.cached-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cached-size { color: var(--muted-text); font-variant-numeric: tabular-nums; }
+.cached-remove { height: 18px; padding: 0 8px; border-radius: 999px; background: transparent; box-shadow: none; font-size: var(--font-xs); line-height: 1; color: var(--muted-text); }
+.cached-remove:hover { background: rgba(180,42,42,0.1); color: #b42a2a; }
+.cached-list li.cached-all { background: none; justify-content: flex-end; height: 20px; }
+.cached-clear { height: 20px; padding: 0 6px; background: transparent; box-shadow: none; font-size: var(--font-xs); color: var(--muted-text); text-decoration: underline dotted; }
+.cached-clear:hover { color: #b42a2a; }
+.cached-empty { margin-top: 4px; max-width: 60ch; line-height: 1.5; }
 
 /* floating bubble as a small group: Search [×] */
 .editor-fab { display: inline-flex; align-items: stretch; padding: 0; overflow: hidden; }
@@ -645,3 +671,21 @@ select {
 .howto { width: min(1100px, 100%); display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
 .howto-title { font-family: var(--serif-font); font-size: 15px; color: var(--primary-text); text-align: center; }
 .howto .landing-steps { margin-top: 0; }
+
+/* --- landing: readable type --------------------------------------------- */
+/* The workspace is dense and keeps its small scale; the landing is a page to
+   read, so its type is set larger here, overriding the shared sizes above. */
+.landing { --font-xs: 12px; --font-sm: 13px; }
+.landing .landing-tagline { font-size: 17px; }
+.landing .landing-intro { font-size: 15px; line-height: 1.6; max-width: 72ch; }
+.landing .landing-steps li { font-size: 14px; line-height: 1.55; }
+.landing .landing-links, .landing .landing-fineprint, .landing .landing-disclaimer { font-size: 12px; }
+.landing .budget-line { font-size: 14px; }
+.landing .models-panel-title, .landing .howto-title { font-size: 17px; }
+.landing .models-panel-note { font-size: 12.5px; max-width: 70ch; }
+.landing .presets.compact .preset { height: 26px; font-size: 12px; padding: 0 12px; }
+.landing .model-row-title { font-size: 16px; }
+.landing .model-row-uses { font-size: 12px; }
+.landing .model-row-pick select { font-size: 13px; }
+.landing .model-row-note { font-size: 11px; }
+.landing .progress-label { font-size: 11px; }

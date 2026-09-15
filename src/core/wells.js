@@ -1,5 +1,5 @@
 // Well definitions: each well is a way of looking at (and rewriting) a phrase.
-import { rainbowColors, glassify, grayer, deepen } from '../lib/colors.js';
+import { rainbowColors, glassify, grayer, deepen, familyShade } from '../lib/colors.js';
 import { randomRole } from '../lang/roles.js';
 import { uid } from './tokens.js';
 import { TEMPLATES } from '../models/prompts.js';
@@ -52,7 +52,7 @@ export const WELL_DEFS = {
     canSearch: true,
     roles: true,
     showItems: ['pos', 'sound', 'prob'],
-    color: palette[4],
+    color: '#fffaad', // the rainbow's slot here is yellow-orange; pulled to a clearer yellow (hue 56°) so it reads apart from the dictionary
   },
   dictionary: {
     title: 'dictionary',
@@ -61,12 +61,46 @@ export const WELL_DEFS = {
     canSearch: true,
     roles: true,
     showItems: ['pos', 'sound'],
-    color: palette[5],
+    color: '#ffb0ad', // the rainbow's slot here is salmon; pulled to red (hue 2°)
   },
 };
 export const AGGREGATE_COLOR = palette[6];
 
 export const VIEW_WELLS = new Set(['words', 'context', 'sound']);
+
+/**
+ * Search settings per well type and mode (the well's `search` field picks the
+ * mode, `params[mode]` overrides the defaults). Beam modes run src/models/beam.js;
+ * 'fast' is the top-K-then-greedy loop in lm.js; 'sample' is plain sampling.
+ */
+export const SEARCH_DEFAULTS = {
+  context: {
+    beam: { beams: 24, groups: 6, diversity: 1.0, lengthPenalty: 1.0, noRepeat: 2 },
+    fast: { k: 24 },
+  },
+  thesaurus: {
+    beam: { beams: 4, groups: 4, perBeam: 4, diversity: 1.0, lengthPenalty: 1.0, tokensPerEntry: 15 },
+    sample: { temperature: 1.0, topP: 1.0, maxNewTokens: 320 },
+  },
+};
+
+/** The well's effective search mode and settings, with `groups` forced to divide `beams`. */
+/** Search mode used when the well has not chosen one. */
+export const DEFAULT_SEARCH = { context: 'beam', thesaurus: 'beam' };
+
+export function searchSettings(well) {
+  const modes = SEARCH_DEFAULTS[well.type] ?? {};
+  const mode = well.search ?? DEFAULT_SEARCH[well.type] ?? 'beam';
+  const p = { mode, ...(modes[mode] ?? {}) };
+  for (const [k, v] of Object.entries(well.params?.[mode] ?? {})) if (Number.isFinite(v)) p[k] = v; // a cleared field never overrides a default
+  if (p.beams != null) {
+    p.beams = Math.max(1, Math.round(p.beams));
+    p.groups = Math.min(Math.max(1, Math.round(p.groups ?? p.beams)), p.beams);
+    while (p.beams % p.groups) p.groups--;
+  }
+  if (p.perBeam != null) p.perBeam = Math.max(1, Math.round(p.perBeam));
+  return p;
+}
 
 export const FEATURE_LABELS = { pos: 'part of speech', length: 'word count', sound: 'sound', prob: 'probability', rhyme: 'rhyme', syllables: 'syllables', stress: 'stress', letters: 'letters', chars: 'characters' };
 
@@ -77,18 +111,20 @@ export function makeWell(type) {
     type,
     active: type === 'words',
     collapsed: false,
+    shade: 0, // which sibling color this well wears; the n-th open well of a type gets shade n
     role: def.roles ? randomRole(type) : null,
     templates: def.roles ? { ...TEMPLATES[type] } : null,
   };
 }
 
-export function wellColor(type) {
-  return WELL_DEFS[type]?.color ?? AGGREGATE_COLOR;
+/** A well type's family color, or the shade-th sibling of it (see familyShade). */
+export function wellColor(type, shade = 0) {
+  return familyShade(WELL_DEFS[type]?.color ?? AGGREGATE_COLOR, shade);
 }
 
 /** Style bundle for a well's panels and buttons. */
-export function wellStyles(type, active = true) {
-  const color = wellColor(type);
+export function wellStyles(type, active = true, shade = 0) {
+  const color = wellColor(type, shade);
   const textColor = active ? deepen(color) : grayer(color);
   return {
     color,

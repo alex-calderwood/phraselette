@@ -56,6 +56,8 @@ export function reducer(state, action) {
         wells = state.wells.map((w) => (w.id === existing.id ? { ...w, active: true, collapsed: false } : w));
       } else {
         const fresh = { ...makeWell(action.wellType), active: true };
+        // each further well of the same type wears the next sibling color, so its rephrasings stay tellable apart
+        fresh.shade = state.wells.filter((w) => w.type === action.wellType).length;
         if (action.role) fresh.role = action.role;
         wells = [...state.wells, fresh];
       }
@@ -76,7 +78,11 @@ export function reducer(state, action) {
     case 'removeWell': {
       const wells = state.wells.map((w) => (w.id === action.id ? { ...w, active: false } : w));
       const highlightWellId = state.highlightWellId === action.id ? null : state.highlightWellId;
-      return { ...state, wells, highlightWellId };
+      // forget the well's results and rebuild the aggregate pane for every inlet without them
+      const { [action.id]: _gone, ...insights } = state.insights;
+      let next = { ...state, wells, highlightWellId, insights };
+      for (const inletId of Object.keys(state.results ?? {})) next = recompute(next, inletId);
+      return next;
     }
     case 'patchWell':
       return { ...state, wells: state.wells.map((w) => (w.id === action.id ? { ...w, ...action.patch } : w)) };

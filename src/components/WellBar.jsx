@@ -5,7 +5,8 @@ import AddWell from './AddWell.jsx';
 import { AddConstraint, constraintSummary, constraintWellType } from './ConstraintsPanel.jsx';
 
 /**
- * Strip of open wells (one chip per instance) plus the single Add well button.
+ * Search, then the Add well / Add constraint buttons, then one chip per open well
+ * and per constraint.
  * Chips carry the color-the-editor toggle for view wells and a close action.
  */
 export default function WellBar({ searchButton = null, wells, highlightWellId, onAdd, onRemove, onHighlight, inlet, inletTokens, constraints = [], onAddConstraint, onRemoveConstraint }) {
@@ -13,9 +14,12 @@ export default function WellBar({ searchButton = null, wells, highlightWellId, o
   return (
     <div className="well-strip">
       {searchButton}
+      {/* the add buttons stay put beside Search; chips grow to the right of them */}
+      <AddWell wells={wells} onAdd={onAdd} />
+      <AddConstraint inlet={inlet} inletTokens={inletTokens} onAdd={onAddConstraint} />
       {open.map((w) => {
         const def = WELL_DEFS[w.type];
-        const color = wellColor(w.type);
+        const color = wellColor(w.type, w.shade);
         const highlighted = w.id === highlightWellId;
         return (
           <div key={w.id} className={`well-chip ${highlighted ? 'highlighted' : ''}`} style={{ '--well': color, '--well-deep': deepen(color), '--well-glass': glassify(color, 0.55) }} title={w.role ?? def.description}>
@@ -42,8 +46,6 @@ export default function WellBar({ searchButton = null, wells, highlightWellId, o
           </div>
         );
       })}
-      <AddWell wells={wells} onAdd={onAdd} />
-      <AddConstraint inlet={inlet} inletTokens={inletTokens} onAdd={onAddConstraint} />
     </div>
   );
 }

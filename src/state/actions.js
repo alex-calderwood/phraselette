@@ -7,7 +7,7 @@ import { loadPhones } from '../lang/phones.js';
 import { ptbToUpos } from '../lang/pos.js';
 import { makeToken, makeSequence, numWords, isWordToken, uid } from '../core/tokens.js';
 import { constraintAdvice, maxWordsAllowed } from '../core/constraints.js';
-import { WELL_DEFS, makeWell } from '../core/wells.js';
+import { searchSettings, WELL_DEFS, makeWell } from '../core/wells.js';
 import { thesaurusMessages, readerMessages, readerRevisionsMessages, dictionaryMessages, parseEntries, ENTRY_PREFIX, BULLET_PREFIX } from '../models/prompts.js';
 import { inletConstraints, activeWells, tokensIn } from './store.js';
 
@@ -153,7 +153,7 @@ export function createActions(dispatch, getState, session) {
     return dedupe(candidates.map((c) => {
       const text = leading + c.replace(/^\s+/, '');
       const tokens = wordTokensFor(prefix, text, null, maxWords);
-      return finishSequence(makeSequence(tokens, text, well.type, well.id));
+      return finishSequence(makeSequence(tokens, text, well.type, well.id, { originShade: well.shade ?? 0 }));
     })).filter((s) => !badSequence(s));
   }
 
@@ -222,21 +222,24 @@ export function createActions(dispatch, getState, session) {
     const selection = selectionFor(inlet);
     const prefix = prefixFor(inlet);
     const track = (p) => { running.set(key, p.id); return p; };
-    // keep the prompt actually sent (last user turn) so the well can show it
-    const remember = (messages, append = false) => {
-      const sent = messages[messages.length - 1].content;
+    // The worker reports the exact text handed to the model (chat template
+    // applied, reply prefix appended); keep it so the well can show it.
+    const showPrompt = (onPartial, append = false) => (d) => {
+      if (d?.prompt == null) { onPartial?.(d); return; }
       const prev = append ? (getState().insights[well.id]?.[inlet.id]?.prompt ?? '') : '';
-      dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { prompt: prev ? `${prev}\n\n────────\n\n${sent}` : sent } });
-      return messages;
+      dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { prompt: prev ? `${prev}\n\n────────\n\n${d.prompt}` : d.prompt } });
     };
     try {
       if (well.type === 'context') {
+        const ss = searchSettings(well);
         const selWords = Math.max(1, numWords(tokensIn(getState().tokens, inlet.start, inlet.end)));
         const targetWords = maxWords != null ? Math.min(maxWords, selWords) : selWords;
         const depth = Math.max(1, Math.min(25, Math.floor(targetWords * 4 / 3 + 1)));
         const after = getState().text.slice(inlet.end);
         const p = track(request('search', {
-          prefix, k: session.searchWidth ?? 24, depth, window: 256,
+          prefix, depth, window: 256,
+          // diverse beam search (beam.js) by default; 'fast' is the top-K-then-greedy loop in lm.js
+          mode: ss.mode, k: ss.mode === 'beam' ? ss.beams : ss.k, numBeamGroups: ss.groups, diversityPenalty: ss.diversity, lengthPenalty: ss.lengthPenalty, noRepeatNgramSize: ss.noRepeat,
           // used by bidirectional models: what follows the inlet, its leading space, how many words to fill
           after, leading: leadingFor(inlet), nWords: targetWords, capitalize: /^[A-Z]/.test(selection),
         }, {
@@ -253,26 +256,42 @@ export function createActions(dispatch, getState, session) {
           const text = toks.map((t) => t.text).join('');
           const subs = toks.map((t) => { const st = { text: t.text, start: pos, end: pos + t.text.length, logProb: t.logProb }; pos += t.text.length; return st; });
           const tokens = wordTokensFor(prefix, text, subs, maxWords ?? targetWords);
-          return finishSequence(makeSequence(tokens, text, well.type, well.id));
+          return finishSequence(makeSequence(tokens, text, well.type, well.id, { originShade: well.shade ?? 0 }));
         })).filter((s) => !badSequence(s));
         dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { sequences: seqs, histogram, progress: null } });
       } else if (well.type === 'thesaurus') {
-        const { text } = await track(request('chat', { slot: 'thesaurus', messages: remember(thesaurusMessages({ description: well.role, selection, advice, templates: well.templates })), maxNewTokens: 320, temperature: 1.0, assistantPrefix: ENTRY_PREFIX }, {
-          onPartial: streamEntries(inlet, well, selection, maxWords),
-        }));
+        const messages = thesaurusMessages({ description: well.role, selection, advice, templates: well.templates, examples: well.examples !== false });
+        let text;
+        const ss = searchSettings(well);
+        if (ss.mode === 'beam') {
+          // diverse beam search over the reply: each beam writes several entries in a row (seeing its
+          // own earlier ones), the groups keep the beams apart, and every beam's entries are collected
+          const stream = streamEntries(inlet, well, selection, maxWords);
+          const { texts } = await track(request('beamEntries', { slot: 'thesaurus', messages, assistantPrefix: ENTRY_PREFIX, numBeams: ss.beams, numBeamGroups: ss.groups, entriesPerBeam: ss.perBeam, diversityPenalty: ss.diversity, lengthPenalty: ss.lengthPenalty, maxNewTokens: ss.tokensPerEntry * ss.perBeam }, {
+            onPartial: showPrompt((d) => {
+              if (d.progress) dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { progress: d.progress } });
+              if (d.text) stream(d);
+            }),
+          }));
+          text = texts.join('\n\n');
+        } else {
+          ({ text } = await track(request('chat', { slot: 'thesaurus', messages, maxNewTokens: ss.maxNewTokens, temperature: ss.temperature, topP: ss.topP, doSample: ss.temperature > 0, assistantPrefix: ENTRY_PREFIX }, {
+            onPartial: showPrompt(streamEntries(inlet, well, selection, maxWords)),
+          })));
+        }
         const entries = parseEntries(text, selection);
         const seqs = candidatesToSequences(inlet, well, entries, maxWords);
-        dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { sequences: seqs, streaming: null, raw: text } });
+        dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { sequences: seqs, streaming: null, raw: text, progress: null } });
         reresolve(inlet.id);
         scoreSequences(inlet, well, seqs, maxWords);
       } else if (well.type === 'reader') {
         const context = markedContextFor(inlet);
-        const { text: feedback } = await track(request('chat', { slot: 'reader', messages: remember(readerMessages({ description: well.role, context, selection, templates: well.templates })), maxNewTokens: 260, temperature: 1.0, assistantPrefix: BULLET_PREFIX }, {
-          onPartial: (d) => dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { streaming: d.text } }),
+        const { text: feedback } = await track(request('chat', { slot: 'reader', messages: readerMessages({ description: well.role, context, selection, templates: well.templates }), maxNewTokens: 260, temperature: 1.0, assistantPrefix: BULLET_PREFIX }, {
+          onPartial: showPrompt((d) => dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { streaming: d.text } })),
         }));
         dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { text: feedback, streaming: null } });
-        const { text: rev } = await track(request('chat', { slot: 'reader', messages: remember(readerRevisionsMessages({ description: well.role, context, selection, feedback, advice, templates: well.templates }), true), maxNewTokens: 260, temperature: 1.0, assistantPrefix: ENTRY_PREFIX }, {
-          onPartial: streamEntries(inlet, well, selection, maxWords),
+        const { text: rev } = await track(request('chat', { slot: 'reader', messages: readerRevisionsMessages({ description: well.role, context, selection, feedback, advice, templates: well.templates }), maxNewTokens: 260, temperature: 1.0, assistantPrefix: ENTRY_PREFIX }, {
+          onPartial: showPrompt(streamEntries(inlet, well, selection, maxWords), true),
         }));
         const entries = parseEntries(rev, selection);
         const seqs = candidatesToSequences(inlet, well, entries, maxWords);
@@ -280,8 +299,8 @@ export function createActions(dispatch, getState, session) {
         reresolve(inlet.id);
         scoreSequences(inlet, well, seqs, maxWords);
       } else if (well.type === 'dictionary') {
-        const { text } = await track(request('chat', { slot: 'dictionary', messages: remember(dictionaryMessages({ description: well.role, selection, templates: well.templates })), maxNewTokens: 260, temperature: 1.0, assistantPrefix: BULLET_PREFIX }, {
-          onPartial: (d) => dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { streaming: d.text } }),
+        const { text } = await track(request('chat', { slot: 'dictionary', messages: dictionaryMessages({ description: well.role, selection, templates: well.templates }), maxNewTokens: 260, temperature: 1.0, assistantPrefix: BULLET_PREFIX }, {
+          onPartial: showPrompt((d) => dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { streaming: d.text } })),
         }));
         dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { text, raw: text, streaming: null, sequences: [] } });
       }

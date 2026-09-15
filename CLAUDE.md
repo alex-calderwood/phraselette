@@ -13,12 +13,11 @@ These come from Alex and take precedence over defaults.
 - Alex does the browser testing; do not drive the app in a browser unless asked.
 
 ## Editing habits Alex has asked for
-- Prompts follow the original `old/front-end/src/server/queries.js` closely; changes to prompt text are discussed first.
+- Prompts follow the original study build's `queries.js` (now only in git history under `old/`); changes to prompt text are discussed first.
 - Match the original's generation settings unless Alex says otherwise (the original passed no repetition penalties to the API).
 - American spelling in user-facing text.
-- Keep `TODO.md` current.
 
 ## Project facts
 - Phraselette 2.0: browser-only rebuild of the DIS '25 paper's tool; all models run via Transformers.js. Served under `/phraselette/` on port 3027 (`npm run dev`, `npm run static`, Docker).
-- `old/` holds the original study build for reference and will be deleted by Alex. `old-secrets/` (git-ignored) is a local backup of the study credentials; never commit or print them.
-- Transformers.js has no beam search; the context well uses its own loop (`src/models/lm.js`, `src/models/mlm.js`). A port of upstream PR #1539 is an open task in `TODO.md`.
+- `old/` (the original study build) has been deleted from the working tree; it remains in git history. `old-secrets/` (git-ignored) is a local backup of the study credentials; never commit or print them.
+- Transformers.js has no beam search. `src/models/beam.js` is a port of upstream PR #1539 (reference diff in `docs/reference/`; keep the attribution comment) used by the context well and the thesaurus; `src/models/lm.js` keeps the older top-K-then-greedy "fast" loop and `src/models/mlm.js` the masked-model fill.

@@ -33,6 +33,7 @@ export function isWordToken(t) {
  * @property {string} text          text as it would appear in the document
  * @property {string} origin        well type that produced it
  * @property {string} originId      well id
+ * @property {number} originShade   which sibling color that well wears (see wellColor)
  * @property {number|null} logProb  summed log-prob of generated sub-tokens
  * @property {number|null} logProbMean
  * @property {Object<string,number>} scores  constraint name -> [0,1]

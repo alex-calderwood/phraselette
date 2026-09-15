@@ -2,6 +2,21 @@
 // landing-page slot performs. Every entry is an ONNX export on the Hugging Face
 // Hub that Transformers.js can load; the app never calls a hosted API.
 
+/**
+ * Rough benchmark scores, one benchmark per model family so the numbers are
+ * comparable within a dropdown. Generative models: HellaSwag (sentence
+ * completion, % correct; 10-shot unless noted), which is closest to what the
+ * wells ask of them. Masked models: MNLI accuracy after fine-tuning (from the
+ * GLUE tables on each model card). Instruct variants whose cards omit
+ * HellaSwag inherit the base model's number. Looked up September 2026.
+ */
+const hellaswag = (score, note = '10-shot, as reported for the base model') => ({ name: 'HellaSwag', score, note, about: 'HellaSwag: given the start of an everyday scene, pick the sentence that plausibly comes next (% correct; chance is 25).' });
+const mnli = (score) => ({ name: 'MNLI', score, note: 'GLUE MNLI accuracy after fine-tuning, from the model card', about: 'MNLI: decide whether one sentence follows from, contradicts, or is unrelated to another (% correct; chance is 33).' });
+
+/** One-paragraph explanation of the benchmark column, for the landing page. */
+export const BENCHMARK_NOTE =
+  'The benchmark score is a rough guide to general language ability, higher is better. Left-to-right and instruct models are scored on HellaSwag (pick the plausible next sentence, % correct, chance 25); bidirectional models on MNLI (does one sentence follow from another, % correct, chance 33). Hover a score for its source.';
+
 /** dtype to request per device. fp16 needs a WebGPU adapter with shader-f16. */
 const small = { webgpu: 'fp16', webgpuNoF16: 'fp32', wasm: 'q8' };
 const medium = { webgpu: 'q4f16', webgpuNoF16: 'q4', wasm: 'q8' };
@@ -11,6 +26,7 @@ export const CAUSAL_MODELS = [
     id: 'Xenova/gpt2',
     name: 'GPT-2 · 124M',
     note: 'The model used in the paper. Fast, literal, endearingly odd. (fp16 overflows for GPT-2, so fp32 is used on WebGPU.)',
+    bench: hellaswag(31.1, 'lm-evaluation-harness acc_norm, 0-shot'),
     params: 124e6,
     dtype: { webgpu: 'fp32', webgpuNoF16: 'fp32', wasm: 'int8' },
     size: { fp16: 250, fp32: 500, int8: 281 },
@@ -22,6 +38,7 @@ export const CAUSAL_MODELS = [
     id: 'Xenova/gpt-neo-125M',
     name: 'GPT-Neo · 125M',
     note: 'Trained on the Pile; a slightly different sense of the likely.',
+    bench: hellaswag(30.3, '10-shot, Open LLM Leaderboard'),
     params: 125e6,
     dtype: small,
     size: { fp16: 250, fp32: 500, q8: 130 },
@@ -33,6 +50,7 @@ export const CAUSAL_MODELS = [
     id: 'onnx-community/gemma-3-270m-ONNX',
     name: 'Gemma 3 · 270M (base)',
     note: 'Newer base model, broad vocabulary.',
+    bench: hellaswag(40.9, '10-shot, Gemma 3 model card'),
     params: 270e6,
     dtype: small,
     size: { fp16: 540, fp32: 1080, q8: 300 },
@@ -44,6 +62,7 @@ export const CAUSAL_MODELS = [
     id: 'onnx-community/Qwen3-0.6B-ONNX',
     name: 'Qwen3 · 0.6B (base)',
     note: 'Strongest sense of context here; slower.',
+    bench: hellaswag(58.1, 'not on the Qwen card; third-party eval (arXiv 2601.22699)'),
     params: 600e6,
     dtype: medium,
     size: { q4f16: 470, q4: 700, q8: 640 },
@@ -58,6 +77,7 @@ export const INSTRUCT_MODELS = [
     id: 'HuggingFaceTB/SmolLM2-135M-Instruct',
     name: 'SmolLM2 · 135M',
     note: 'Tiny and quick; follows instructions loosely.',
+    bench: hellaswag(40.9, '0-shot, instruct model, SmolLM2 card'),
     params: 135e6,
     dtype: small,
     size: { fp16: 270, fp32: 540, q8: 140 },
@@ -69,6 +89,7 @@ export const INSTRUCT_MODELS = [
     id: 'HuggingFaceTB/SmolLM2-360M-Instruct',
     name: 'SmolLM2 · 360M',
     note: 'Good balance for a laptop.',
+    bench: hellaswag(52.1, '0-shot, instruct model, SmolLM2 card'),
     params: 360e6,
     dtype: medium,
     size: { q4f16: 280, q4: 400, q8: 370 },
@@ -80,6 +101,7 @@ export const INSTRUCT_MODELS = [
     id: 'onnx-community/gemma-3-270m-it-ONNX',
     name: 'Gemma 3 · 270M',
     note: 'Small, chatty, decent at lists of words.',
+    bench: hellaswag(40.9, '10-shot, base Gemma 3 270M; the IT card gives no HellaSwag'),
     params: 270e6,
     dtype: small,
     size: { fp16: 540, fp32: 1080, q8: 300 },
@@ -91,6 +113,7 @@ export const INSTRUCT_MODELS = [
     id: 'onnx-community/Qwen2.5-0.5B-Instruct',
     name: 'Qwen2.5 · 0.5B',
     note: 'Recommended default: follows the entry format well.',
+    bench: hellaswag(52.1, '10-shot, base Qwen2.5-0.5B (Qwen blog); SmolLM2 card measures the instruct model at 48.0 0-shot'),
     params: 494e6,
     dtype: medium,
     size: { q4f16: 400, q4: 560, q8: 500 },
@@ -103,6 +126,7 @@ export const INSTRUCT_MODELS = [
     id: 'onnx-community/gemma-3-1b-it-ONNX',
     name: 'Gemma 3 · 1B',
     note: 'Richer diction; needs a real GPU.',
+    bench: hellaswag(62.3, '10-shot, base Gemma 3 1B; the IT card gives no HellaSwag'),
     params: 1e9,
     dtype: medium,
     size: { q4f16: 1000, q4: 1500, q8: 1100 },
@@ -114,6 +138,7 @@ export const INSTRUCT_MODELS = [
     id: 'onnx-community/Llama-3.2-1B-Instruct-ONNX',
     name: 'Llama 3.2 · 1B',
     note: 'Fluent; heavy download.',
+    bench: hellaswag(41.2, '0-shot, instruct model, Llama 3.2 model card'),
     params: 1.24e9,
     dtype: medium,
     size: { q4f16: 1100, q4: 1700, q8: 1300 },
@@ -125,6 +150,7 @@ export const INSTRUCT_MODELS = [
     id: 'onnx-community/Qwen2.5-1.5B-Instruct',
     name: 'Qwen2.5 · 1.5B',
     note: 'The most capable option; WebGPU strongly advised.',
+    bench: hellaswag(67.9, '10-shot, base Qwen2.5-1.5B (Qwen blog)'),
     params: 1.54e9,
     dtype: medium,
     size: { q4f16: 1200, q4: 1900, q8: 1600 },
@@ -137,11 +163,11 @@ export const INSTRUCT_MODELS = [
 /** Bidirectional (masked) language models: fill the inlet from both sides. */
 const maskedDtype = { webgpu: 'fp32', webgpuNoF16: 'fp32', wasm: 'q8' };
 export const MASKED_MODELS = [
-  { id: 'Xenova/distilbert-base-cased', name: 'DistilBERT · 66M', note: 'Fast, keeps capitalization. Good first choice.', params: 66e6, dtype: maskedDtype, size: { fp32: 260, q8: 66 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)', recommended: true },
-  { id: 'Xenova/albert-base-v2', name: 'ALBERT · 12M', note: 'Tiny download; lower-case only.', params: 12e6, dtype: maskedDtype, size: { fp32: 47, q8: 12 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)' },
-  { id: 'Xenova/distilroberta-base', name: 'DistilRoBERTa · 82M', note: 'Web-trained vocabulary, cased.', params: 82e6, dtype: maskedDtype, size: { fp32: 330, q8: 83 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)' },
-  { id: 'Xenova/bert-base-cased', name: 'BERT base · 110M', note: 'The classic; a little slower.', params: 110e6, dtype: maskedDtype, size: { fp32: 430, q8: 110 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)' },
-  { id: 'Xenova/roberta-base', name: 'RoBERTa base · 125M', note: 'Strongest of the small masked models.', params: 125e6, dtype: maskedDtype, size: { fp32: 500, q8: 125 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)' },
+  { id: 'Xenova/distilbert-base-cased', bench: mnli(81.5), name: 'DistilBERT · 66M', note: 'Fast, keeps capitalization. Good first choice.', params: 66e6, dtype: maskedDtype, size: { fp32: 260, q8: 66 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)', recommended: true },
+  { id: 'Xenova/albert-base-v2', bench: mnli(84.6), name: 'ALBERT · 12M', note: 'Tiny download; lower-case only.', params: 12e6, dtype: maskedDtype, size: { fp32: 47, q8: 12 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)' },
+  { id: 'Xenova/distilroberta-base', bench: mnli(84.0), name: 'DistilRoBERTa · 82M', note: 'Web-trained vocabulary, cased.', params: 82e6, dtype: maskedDtype, size: { fp32: 330, q8: 83 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)' },
+  { id: 'Xenova/bert-base-cased', bench: mnli(84.6), name: 'BERT base · 110M', note: 'The classic; a little slower.', params: 110e6, dtype: maskedDtype, size: { fp32: 430, q8: 110 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)' },
+  { id: 'Xenova/roberta-base', bench: mnli(87.6), name: 'RoBERTa base · 125M', note: 'Strongest of the small masked models.', params: 125e6, dtype: maskedDtype, size: { fp32: 500, q8: 125 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)' },
 ];
 
 export const POS_MODELS = [
@@ -283,7 +309,7 @@ export function deviceMemoryInfo() {
   return info;
 }
 
-const ALL_MODELS = [...CAUSAL_MODELS, ...MASKED_MODELS, ...INSTRUCT_MODELS, ...POS_MODELS];
+export const ALL_MODELS = [...CAUSAL_MODELS, ...MASKED_MODELS, ...INSTRUCT_MODELS, ...POS_MODELS];
 
 /** The worker task behind a slot for this session ('causal' | 'fill-mask' | 'instruct' | 'pos'). */
 export function taskFor(session, slot) {
@@ -312,4 +338,9 @@ export function modelLabelFor(session, wellType) {
     case 'sound': return 'CMU Pronouncing Dictionary';
     default: return null;
   }
+}
+
+/** Short "benchmark 52" label for dropdowns, or null when no comparable score is published. */
+export function benchLabel(model) {
+  return model.bench ? `benchmark ${Math.round(model.bench.score)}` : null;
 }

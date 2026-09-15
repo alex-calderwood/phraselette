@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { WELL_DEFS, VIEW_WELLS, wellStyles } from '../core/wells.js';
+import { searchSettings, SEARCH_DEFAULTS, WELL_DEFS, VIEW_WELLS, wellStyles } from '../core/wells.js';
 import { randomRole } from '../lang/roles.js';
 import { parseBullets, TEMPLATES, TEMPLATE_LABELS } from '../models/prompts.js';
 import { TokenRow, SequenceChip } from './TokenRange.jsx';
@@ -86,6 +86,21 @@ function Menu({ items, style }) {
             ? <div key={i} className="well-menu-divider" />
             : it.static
               ? <div key={i} className="well-menu-static">{it.label}</div>
+              : it.fields
+                ? (
+                  <div key={i} className="well-menu-fields">
+                    {it.title && <div className="well-menu-static">{it.title}</div>}
+                    {it.fields.map((f) => (
+                      <label key={f.key} title={f.hint} className={f.type === 'checkbox' ? 'check' : ''}>
+                        <span>{f.label}</span>
+                        {f.type === 'checkbox'
+                          ? <input type="checkbox" checked={!!f.value} onChange={(e) => f.onChange(e.target.checked)} />
+                          : <input type="number" value={f.value} min={f.min} max={f.max} step={f.step ?? 1} onChange={(e) => f.onChange(Number(e.target.value))} />}
+                      </label>
+                    ))}
+                    {it.note && <div className="well-menu-static">{it.note}</div>}
+                  </div>
+                )
               : <button key={i} role="menuitem" className={`well-menu-item ${it.danger ? 'danger' : ''}`} onClick={() => { setOpen(false); it.onClick(); }}>{it.label}</button>)}
         </div>
       )}
@@ -93,9 +108,45 @@ function Menu({ items, style }) {
   );
 }
 
+/** Menu block with the knobs of the well's current search mode; values live on well.params[mode] (see SEARCH_DEFAULTS). */
+function searchFields(well, actions) {
+  const ss = searchSettings(well);
+  const set = (key) => (v) => actions.patchWell(well.id, { params: { ...(well.params ?? {}), [ss.mode]: { ...(well.params?.[ss.mode] ?? {}), [key]: v } } });
+  const beamKnobs = [
+    { key: 'beams', label: 'beams', value: ss.beams, min: 1, max: 64, hint: 'How many hypotheses run side by side. More is slower and uses more memory.', onChange: set('beams') },
+    { key: 'groups', label: 'groups', value: ss.groups, min: 1, max: ss.beams, hint: 'Diverse beam search: the beams are split into this many groups, and a token an earlier group picked at the same step is penalized for later ones, so the groups spread out. Must divide the number of beams; 1 is plain beam search; groups = beams forces every beam apart.', onChange: set('groups') },
+    { key: 'diversity', label: 'beam diversity', value: ss.diversity, min: 0, max: 5, step: 0.1, hint: 'How strongly later groups are pushed away from tokens earlier groups picked at the same step (log-probability subtracted per prior use). 0 turns it off.', onChange: set('diversity') },
+  ];
+  const examples = { key: 'examples', type: 'checkbox', label: 'include 2 shot examples', value: well.examples !== false, hint: 'Send the two worked user/assistant exchanges before the request. Off sends only the system prompt and the request.', onChange: (v) => actions.patchWell(well.id, { examples: v }) };
+  let fields;
+  let note;
+  if (well.type === 'context' && ss.mode === 'beam') {
+    fields = [...beamKnobs, { key: 'noRepeat', label: 'no-repeat n-gram', value: ss.noRepeat, min: 0, max: 4, hint: 'A word n-gram already generated in a beam may not recur (2 was the original build\'s setting; 0 turns it off).', onChange: set('noRepeat') }];
+    note = `${ss.beams} rephrasings`;
+  } else if (well.type === 'context') {
+    fields = [{ key: 'k', label: 'continuations', value: ss.k, min: 1, max: 64, hint: 'Top-K first tokens, each continued greedily.', onChange: set('k') }];
+    note = `${ss.k} rephrasings`;
+  } else if (ss.mode === 'beam') {
+    fields = [...beamKnobs,
+      { key: 'perBeam', label: 'entries per beam', value: ss.perBeam, min: 1, max: 12, hint: 'Each beam writes this many entries in a row, seeing its own earlier ones.', onChange: set('perBeam') },
+      examples];
+    note = `up to ${ss.beams * ss.perBeam} entries`;
+  } else {
+    fields = [
+      { key: 'temperature', label: 'temperature', value: ss.temperature, min: 0, max: 2, step: 0.1, hint: 'Sampling temperature; 0 is greedy. The original build used 1.0.', onChange: set('temperature') },
+      { key: 'topP', label: 'top-p', value: ss.topP, min: 0.05, max: 1, step: 0.05, hint: 'Nucleus sampling: only the smallest set of tokens whose probabilities sum to p are sampled. 1 = off.', onChange: set('topP') },
+      { key: 'maxNewTokens', label: 'max tokens', value: ss.maxNewTokens, min: 16, max: 1024, step: 16, hint: 'Length cap on the whole reply.', onChange: set('maxNewTokens') },
+      examples,
+    ];
+  }
+  const changed = Object.keys(well.params?.[ss.mode] ?? {}).filter((k) => Number.isFinite(well.params[ss.mode][k]) && well.params[ss.mode][k] !== SEARCH_DEFAULTS[well.type]?.[ss.mode]?.[k]);
+  const title = `${ss.mode === 'beam' ? 'beam search' : ss.mode === 'fast' ? 'fast search' : 'sampling'}${changed.length ? ` · changed: ${changed.join(', ')}` : ' · defaults'}`;
+  return { fields, note, title };
+}
+
 export default function WellView({ well, inlet, inletTokens, constraints, insight, searching, actions, setTooltip, highlighted, session, colorBy = 'origin', dragProps = {}, dropProps = {}, dropIndicator = null, isDragging = false }) {
   const def = WELL_DEFS[well.type];
-  const st = wellStyles(well.type, true);
+  const st = wellStyles(well.type, true, well.shade);
   const open = !well.collapsed;
   const modelLabel = modelLabelFor(session, well.type);
   const bidirectional = well.type === 'context' && taskFor(session, 'context') === 'fill-mask';
@@ -115,7 +166,16 @@ export default function WellView({ well, inlet, inletTokens, constraints, insigh
       ...(promptEdited ? [{ label: 'reset prompt to original', onClick: () => actions.patchWell(well.id, { templates: { ...TEMPLATES[well.type] } }) }] : []),
       { divider: true },
     ] : []),
-    ...(modelLabel ? [{ static: true, label: modelLabel }, { divider: true }] : []),
+    ...((well.type === 'context' && !bidirectional) || well.type === 'thesaurus' ? [
+      // 'beam' (diverse beam search, beam.js) is the default; the alternative is lm.js fast search or plain sampling
+      { label: searchSettings(well).mode === 'beam' ? (well.type === 'context' ? 'use fast search instead' : 'use sampling instead') : 'use beam search instead',
+        onClick: () => actions.patchWell(well.id, { search: searchSettings(well).mode === 'beam' ? (well.type === 'context' ? 'fast' : 'sample') : 'beam' }) },
+      searchFields(well, actions),
+      ...(well.params?.[searchSettings(well).mode] && Object.keys(well.params[searchSettings(well).mode]).length
+        ? [{ label: 'reset search settings', onClick: () => actions.patchWell(well.id, { params: { ...well.params, [searchSettings(well).mode]: {} } }) }] : []),
+      { divider: true },
+    ] : []),
+    ...(modelLabel ? [{ static: true, label: `${modelLabel}${(well.type === 'context' && !bidirectional) || well.type === 'thesaurus' ? ` · ${searchSettings(well).mode === 'beam' ? 'beam search' : well.type === 'context' ? 'fast search' : 'sampling'}` : ''}` }, { divider: true }] : []),
     ...(!def.undestroyable ? [{ label: 'close well', danger: true, onClick: () => actions.removeWell(well.id) }] : []),
   ];
 

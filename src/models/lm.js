@@ -6,10 +6,10 @@
 // next-token distribution (and the probability of every existing token). The
 // top-K first tokens are taken from it, the KV cache is expanded to K rows,
 // and each row continues greedily. Rows never swap, so no cache reordering.
-// True (diverse) beam search is tracked as an open task (TODO.md §7).
+// True (diverse) beam search lives in beam.js and reuses the helpers here.
 import { Tensor, ones, log_softmax } from '@huggingface/transformers';
 
-const LN_FLOOR = Math.log(1e-12);
+export const LN_FLOOR = Math.log(1e-12);
 const HIST_MIN = -30;
 const HIST_BINS = 100;
 const HIST_WIDTH = (0 - HIST_MIN) / HIST_BINS;
@@ -57,7 +57,7 @@ function startTokenId(tokenizer, model) {
 }
 
 /** ids for the prefix, windowed to the last `window` tokens and prefixed with BOS when at document start. */
-function prefixIds(inst, prefix, window) {
+export function prefixIds(inst, prefix, window) {
   let ids = encode(inst.tokenizer, prefix);
   let truncated = false;
   if (ids.length > window) { ids = ids.slice(ids.length - window); truncated = true; }
@@ -69,7 +69,7 @@ function prefixIds(inst, prefix, window) {
 // ---------------------------------------------------------------------------
 // per-model masks (built once, cached on the instance)
 
-function ensureMasks(inst) {
+export function ensureMasks(inst) {
   if (inst.masks) return inst.masks;
   const { tokenizer, model } = inst;
   const vocabSize = model.config.vocab_size ?? tokenizer.model?.vocab?.length ?? 50257;
@@ -96,7 +96,7 @@ function ensureMasks(inst) {
 // ---------------------------------------------------------------------------
 // forward helpers
 
-function needsAllLogits(model, inputs) {
+export function needsAllLogits(model, inputs) {
   const session = model.sessions?.model;
   if (session?.inputNames?.includes('num_logits_to_keep')) {
     inputs.num_logits_to_keep = new Tensor('int64', [0n], []);
@@ -104,7 +104,7 @@ function needsAllLogits(model, inputs) {
   return inputs;
 }
 
-function disposeOutputs(outputs, keep = null) {
+export function disposeOutputs(outputs, keep = null) {
   const keepSet = new Set(keep ? Object.values(keep) : []);
   for (const t of Object.values(outputs)) {
     if (t instanceof Tensor && t.location === 'gpu-buffer' && !keepSet.has(t)) t.dispose();
@@ -112,7 +112,7 @@ function disposeOutputs(outputs, keep = null) {
 }
 
 /** Float32Array view of logits row `row` at position `pos` for a [B, T, V] tensor. */
-function logitsRow(logits, row, pos) {
+export function logitsRow(logits, row, pos) {
   const [, T, V] = logits.dims;
   const data = logits.data;
   const off = (row * T + pos) * V;
@@ -120,7 +120,7 @@ function logitsRow(logits, row, pos) {
 }
 
 /** Download (if needed) and repeat every cache tensor K times along the batch dim. */
-async function expandCache(cache, K) {
+export async function expandCache(cache, K) {
   const entries = {};
   for (const key of Object.keys(cache)) {
     const t = cache[key];
@@ -135,7 +135,7 @@ async function expandCache(cache, K) {
 }
 
 /** fp16 exports of some models (GPT-2 especially) overflow to NaN; fail loudly instead of returning vocabulary-order garbage. */
-function assertFinite(row, inst) {
+export function assertFinite(row, inst) {
   for (let i = 0; i < row.length; i += 97) {
     if (!Number.isFinite(row[i])) {
       throw new Error(`${inst.modelId} returned non-finite logits with dtype ${inst.dtype} on ${inst.device}; choose a different precision (fp32 or q8) for this model.`);
@@ -143,10 +143,10 @@ function assertFinite(row, inst) {
   }
 }
 
-function makeHistogram() {
+export function makeHistogram() {
   return { counts: new Float64Array(HIST_BINS), binEdges: Array.from({ length: HIST_BINS + 1 }, (_, i) => HIST_MIN + i * HIST_WIDTH) };
 }
-function histogramAdd(h, logProbs) {
+export function histogramAdd(h, logProbs) {
   for (let i = 0; i < logProbs.length; i++) {
     const v = logProbs[i];
     if (v < LN_FLOOR || !Number.isFinite(v)) continue;
@@ -156,7 +156,7 @@ function histogramAdd(h, logProbs) {
     h.counts[b]++;
   }
 }
-function histogramFinish(h) {
+export function histogramFinish(h) {
   // trim empty low bins, mirroring the old 0.5% quantile clipping
   const total = h.counts.reduce((a, b) => a + b, 0);
   let acc = 0;
@@ -165,7 +165,7 @@ function histogramFinish(h) {
   return { counts: Array.from(h.counts.slice(first)), binEdges: h.binEdges.slice(first) };
 }
 
-function topKIndices(arr, k, allowed) {
+export function topKIndices(arr, k, allowed) {
   // simple partial selection: k is small (≤ 64) compared to the vocabulary
   const best = [];
   for (let i = 0; i < arr.length; i++) {

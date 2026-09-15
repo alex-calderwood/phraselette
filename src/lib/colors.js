@@ -75,3 +75,24 @@ export function humanLog(logProb) {
   if (logProb === 0) return '0';
   return logProb.toFixed(Math.abs(logProb) < 10 ? 1 : 0);
 }
+
+/**
+ * The i-th sibling of a family color (i = 0 is the family color itself).
+ * Siblings stay in the same hue neighborhood so a type is still recognizable
+ * at a glance, but differ enough to tell one well of that type from another:
+ * the hue swings a step to either side, and once those are used up the next
+ * round is darker.
+ */
+export function familyShade(color, i = 0) {
+  if (!i) return color;
+  // Each sibling moves on both axes at once so the difference survives the
+  // pale chip fill: hue swings a step warmer or cooler, and darkness steps up.
+  const SERIES = [[0, 0], [34, 0.28], [-34, 0.14], [17, 0.42], [-17, 0.5], [50, 0.36]];
+  const [swing, dark] = SERIES[i % SERIES.length];
+  const extra = Math.floor(i / SERIES.length) * 0.08; // past six siblings, keep darkening a little
+  const [h, s, l] = chroma(color).hsl();
+  let c = chroma.hsl(((h || 0) + swing + 360) % 360, s, l);
+  const d = Math.min(0.6, dark + extra);
+  if (d) c = chroma.mix(c, 'black', d, 'rgb');
+  return c.hex();
+}

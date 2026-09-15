@@ -64,13 +64,13 @@ export default function AddWell({ wells, onAdd }) {
                 <span className="popover-step">1 of 2</span>
               </div>
               <div className="well-choices">
-                {WELL_TYPES.map((t) => {
+                {/* single-instance wells that are already open are simply not offered */}
+                {WELL_TYPES.filter((t) => !singularOpen(t)).map((t) => {
                   const def = WELL_DEFS[t];
                   const color = wellColor(t);
-                  const disabled = singularOpen(t);
                   return (
-                    <button key={t} className="well-choice" style={{ '--well': color, '--well-deep': deepen(color), '--well-glass': glassify(color, 0.5) }} disabled={disabled} onClick={() => pick(t)}>
-                      <span className="well-choice-title">{def.title}{disabled && <span className="well-choice-note"> · already open</span>}{def.roles && <span className="well-choice-note"> · takes a role</span>}</span>
+                    <button key={t} className="well-choice" style={{ '--well': color, '--well-deep': deepen(color), '--well-glass': glassify(color, 0.5) }} onClick={() => pick(t)}>
+                      <span className="well-choice-title">{def.title}{def.roles && <span className="well-choice-note"> · takes a role</span>}</span>
                       <span className="well-choice-desc">{def.description}</span>
                     </button>
                   );

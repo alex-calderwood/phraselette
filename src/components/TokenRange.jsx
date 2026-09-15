@@ -18,7 +18,7 @@ export const COLOR_MODES = [
 ];
 
 function chipColor(colorBy, showItems, token, originColor) {
-  if (colorBy === 'origin' && originColor) return `color-mix(in srgb, ${originColor} 45%, white)`;
+  if (colorBy === 'origin' && originColor) return `color-mix(in srgb, ${originColor} 60%, white)`;
   if (colorBy === 'pos') return categoryColor(token.pos);
   if (colorBy === 'prob') return typeof token.logProbMean === 'number' ? logProbColor(token.logProbMean) : 'rgba(255,255,255,0.5)';
   return tokenColor(showItems, token);
@@ -53,8 +53,8 @@ export function TokenRow({ tokens, wellType, expanded = true }) {
 /** One rephrasing chip; expands with all view data on hover (via the global tooltip). */
 export function SequenceChip({ seq, wellType, expanded = false, onClick, setTooltip, colorBy = 'origin' }) {
   const showItems = wellType && WELL_DEFS[wellType] ? WELL_DEFS[wellType].showItems : ['pos', 'sound', 'prob'];
-  const origin = wellColor(seq.origin);
-  const bg = colorBy === 'prob' && typeof seq.logProbMean === 'number' ? logProbColor(seq.logProbMean) : `color-mix(in srgb, ${origin} 30%, white)`;
+  const origin = wellColor(seq.origin, seq.originShade);
+  const bg = colorBy === 'prob' && typeof seq.logProbMean === 'number' ? logProbColor(seq.logProbMean) : `color-mix(in srgb, ${origin} 55%, white)`;
   // Collapsed and colored by source: the chip is just the text, no per-word boxes.
   const plain = !expanded && colorBy === 'origin';
   const body = (

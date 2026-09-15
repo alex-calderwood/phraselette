@@ -38,9 +38,11 @@ Model weights are downloaded by the browser directly from the Hugging Face Hub a
 
 Pronunciations for the sound well come from the CMU Pronouncing Dictionary, bundled as a lazily loaded chunk.
 
-### The context well without beam search
+### Beam search
 
-Transformers.js does not implement beam search (its `generate()` takes the top token only). The context well therefore runs its own search in `src/models/lm.js`: one pass over the preceding text gives the next-token distribution and the probability of every existing word; the top-K first tokens are taken from it and each continues greedily with the original build's `no_repeat_ngram_size=2` rule. A port of true diverse beam search from Transformers.js [PR #1539](https://github.com/huggingface/transformers.js/pull/1539) is an open task (see `TODO.md`; the reference diff is in `docs/reference/`).
+Transformers.js 4.2.0 has no beam search (its `generate()` takes the top token only), so Phraselette carries its own in `src/models/beam.js`, ported from Transformers.js [PR #1539](https://github.com/huggingface/transformers.js/pull/1539) (reference diff in `docs/reference/`). It is diverse beam search in the Hugging Face sense: the beams are split into groups, and at every step a token already chosen by an earlier group is penalized (`diversity_penalty`, default 1.0) so the groups spread out. The search drives `model.forward()` directly, keeping every token's log-probability for the histogram and the coloring, reorders the KV cache between steps, and applies the original build's `no_repeat_ngram_size=2` rule.
+
+Two wells use it. The **context well** beam-searches continuations of the preceding text (K beams, K/4 groups); its earlier top-K-then-greedy loop remains in `src/models/lm.js` as "fast search", selectable from the well's ⋯ menu. The **thesaurus** beam-searches the chat reply itself (plain sampling is a menu option): four beams in four groups each write four `<entry>` lines in a row, so a beam sees (and avoids repeating) its own earlier entries while the groups keep the beams apart; all sixteen are collected, best beam first, deduplicated. `scripts/lm-test.mjs --beam` runs either on the CPU.
 
 ## Testing the models
 
