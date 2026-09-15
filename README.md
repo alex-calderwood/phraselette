@@ -1,6 +1,6 @@
 # Phraselette
 
-A poet's procedural palette: highlight a phrase, open a few *wells*, and sift the rephrasings they offer. This is the browser-only rebuild of the system described in
+This is a 'revibecoded' version of the system used for the paper:
 
 > Alex Calderwood, John Joon Young Chung, Yuqian Sun, Melissa Roemmele, and Max Kreminski. 2025. **Phraselette: A Poet's Procedural Palette.** In *Designing Interactive Systems Conference (DIS '25)*. https://arxiv.org/abs/2503.06335
 
