@@ -1,6 +1,7 @@
-// Minimal static server for the production build. Serves dist/ under the
-// /phraselette/ base path on port 3027 (inside and outside the container),
-// with a single-page-app fallback to index.html. No dependencies.
+// Minimal static server for the production build. Serves dist/ on port 3027
+// (inside and outside the container) under the /phraselette/ base path, and
+// also at / for proxies that strip the prefix, with a single-page-app fallback
+// to index.html. No dependencies.
 import { createServer } from 'node:http';
 import { createReadStream, statSync, existsSync } from 'node:fs';
 import { join, extname, normalize, resolve } from 'node:path';
@@ -49,15 +50,15 @@ const server = createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
   let pathname = decodeURIComponent(url.pathname);
 
-  if (pathname === '/' || pathname === BASE.slice(0, -1)) {
-    res.writeHead(302, { Location: BASE });
-    res.end();
-    return;
-  }
-  if (pathname === '/healthz') { send(res, 200, 'ok'); return; }
-  if (!pathname.startsWith(BASE)) { send(res, 404, 'not found'); return; }
+  if (pathname === '/healthz' || pathname === `${BASE}healthz`) { send(res, 200, 'ok'); return; }
 
-  const rel = normalize(pathname.slice(BASE.length)).replace(/^(\.\.[/\\])+/, '');
+  // Accept both "/phraselette/x" (direct, or a proxy that passes the prefix
+  // through) and "/x" (a proxy that strips the prefix before forwarding).
+  // Never redirect: a prefix-stripping proxy would turn that into a loop.
+  const withoutBase = pathname.startsWith(BASE) ? pathname.slice(BASE.length)
+    : pathname === BASE.slice(0, -1) ? ''
+    : pathname.slice(1);
+  const rel = normalize(withoutBase).replace(/^(\.\.[/\\])+/, '').replace(/^\.$/, '');
   const filePath = join(ROOT, rel);
   if (!filePath.startsWith(ROOT)) { send(res, 403, 'forbidden'); return; }
 

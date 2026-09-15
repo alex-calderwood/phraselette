@@ -38,7 +38,10 @@ The image is a two-stage build (Node builds `dist/`, then a slim Node image runs
 
 ## nginx (nonsens.ing)
 
-The container serves the app under `/phraselette/` itself, so proxy the prefix through unchanged:
+The server accepts requests both with the `/phraselette/` prefix and without it, and never redirects, so either proxy style works:
+
+- **Prefix stripped** (Nginx Proxy Manager location `/phraselette` with `rewrite ^/phraselette(/.*)$ $1 break;`): nothing more to do.
+- **Prefix passed through** (plain nginx):
 
 ```nginx
 location /phraselette/ {
@@ -47,7 +50,6 @@ location /phraselette/ {
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Proto $scheme;
 }
-location = /phraselette { return 301 /phraselette/; }
 ```
 
 Model weights are downloaded by the browser directly from the Hugging Face Hub and cached in the browser's Cache Storage, so nothing large flows through the server.
