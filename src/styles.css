@@ -613,7 +613,7 @@ select {
 .big-button { font-size: 22px; padding: 12px 44px; background: var(--darker-text); color: white; box-shadow: 0 6px 18px rgba(60,44,72,0.28); }
 .big-button:hover { background: var(--primary-text); color: white; }
 .big-button:disabled { background: rgba(86,63,102,0.5); }
-.budget-line { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; font-size: var(--font-xs); color: var(--muted-text); }
+.budget-line { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; font-size: 13px; line-height: 1.5; color: var(--darker-text); }
 .device-inline { display: inline-flex; align-items: center; gap: 5px; }
 .device-inline .dot { width: 7px; height: 7px; border-radius: 50%; background: #58c67a; display: inline-block; }
 .device-inline.cpu .dot { background: #e8b64a; }

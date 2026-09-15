@@ -115,7 +115,7 @@ export default function Landing({ onReady }) {
         <div className="landing-rule" aria-hidden="true" />
         <p className="landing-tagline">A poet's procedural palette.</p>
         <p className="landing-intro">
-          Phraselette is a word and phrase search toolbox. It is centered on the idea of 'word wells'. Each well is a customizable word search tool that gives you a new lens on your language choices, and provides alternative or other insight for you to use while composing.
+          Phraselette is a word (and phrase) search toolbox. It is centered on the idea of 'word wells'. Each well is a customizable word search tool that gives you a new lens on your language choices. Each provides phrase alternatives using attributes of probablistic language models not surfaced by chatbots, and gives you a variety of tunable linguistic probes or search procedures. Phraselette also allows you to constrain text generation using a number of 'poetic' constraint procedures.
         </p>
         <p className="landing-links">
           <a href="https://arxiv.org/abs/2503.06335" target="_blank" rel="noreferrer">Read the paper</a>
@@ -184,7 +184,7 @@ export default function Landing({ onReady }) {
       </section>
 
       <div className="landing-disclaimer">
-        Phraselette 2.0 · re-vibecoded by Claude Fable 5.1 from the DIS ’25 paper and the original study build.
+        Phraselette 2.0 · re-vibecoded by Fable 5.1 from the DIS ’25 paper and the original study build.
         Hosted models were replaced by models that run entirely in your browser via Transformers.js; expect rougher edges than the paper's version.
       </div>
     </div>
