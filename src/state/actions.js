@@ -301,7 +301,7 @@ export function createActions(dispatch, getState, session) {
           mode: ss.mode, k: ss.mode === 'beam' ? ss.beams : ss.k, numBeamGroups: ss.groups, diversityPenalty: ss.diversity, lengthPenalty: ss.lengthPenalty, noRepeatNgramSize: ss.noRepeat,
           // used by bidirectional models: what follows the inlet, its leading space, how many words to fill
           after, leading: leadingFor(inlet), nWords: targetWords, capitalize: /^[A-Z]/.test(selection),
-          gate,
+          gate, steer: ss.steer,
         }, {
           onPartial: (d) => d.progress && dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { progress: d.progress } }),
         }));
@@ -391,11 +391,11 @@ export function createActions(dispatch, getState, session) {
   }
 
   function runWells(inlet, wells = activeWells(getState())) {
-    // Nothing that can search is open: open the context well so Search always does something.
+    // Nothing that can search is open: open the sieve so Search always does something.
     if (!wells.some((w) => WELL_DEFS[w.type].canSearch)) {
       const st = getState();
-      const existing = st.wells.find((w) => w.type === 'context');
-      const ctx = existing ? { ...existing, active: true, collapsed: false } : { ...makeWell('context'), active: true };
+      const existing = st.wells.find((w) => w.type === 'sieve');
+      const ctx = existing ? { ...existing, active: true, collapsed: false } : { ...makeWell('sieve'), active: true };
       dispatch({ type: 'addWellObject', well: ctx });
       wells = [...wells, ctx];
     }

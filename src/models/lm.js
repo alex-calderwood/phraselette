@@ -231,11 +231,19 @@ export async function probsForText(inst, { prefix, text, window = 384, topK = 5,
  * Returns { sequences: [{ tokens: [{text,logProb}], text, logProb }], histogram, firstTokenLogProbs }.
  */
 export async function searchContinuations(inst, {
-  prefix, k = 24, depth = 8, window = 256, topKFirst = null, gate = null, checkCancel, onProgress,
+  prefix, k = 24, depth = 8, window = 256, topKFirst = null, gate = null, steer = 1, nWords = null, checkCancel, onProgress,
 }) {
   const { tokenizer, model } = inst;
   const masks = ensureMasks(inst);
-  const g = makeGate(inst, gate); // sieve well: hard mask from the constraints
+  const g = makeGate(inst, gate, { nWords, depth }); // sieve well: hard mask (and steering) from the constraints
+  /** Best `n` tokens by log-prob + steer·h among `allowed`, with the tokens that place or approach a needed run shortlisted as well; see beam.js. */
+  const pick = (lp, n, allowed, prevIds) => {
+    const st = g && steer ? g.steering(prevIds, lp) : null;
+    const top = topKIndices(lp, n, allowed);
+    if (!st) return top;
+    for (const c of topKIndices(lp, n, (i) => allowed(i) && st.shortlist(i))) if (!top.some((t) => t[1] === c[1])) top.push(c);
+    return top.map(([v, i]) => [v, i, st.h(i)]).filter((c) => c[2] !== -Infinity).sort((a, b) => (b[0] + steer * b[2]) - (a[0] + steer * a[2])).slice(0, n);
+  };
   let text = prefix.replace(/ /g, ' ');
   const endsWithSpace = /\s$/.test(text) && !/\n$/.test(text);
   if (endsWithSpace) text = text.replace(/[ \t]+$/, '');
@@ -262,7 +270,7 @@ export async function searchContinuations(inst, {
   const allowedFirst = (i) => !masks.halt[i] && (!endsWithSpace || masks.startsWithSpace[i]);
   const gateStats = g ? g.firstStep(lp0, allowedFirst) : null;
   const pass0 = g ? g.forBeam([]) : null;
-  const firsts = topKIndices(lp0, topKFirst ?? K, (i) => allowedFirst(i) && (!pass0 || pass0(i, lp0[i])));
+  const firsts = pick(lp0, topKFirst ?? K, (i) => allowedFirst(i) && (!pass0 || pass0(i, lp0[i])), []);
   const rows = firsts.map(([lpv, id]) => ({ ids: [id], logProbs: [lpv], done: false }));
   const R = rows.length;
   onProgress?.({ step: 1, total: depth });
@@ -294,7 +302,7 @@ export async function searchContinuations(inst, {
         const banned = new Set();
         for (let j = 0; j + 1 < seq.length; j++) if (seq[j] === prev) banned.add(seq[j + 1]);
         const pass = g ? g.forBeam(seq) : null;
-        const best = topKIndices(lp, 1, (i) => !masks.halt[i] && !banned.has(i) && (!pass || pass(i, lp[i])))[0];
+        const best = pick(lp, 1, (i) => !masks.halt[i] && !banned.has(i) && (!pass || pass(i, lp[i])), seq)[0];
         const id = best ? best[1] : prev;
         rows[r].ids.push(id);
         rows[r].logProbs.push(best ? best[0] : LN_FLOOR);

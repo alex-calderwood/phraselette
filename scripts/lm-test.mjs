@@ -3,8 +3,9 @@
 // Node on the CPU so the algorithm can be checked independently of WebGPU.
 //
 //   node scripts/lm-test.mjs [--model Xenova/gpt2] [--dtype fp32] [--k 8] [--depth 6] [--prefix "text"] [--text "text to score"] [--beam [--groups 2] [--diversity 1.0]]
-//        [--avoid e,a] [--starts st] [--sound "S T"] [--avoidsound R] [--pmin -9 --pmax -3]
-//        the sieve well's gate: letters to ban, a letter prefix, an ARPAbet prefix, phonemes to ban, a per-token log-probability window
+//        [--avoid e,a] [--starts st] [--sound "S T"] [--avoidsound R] [--pmin -9 --pmax -3] [--needs z] [--needsound "IY"] [--steer 2] [--nwords 3]
+//        the sieve well's gate: letters to ban, a letter prefix, an ARPAbet prefix, phonemes to ban, a per-token log-probability
+//        window, a letter run the phrase must contain (steered, with strength --steer, inside the first --nwords words)
 //   node scripts/lm-test.mjs --well thesaurus [--model onnx-community/Qwen2.5-0.5B-Instruct] [--dtype q8] --role "a thesaurus of metonyms" --query "following day" [--runs 2] [--beam [--k 4] [--per 4]]
 //   node scripts/lm-test.mjs --well fill [--model Xenova/distilbert-base-cased] --prefix "text before the inlet" --after "text after" --n 2 --k 12
 //
@@ -101,11 +102,16 @@ const sounds = [];
 if (args.sound) sounds.push({ mode: 'starts with', target: args.sound.toUpperCase().split(/\s+/).filter(Boolean) });
 if (args.avoidsound) sounds.push({ mode: 'avoid', target: args.avoidsound.toUpperCase().split(/[\s,]+/).filter(Boolean) });
 const prob = args.pmin || args.pmax ? { min: Number(args.pmin ?? -1e9), max: Number(args.pmax ?? 0) } : null;
-const gate = letters.length || sounds.length || prob ? { letters, sounds, prob } : null;
+const needs = [];
+if (args.needs) needs.push({ kind: 'letters', target: args.needs.toLowerCase().split('') });
+if (args.needsound) needs.push({ kind: 'sound', target: args.needsound.toUpperCase().split(/\s+/).filter(Boolean) });
+const steer = Number(args.steer ?? 2);
+const nWords = args.nwords ? Number(args.nwords) : null;
+const gate = letters.length || sounds.length || needs.length || prob ? { letters, sounds, needs, prob } : null;
 if (gate) await prepareGate(gate);
 const { sequences, histogram, endsWithSpace, gateStats } = beam
-  ? await beamContinuations(inst, { prefix, k: K, depth, window: 256, numBeamGroups: args.groups ? Number(args.groups) : null, diversityPenalty: Number(args.diversity ?? 1.0), gate })
-  : await searchContinuations(inst, { prefix, k: K, depth, window: 256, gate });
+  ? await beamContinuations(inst, { prefix, k: K, depth, window: 256, numBeamGroups: args.groups ? Number(args.groups) : null, diversityPenalty: Number(args.diversity ?? 1.0), gate, steer, nWords })
+  : await searchContinuations(inst, { prefix, k: K, depth, window: 256, gate, steer, nWords });
 if (beam) console.log('(diverse beam search)');
 if (gate) console.log(`gate ${JSON.stringify(gate)} · first step let through ${gateStats.allowed}/${gateStats.vocab} tokens (${(100 * gateStats.mass).toFixed(2)}% of the probability)`);
 console.log(`took ${((t() - t0) / 1000).toFixed(1)}s · endsWithSpace=${endsWithSpace} · histogram bins=${histogram.counts.length} total=${histogram.counts.reduce((a, b) => a + b, 0)}`);

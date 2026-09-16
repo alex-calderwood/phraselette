@@ -139,7 +139,7 @@ export async function reorderCache(cache, indices) {
 export async function beamSearch(inst, {
   ids, numBeams = 12, numBeamGroups = numBeams, diversityPenalty = 1.0, lengthPenalty = 1.0, earlyStopping = false,
   maxNewTokens = 8, numReturn = numBeams, noRepeatNgramSize = 2, allowedFirst = null, stopWhen = null, eosIds = new Set(), haltOnTagTokens = true,
-  gate = null, checkCancel, onProgress, onText,
+  gate = null, steer = 1, checkCancel, onProgress, onText,
 }) {
   const { tokenizer, model } = inst;
   const masks = ensureMasks(inst);
@@ -191,12 +191,23 @@ export async function beamSearch(inst, {
         // the diversity penalty only lowers tokens earlier groups chose, so the exact
         // penalised top-2gs lies within the raw top-(2gs + |penalised|)
         const top = topKIndices(lp, 2 * gs + prevGroupTokens.size, allowed);
+        // sieve well steering: rank by score + steer·h (h estimates the chance of still meeting a
+        // "contains" rule; see gate.js). The score itself stays the plain sum, so nothing accumulates.
+        const st = gate && steer ? gate.steering(beam.ids, lp) : null;
+        if (st) for (const c of topKIndices(lp, gs, (i) => allowed(i) && st.shortlist(i))) if (!top.some((t) => t[1] === c[1])) top.push(c);
         for (const [v, i] of top) {
-          candidates.push({ score: beam.sum + v - diversityPenalty * (prevGroupTokens.get(i) ?? 0), token: i, src: bi, lp: v });
+          const score = beam.sum + v - diversityPenalty * (prevGroupTokens.get(i) ?? 0);
+          let rank = score;
+          if (st) {
+            const h = st.h(i);
+            if (h === -Infinity) continue; // ends the phrase without meeting the rule: not a candidate
+            rank += steer * h;
+          }
+          candidates.push({ score, rank, token: i, src: bi, lp: v });
         }
         if (first) break; // every beam shares the prompt distribution on the first step
       }
-      candidates.sort((a, b) => b.score - a.score);
+      candidates.sort((a, b) => b.rank - a.rank);
       const chosen = scorers[g].process(group, candidates.slice(0, 2 * gs), isEos);
       for (let bi = 0; bi < gs; bi++) {
         next[off + bi] = { ...chosen[bi], src: off + chosen[bi].src };
@@ -296,7 +307,7 @@ function hypothesisToSequence(tokenizer, isSpecial, h, cutAt = null) {
  * lm.js searchContinuations so the worker can swap between the two.
  */
 export async function beamContinuations(inst, {
-  prefix, k = 24, depth = 8, window = 256, numBeamGroups = null, diversityPenalty = 1.0, lengthPenalty = 1.0, noRepeatNgramSize = 2, gate = null, checkCancel, onProgress,
+  prefix, k = 24, depth = 8, window = 256, numBeamGroups = null, diversityPenalty = 1.0, lengthPenalty = 1.0, noRepeatNgramSize = 2, gate = null, steer = 1, nWords = null, checkCancel, onProgress,
 }) {
   const { tokenizer } = inst;
   const masks = ensureMasks(inst);
@@ -307,10 +318,10 @@ export async function beamContinuations(inst, {
   const numBeams = Math.max(1, k);
   // default grouping: beams of four per group (diverse beam search), or one group per beam when k is odd
   const groups = numBeamGroups ?? (numBeams % 4 === 0 ? numBeams / 4 : numBeams % 2 === 0 ? numBeams / 2 : numBeams);
-  const g = makeGate(inst, gate);
+  const g = makeGate(inst, gate, { nWords, depth });
   const { hypotheses, histogram, gateStats } = await beamSearch(inst, {
     ids, numBeams, numBeamGroups: groups, diversityPenalty, lengthPenalty, noRepeatNgramSize, maxNewTokens: depth, numReturn: numBeams,
-    allowedFirst: (i) => !endsWithSpace || masks.startsWithSpace[i], gate: g, checkCancel, onProgress,
+    allowedFirst: (i) => !endsWithSpace || masks.startsWithSpace[i], gate: g, steer, checkCancel, onProgress,
   });
   // hypotheses cut off mid-word (or short of a letter prefix) by the depth limit do not meet the gate: drop them
   const kept = g ? hypotheses.filter((h) => g.accepts(h.ids)) : hypotheses;

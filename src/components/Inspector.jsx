@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { CONTEXT_LIKE } from '../core/wells.js';
+import { CONTEXT_LIKE, POS_HIGHLIGHT } from '../core/wells.js';
 import WellView from './WellView.jsx';
+import { TokenRow } from './TokenRange.jsx';
 import { ConstraintCard } from './ConstraintsPanel.jsx';
 import { hoverProps } from './Tooltip.jsx';
 
@@ -9,12 +10,15 @@ const fmt = (n) => (Number.isInteger(n) ? n : Number(n).toFixed(1));
 /**
  * The phrase being worked on, drawn the way it looks in the editor: rainbow
  * underlay once it is an inlet, teal dotted underline while it is only a
- * selection. Status and the single Search action sit beneath it.
+ * selection. Beneath it: the status, and the words with their part-of-speech
+ * tags next to the toggle that colors the editor by part of speech (what the
+ * former words well did).
  */
 export function InletHeader({ state, inlet, rangeText, inletTokens, onSearch, actions, setTooltip }) {
   const searching = inlet ? (state.searching[inlet.id] ?? []) : [];
   const results = inlet ? state.results[inlet.id] : null;
   const words = inletTokens.filter((t) => !t.isSpace && t.pos !== 'PUNCT').length;
+  const posOn = state.highlightWellId === POS_HIGHLIGHT;
   let status;
   if (!inlet) status = `selection · ${words} word${words === 1 ? '' : 's'}`;
   else if (searching.length) status = `searching · ${searching.length} well${searching.length === 1 ? '' : 's'} running`;
@@ -32,6 +36,20 @@ export function InletHeader({ state, inlet, rangeText, inletTokens, onSearch, ac
         </div>
         <span className={`inlet-status ${searching.length ? 'rainbow-animated' : ''}`}>{status}</span>
       </div>
+      {/* top right, level with the phrase: its words with their part-of-speech tags, and the toggle that colors the editor by them */}
+      {inletTokens.length > 0 && (
+        <div className="inlet-tags">
+          <TokenRow tokens={inletTokens} wellType="words" />
+          <button
+            className={`inlet-paint ${posOn ? 'on' : ''}`}
+            aria-pressed={posOn}
+            onClick={() => actions.highlight(POS_HIGHLIGHT)}
+            {...hoverProps(setTooltip, posOn ? 'Stop coloring the editor.' : 'Color every word in the editor by its part of speech.')}
+          >
+            <span aria-hidden="true">🎨</span> parts of speech
+          </button>
+        </div>
+      )}
       {onSearch && (
         <button className={`search-button ${searching.length ? 'busy' : ''}`} onClick={onSearch} {...hoverProps(setTooltip, inlet ? 'Run every well again on this inlet. ⌘ + Enter' : 'Open this phrase as an inlet and run every well. ⌘ + Enter')}>
           <span className="search-icon" aria-hidden="true">🖌️</span>
@@ -43,18 +61,11 @@ export function InletHeader({ state, inlet, rangeText, inletTokens, onSearch, ac
   );
 }
 
-export default function Inspector({ state, session, inlet, rangeText, hasRange, wells, inletTokens, inletConstraints, actions, setTooltip, onSearch, colorBy }) {
+export default function Inspector({ state, session, inlet, rangeText, wells, inletTokens, inletConstraints, actions, setTooltip, onSearch, colorBy }) {
   const [dragging, setDragging] = useState(null);
   const [over, setOver] = useState(null);
   return (
     <div className="inspector glass">
-      {!hasRange && (
-        <div className="hint">
-          {state.text.trim()
-            ? <>Click a word or highlight a phrase in the editor, then press <b>Search</b> (⌘↵). The wells below will fill with rephrasings for it.</>
-            : <>Begin a poem in the text editor (left). Then click a word or highlight a phrase and press <b>Search</b> (⌘↵).</>}
-        </div>
-      )}
 
       {wells.map((w, i) => (
         <WellView
@@ -85,11 +96,12 @@ export default function Inspector({ state, session, inlet, rangeText, hasRange, 
         />
       ))}
 
-      {inlet && inletConstraints.length > 0 && (
+      {inlet && (
         <section className="constraints-section" aria-label="constraints on this inlet">
           <div className="constraints-section-title">
             <span>Constraints on “{rangeText}”</span>
           </div>
+          {!inletConstraints.length && <div className="constraints-section-note">None yet. A constraint (the + Constraint button, beside + Add well) narrows the rephrasings every well returns for this inlet.</div>}
           {inletConstraints.map((c) => (
             <ConstraintCard
               key={c.id}

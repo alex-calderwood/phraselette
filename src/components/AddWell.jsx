@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePopoverPosition } from './usePopover.js';
-import { WELL_TYPES, WELL_DEFS, wellColor } from '../core/wells.js';
+import { WELL_DEFS, WELL_GROUPS, wellColor } from '../core/wells.js';
 import { ROLES } from '../lang/roles.js';
 import { deepen, glassify } from '../lib/colors.js';
 
@@ -52,7 +52,7 @@ export default function AddWell({ wells, onAdd }) {
   return (
     <div className="add-well">
       <button ref={buttonRef} className={`add-well-button ${open ? 'open' : ''}`} onClick={() => (open ? close() : setOpen(true))} aria-expanded={open} aria-haspopup="dialog">
-        <span aria-hidden="true">＋</span> Add well
+        <span className="plus" aria-hidden="true">＋</span> Add well
       </button>
 
       {open && (
@@ -63,19 +63,28 @@ export default function AddWell({ wells, onAdd }) {
                 <span className="popover-title">Choose a well</span>
                 <span className="popover-step">1 of 2</span>
               </div>
-              <div className="well-choices">
-                {/* single-instance wells that are already open are simply not offered */}
-                {WELL_TYPES.filter((t) => !singularOpen(t)).map((t) => {
-                  const def = WELL_DEFS[t];
-                  const color = wellColor(t);
-                  return (
-                    <button key={t} className="well-choice" style={{ '--well': color, '--well-deep': deepen(color), '--well-glass': glassify(color, 0.5) }} onClick={() => pick(t)}>
-                      <span className="well-choice-title">{def.title}{def.roles && <span className="well-choice-note"> · takes a role</span>}</span>
-                      <span className="well-choice-desc">{def.description}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {/* grouped by what the well does; single-instance wells that are already open are simply not offered */}
+              {WELL_GROUPS.map((group) => {
+                const types = group.types.filter((t) => !singularOpen(t));
+                if (!types.length) return null;
+                return (
+                  <div key={group.title} className="popover-group">
+                    <div className="popover-group-title">{group.title}<span className="popover-group-hint">{group.hint}</span></div>
+                    <div className="well-choices">
+                      {types.map((t) => {
+                        const def = WELL_DEFS[t];
+                        const color = wellColor(t);
+                        return (
+                          <button key={t} className="well-choice" style={{ '--well': color, '--well-deep': deepen(color), '--well-glass': glassify(color, 0.5) }} onClick={() => pick(t)}>
+                            <span className="well-choice-title">{def.title}{def.roles && <span className="well-choice-note"> · takes a role</span>}</span>
+                            <span className="well-choice-desc">{def.description}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </>
           ) : (
             <>

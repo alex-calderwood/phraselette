@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { reducer, initialState, currentInlet, activeWells, inletConstraints, tokensIn, wordAt } from '../state/store.js';
+import { POS_HIGHLIGHT } from '../core/wells.js';
 import { createActions } from '../state/actions.js';
 import Editor from './Editor.jsx';
 import WellBar from './WellBar.jsx';
@@ -18,6 +19,35 @@ export default function Workspace({ session, onChangeModels }) {
   // browser's own undo, so swaps keep their own history: ⌘Z / ⇧⌘Z step through it.
   const historyRef = useRef({ undo: [], redo: [] });
   const [historyLen, setHistoryLen] = useState([0, 0]);
+
+  // The results bar's height: dragged with the handle beneath it, remembered per browser; null = the CSS default.
+  const TOPBAR_KEY = 'phraselette.topbar.v1';
+  const topbarRef = useRef(null);
+  const [topbarHeight, setTopbarHeight] = useState(() => {
+    try { const v = Number(localStorage.getItem(TOPBAR_KEY)); return v >= 80 ? v : null; } catch { return null; }
+  });
+  const [resizing, setResizing] = useState(false);
+  const startTopbarDrag = useCallback((e) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = topbarRef.current?.getBoundingClientRect().height ?? 0;
+    const clamp = (h) => Math.max(80, Math.min(window.innerHeight * 0.7, Math.round(h)));
+    let last = startH;
+    const onMove = (ev) => { last = clamp(startH + ev.clientY - startY); setTopbarHeight(last); };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      setResizing(false);
+      try { localStorage.setItem(TOPBAR_KEY, String(last)); } catch { /* ignore */ }
+    };
+    setResizing(true);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, []);
+  const resetTopbar = useCallback(() => {
+    setTopbarHeight(null);
+    try { localStorage.removeItem(TOPBAR_KEY); } catch { /* ignore */ }
+  }, []);
   const bumpHistory = () => setHistoryLen([historyRef.current.undo.length, historyRef.current.redo.length]);
 
   const actions = useMemo(() => {
@@ -121,9 +151,9 @@ export default function Workspace({ session, onChangeModels }) {
   const anySearching = inlet ? (state.searching[inlet.id] ?? []).length > 0 : false;
 
   return (
-    <div className="workspace rainbow">
+    <div className={`workspace rainbow ${resizing ? 'resizing' : ''}`}>
       <Tooltip tooltip={state.tooltip} />
-      <div className="topbar glass">
+      <div className="topbar glass" ref={topbarRef} style={topbarHeight != null ? { height: topbarHeight } : undefined}>
         {range ? (
           <>
             <InletHeader state={state} inlet={inlet} rangeText={rangeText} inletTokens={inletTokens} onSearch={null} actions={actions} setTooltip={setTooltip} />
@@ -139,6 +169,7 @@ export default function Workspace({ session, onChangeModels }) {
           </div>
         )}
       </div>
+      <div className="topbar-resizer" role="separator" aria-orientation="horizontal" aria-label="resize the results bar" title="drag to resize the results bar · double-click to reset" onMouseDown={startTopbarDrag} onDoubleClick={resetTopbar} />
       <div className="columns">
         <div className="left">
           <Editor
@@ -146,7 +177,7 @@ export default function Workspace({ session, onChangeModels }) {
             tokens={state.tokens}
             probTokens={state.probTokens}
             inlets={state.inlets}
-            highlightType={highlightWell?.active ? highlightWell.type : null}
+            highlightType={state.highlightWellId === POS_HIGHLIGHT ? 'words' : highlightWell?.active ? highlightWell.type : null}
             range={range}
             isInlet={!!inlet}
             searching={anySearching}
@@ -177,23 +208,18 @@ export default function Workspace({ session, onChangeModels }) {
               </button>
             )}
             wells={state.wells}
-            highlightWellId={state.highlightWellId}
             onAdd={actions.addWell}
-            onRemove={actions.removeWell}
-            onHighlight={actions.highlight}
             inlet={inlet}
             inletTokens={inletTokens}
             constraints={cons}
             otherConstraints={otherCons}
             onAddConstraint={actions.addConstraint}
-            onRemoveConstraint={actions.removeConstraint}
           />
           <Inspector
             state={state}
             session={session}
             inlet={inlet}
             rangeText={rangeText}
-            hasRange={!!range}
             wells={wells}
             inletTokens={inletTokens}
             inletConstraints={cons}

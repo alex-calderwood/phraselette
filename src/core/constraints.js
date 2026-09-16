@@ -7,11 +7,9 @@
 // port of old/front-end/src/base/Constraint.js.
 import { uid, numWords, isWordToken } from './tokens.js';
 import { UPOS_TAGS } from '../lang/pos.js';
-import { ARPABET, VOWELS, explainPhone, soundOut } from '../lang/phones.js';
+import { ARPABET, VOWELS, explainPhone } from '../lang/phones.js';
 
 export const MODES = ['contains', 'exactly', 'starts with', 'ends with', 'in order'];
-/** Rhyme constraint modes: how the rephrasing should echo the reference word. */
-export const RHYME_MODES = ['rhymes with', 'assonance with', 'consonance with', 'alliterates with'];
 export const LETTERS = 'abcdefghijklmnopqrstuvwxyz'.split('');
 /** Stress categories: CMUdict's secondary stress (2) is folded into stressed (1). */
 export const STRESS_RANGE = ['0', '1'];
@@ -55,10 +53,10 @@ const MODE_FNS = { contains, exactly, 'starts with': startsWith, 'ends with': en
 /**
  * @typedef {Object} Constraint
  * @property {string} id
- * @property {'pos'|'sound'|'length'|'prob'|'rhyme'|'syllables'|'stress'|'letters'|'chars'|'semantic'} kind
+ * @property {'pos'|'sound'|'length'|'prob'|'syllables'|'stress'|'letters'|'chars'|'semantic'} kind
  * @property {string} inletId
  * @property {string} label
- * @property {boolean} [negate]   category and rhyme kinds: require the opposite ("does not contain")
+ * @property {boolean} [negate]   category kinds: require the opposite ("does not contain")
  * @property {number[]|null} [vector]  semantic kind: unit-length embedding of `reference`, filled in asynchronously
  * @property {number} [cutoff]         semantic kind: cosine similarity at which "close to" turns into "far from"
  */
@@ -71,13 +69,6 @@ export function makePosConstraint(inletId, tokens) {
 export function makeSoundConstraint(inletId, tokens) {
   const target = phonesOfTokens(tokens);
   return { id: uid('c'), kind: 'sound', inletId, label: 'sound', mode: 'contains', target, range: ARPABET, threshold: 1, reference: '' };
-}
-
-/** Rhyme with a reference word; defaults to the selection's last word. */
-export function makeRhymeConstraint(inletId, tokens) {
-  const words = tokens.filter(isWordToken);
-  const reference = words.length ? words[words.length - 1].text : '';
-  return { id: uid('c'), kind: 'rhyme', inletId, label: 'rhyme', mode: 'rhymes with', reference, sound: referenceSound(reference), threshold: 1 };
 }
 
 /** Syllable count window; defaults to exactly the selection's count. */
@@ -154,26 +145,6 @@ function tokenPhones(seq) {
   return out;
 }
 
-/** Pronunciation summary of a reference word for the rhyme constraint (first CMUdict entry). */
-export function referenceSound(word) {
-  const w = (word ?? '').trim().split(/\s+/).pop() ?? '';
-  if (!w) return null;
-  const s = soundOut(w);
-  if (!s.phonemes.length) return null;
-  return { word: w.toLowerCase(), phonemes: s.phonemes, rhymingPart: s.rhymingPart };
-}
-
-const vowelsOf = (phones) => phones.filter((p) => VOWELS.has(p));
-const consonantsOf = (phones) => phones.filter((p) => !VOWELS.has(p));
-const firstConsonant = (phones) => phones.find((p) => !VOWELS.has(p)) ?? null;
-/** Longest common suffix of two phone lists, as a fraction of the target's length. */
-function suffixOverlap(arr, target) {
-  if (!target.length) return 1;
-  let n = 0;
-  while (n < arr.length && n < target.length && arr[arr.length - 1 - n] === target[target.length - 1 - n]) n++;
-  return n / target.length;
-}
-
 /** Rough syllable count for words CMUdict does not know: vowel groups, minus a silent final e. */
 export function guessSyllables(word) {
   const w = word.toLowerCase().replace(/[^a-z]/g, '');
@@ -206,38 +177,6 @@ export function stressesOfTokens(tokens) {
 
 /** Lowercase letters and digits of a string, as a list. */
 export const lettersOfText = (text) => (text.toLowerCase().match(/\p{L}|\p{N}/gu) ?? []);
-
-function scoreRhyme(c, seq) {
-  const ref = c.sound;
-  if (!ref) return 1; // no known pronunciation for the reference: nothing to check
-  const words = seq.tokens.filter(isWordToken);
-  if (!words.length) return 0;
-  const phonesOf = (t) => (t.phonemes?.[0] ?? '').split(' ').filter(Boolean);
-  switch (c.mode) {
-    case 'rhymes with': {
-      const last = words[words.length - 1];
-      if (last.text.toLowerCase() === ref.word) return 0; // a word does not rhyme with itself
-      const parts = last.rhymingPart ?? [];
-      if (parts.some((p) => ref.rhymingPart.includes(p))) return 1;
-      const target = (ref.rhymingPart[0] ?? '').split(' ');
-      return Math.max(0, ...parts.map((p) => suffixOverlap(p.split(' '), target)));
-    }
-    case 'assonance with': {
-      const target = vowelsOf(ref.phonemes[0].split(' '));
-      return inOrder(vowelsOf(words.flatMap(phonesOf)), target);
-    }
-    case 'consonance with': {
-      const target = consonantsOf(ref.phonemes[0].split(' '));
-      return inOrder(consonantsOf(words.flatMap(phonesOf)), target);
-    }
-    case 'alliterates with': {
-      const onset = firstConsonant(ref.phonemes[0].split(' ')) ?? ref.phonemes[0].split(' ')[0];
-      return words.some((t) => (t.phonemes ?? []).some((p) => p.split(' ')[0] === onset)) ? 1 : 0;
-    }
-    default:
-      return 1;
-  }
-}
 
 function rangeScore(n, min, max) {
   if (n >= min && n <= max) return 1;
@@ -332,8 +271,6 @@ function rawScore(c, seq) {
       if (c.target.length === 0) return 1;
       return MODE_FNS[c.mode](lettersOfText(seq.text ?? ''), c.target);
     }
-    case 'rhyme':
-      return scoreRhyme(c, seq);
     case 'prob': {
       const v = seq.logProbMean;
       if (v == null) return 1; // unscored sequences are not penalised
@@ -391,12 +328,6 @@ export function constraintAdvice(constraints) {
     'ends with': 'end with the following',
     'in order': 'include the following sequence of',
   };
-  const rhymeText = {
-    'rhymes with': 'end with a word that rhymes with',
-    'assonance with': 'share vowel sounds with',
-    'consonance with': 'share consonant sounds with',
-    'alliterates with': 'contain a word beginning with the same sound as',
-  };
   let out = '';
   for (const c of constraints) {
     const not = c.negate ? 'not ' : '';
@@ -412,8 +343,6 @@ export function constraintAdvice(constraints) {
       out += `- Each response should be between ${c.min} and ${c.max} letters long, not counting spaces.\n`;
     } else if (c.kind === 'sound' && c.target.length) {
       out += `- If possible, some responses should ${not}contain words which ${modeText[c.mode]} ARPAbet phonemes: ${c.target.map(explainPhone).join(', ')}. For instance 'song' contains S AO NG. Do not mention or mark the phonemes.\n`;
-    } else if (c.kind === 'rhyme' && c.reference) {
-      out += `- Each response should ${not}${rhymeText[c.mode]} '${c.reference}'${c.mode === 'rhymes with' && !c.negate ? ` (but not '${c.reference}' itself)` : ''}.\n`;
     } else if (c.kind === 'stress' && c.target.length) {
       const beat = c.target.map((x) => (x === '1' ? 'DUM' : 'da')).join('-');
       out += `- If possible, responses should ${not}${modeText[c.mode]} syllable stresses, spoken as ${beat} (da = unstressed, DUM = stressed).\n`;
@@ -433,21 +362,24 @@ export function constraintAdvice(constraints) {
  * negated letters "contains" bans every token holding one of those letters
  * (stricter than the sift, which only needs one of them missing); the
  * probability constraint becomes a window on each token's log-probability.
+ * Positive "contains" (letters or sounds) steers the search instead of masking it.
  * Everything else stays a sift after generation. Null when nothing applies.
  */
 export function generationGate(constraints) {
   const letters = [];
   const sounds = [];
+  const needs = [];
   let prob = null;
   for (const c of constraints) {
     const g = gateFragment(c);
     if (!g) continue;
     if (g.kind === 'letters') letters.push(g.rule);
     else if (g.kind === 'sounds') sounds.push(g.rule);
+    else if (g.kind === 'needs') needs.push(g.rule);
     else if (g.kind === 'prob') prob = { min: Math.max(prob?.min ?? -Infinity, g.rule.min), max: Math.min(prob?.max ?? Infinity, g.rule.max) };
   }
-  if (!letters.length && !sounds.length && !prob) return null;
-  return { letters, sounds, prob };
+  if (!letters.length && !sounds.length && !needs.length && !prob) return null;
+  return { letters, sounds, needs, prob };
 }
 
 /**
@@ -461,11 +393,15 @@ export function gateFragment(c) {
   if (c.kind === 'letters' && c.target?.length) {
     if (c.mode === 'starts with' && !c.negate) return { kind: 'letters', rule: { mode: 'starts with', target: [...c.target] } };
     if (c.mode === 'contains' && c.negate) return { kind: 'letters', rule: { mode: 'avoid', target: [...c.target] } };
+    // a run the phrase must contain: no token can break it, so it steers the search rather than masking it
+    if (c.mode === 'contains') return { kind: 'needs', steer: true, rule: { kind: 'letters', target: [...c.target] } };
     return null;
   }
   if (c.kind === 'sound' && c.target?.length) {
     if ((c.mode === 'starts with' || c.mode === 'exactly') && !c.negate) return { kind: 'sounds', rule: { mode: c.mode, target: [...c.target] } };
     if (c.mode === 'contains' && c.negate) return { kind: 'sounds', rule: { mode: 'avoid', target: [...c.target] } };
+    // a phoneme run the phrase must contain: steers the search, judged as each word closes
+    if (c.mode === 'contains') return { kind: 'needs', steer: true, rule: { kind: 'sound', target: [...c.target] } };
     return null;
   }
   if (c.kind === 'prob' && Number.isFinite(c.min) && Number.isFinite(c.max)) return { kind: 'prob', rule: { min: c.min, max: c.max } };
@@ -474,6 +410,12 @@ export function gateFragment(c) {
 
 /** Can the sieve enforce this constraint while searching (rather than only sift by it)? */
 export const gateApplies = (c) => gateFragment(c) != null;
+
+/** How the sieve treats a constraint: 'mask' (tokens are cut), 'steer' (beams are ranked toward it), or null (sift only). */
+export function gateMode(c) {
+  const g = gateFragment(c);
+  return g ? (g.steer ? 'steer' : 'mask') : null;
+}
 
 /** The largest word count any length constraint allows (or null). */
 export function maxWordsAllowed(constraints) {

@@ -9,7 +9,7 @@ import { hoverProps } from './Tooltip.jsx';
 import { modelLabelFor, taskFor } from '../models/catalog.js';
 import { ROLE_GUIDE } from './AddWell.jsx';
 import { constraintSummary } from './ConstraintsPanel.jsx';
-import { gateApplies } from '../core/constraints.js';
+import { gateMode } from '../core/constraints.js';
 
 /** Render <i>…</i> from the model and bold the headword when an entry starts with it. */
 function entry(text, headword) {
@@ -81,7 +81,7 @@ function Menu({ items, style }) {
   }, [open]);
   return (
     <span className="well-menu" ref={ref}>
-      <button className="icon-button" style={style} title="more" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>⋯</button>
+      <button className="icon-button well-more" style={style} title="more" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>⋯</button>
       {open && (
         <div className="well-menu-list glass creamy" role="menu">
           {items.map((it, i) => it.divider
@@ -123,11 +123,12 @@ function searchFields(well, actions) {
   const notes = { key: 'notes', type: 'checkbox', label: 'notes on the thesaurus first', value: well.notes !== false, hint: 'Before the entries, ask the model to think freely about the thesaurus for a few sentences; the notes are shown in the request (and in the examples). Off drops the notes lines from every prompt.', onChange: (v) => actions.patchWell(well.id, { notes: v }) };
   let fields;
   let note;
+  const steer = { key: 'steer', label: 'steering', value: ss.steer, min: 0, max: 3, step: 0.1, hint: 'How hard beams are pulled toward a "contains" constraint they have not met yet: their rank is lowered by this times the log-chance of still meeting it in the tokens left. 0 only drops failures at the end; 1 takes the estimate at face value and tends to leave the letter to the last word; 2 (default) commits to a fitting word early.', onChange: set('steer') };
   if (CONTEXT_LIKE.has(well.type) && ss.mode === 'beam') {
-    fields = [...beamKnobs, { key: 'noRepeat', label: 'no-repeat n-gram', value: ss.noRepeat, min: 0, max: 4, hint: 'A word n-gram already generated in a beam may not recur (2 was the original build\'s setting; 0 turns it off).', onChange: set('noRepeat') }];
+    fields = [...beamKnobs, { key: 'noRepeat', label: 'no-repeat n-gram', value: ss.noRepeat, min: 0, max: 4, hint: 'A word n-gram already generated in a beam may not recur (2 was the original build\'s setting; 0 turns it off).', onChange: set('noRepeat') }, ...(well.type === 'sieve' ? [steer] : [])];
     note = `${ss.beams} rephrasings`;
   } else if (CONTEXT_LIKE.has(well.type)) {
-    fields = [{ key: 'k', label: 'continuations', value: ss.k, min: 1, max: 64, hint: 'Top-K first tokens, each continued greedily.', onChange: set('k') }];
+    fields = [{ key: 'k', label: 'continuations', value: ss.k, min: 1, max: 64, hint: 'Top-K first tokens, each continued greedily.', onChange: set('k') }, ...(well.type === 'sieve' ? [steer] : [])];
     note = `${ss.k} rephrasings`;
   } else if (ss.mode === 'beam') {
     fields = [...beamKnobs,
@@ -154,17 +155,24 @@ function searchFields(well, actions) {
  */
 function GateNote({ constraints, gate, bidirectional }) {
   if (bidirectional) return <div className="gate-note">A context-fill model is loaded; the sieve cannot gate its candidates yet, so this well behaves like the context well.</div>;
-  const applied = constraints.filter(gateApplies);
-  const sifted = constraints.filter((c) => !gateApplies(c));
+  const masked = constraints.filter((c) => gateMode(c) === 'mask');
+  const steered = constraints.filter((c) => gateMode(c) === 'steer');
+  const sifted = constraints.filter((c) => !gateMode(c));
   const st = gate?.stats;
   return (
     <div className="gate-note">
       <div className="gate-line">
-        <span className="gate-label">while searching</span>
-        {applied.length
-          ? applied.map((c) => <span key={c.id} className="gate-chip on">{constraintSummary(c)}</span>)
-          : <span className="gate-none">nothing yet · letters (starts with, must not contain), sounds (starts with, exactly, must not contain) and the probability window can be applied here</span>}
+        <span className="gate-label">cut while searching</span>
+        {masked.length
+          ? masked.map((c) => <span key={c.id} className="gate-chip on">{constraintSummary(c)}</span>)
+          : <span className="gate-none">nothing yet · letters (starts with, must not contain), sounds (starts with, exactly, must not contain) and the probability window cut tokens here; letters or sounds “contains” steers the beams</span>}
       </div>
+      {steered.length > 0 && (
+        <div className="gate-line">
+          <span className="gate-label">steered toward</span>
+          {steered.map((c) => <span key={c.id} className="gate-chip on steer">{constraintSummary(c)}</span>)}
+        </div>
+      )}
       {sifted.length > 0 && (
         <div className="gate-line">
           <span className="gate-label">sifting afterwards</span>
@@ -301,7 +309,8 @@ export default function WellView({ well, inlet, inletTokens, constraints, insigh
             </section>
           )}
 
-          {inletTokens.length > 0 && <TokenRow tokens={inletTokens} wellType={well.type} />}
+          {/* the inlet's words with their tags: only for the wells that view or search by those tags, not the role wells */}
+          {inletTokens.length > 0 && !def.roles && <TokenRow tokens={inletTokens} wellType={well.type} />}
           {well.type === 'sieve' && inlet && <GateNote constraints={constraints} gate={insight?.gate} bidirectional={bidirectional} />}
           {ctxLike && inlet && insight?.histogram && (
             <div className="insight-histogram" title="log-probability of every candidate the model weighed while searching">

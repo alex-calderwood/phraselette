@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CARDS, PRESETS, findModel, dtypeFor, sizeFor, formatMB, estimateMemoryMB, deviceMemoryInfo, benchLabel, BENCHMARK_NOTE } from '../models/catalog.js';
+import { CARDS, PRESETS, findModel, dtypeFor, sizeFor, formatMB, estimateMemoryMB, deviceMemoryInfo, benchLabel, BENCH_SYMBOL, BENCHMARK_NOTE } from '../models/catalog.js';
 import { listCachedModels, deleteCachedModel, clearModelCache } from '../models/cache.js';
 import { detectDevice } from '../models/client.js';
 import { loadCard } from '../models/session.js';
@@ -28,7 +28,7 @@ function ModelRow({ card, color, choice, onChoose, progress, disabled, loaded, d
       <div className="model-row-main">
         <div className="model-row-text">
           <span className="model-row-title">{card.title}</span>
-          <span className="model-row-uses">{card.usedFor.map((u) => u.name).join(' · ')}</span>
+          <span className="model-row-uses"><span className="model-row-uses-label">used for: </span>{card.usedFor.map((u) => u.name).join(' · ')}</span>
         </div>
         <div className="model-row-pick">
           <select value={model.id} disabled={disabled} onChange={(e) => onChoose(card.id, e.target.value)} aria-label={`${card.title} model`}>
@@ -42,7 +42,7 @@ function ModelRow({ card, color, choice, onChoose, progress, disabled, loaded, d
             })}
           </select>
           <span className="model-row-note" title={card.blurb}>{model.note}{dtype ? ` · ${dtype}` : ''}</span>
-          {model.bench && <span className="model-row-note" title={`${model.bench.about} Source: ${model.bench.note}.`}>Benchmark {model.bench.score} ({model.bench.name})</span>}
+          {model.bench && <span className="model-row-note" title={`${BENCHMARK_NOTE} ${model.bench.about} Source: ${model.bench.note}.`}><span className="bench-symbol" aria-label="benchmark">{BENCH_SYMBOL}</span> {model.bench.score} · {model.bench.name}</span>}
         </div>
       </div>
       {progress && (
@@ -125,7 +125,6 @@ export default function Landing({ onReady }) {
     <div className="landing rainbow">
       <header className="landing-header">
         <h1 className="landing-title">Phraselette</h1>
-        <div className="landing-rule" aria-hidden="true" />
         <p className="landing-tagline">A poet's procedural palette.</p>
         <p className="landing-intro">
           Phraselette is a word (and phrase) search toolbox. It is centered on the idea of 'word wells'. Each well is a customizable word search tool that gives you a new lens on your language choices. Each provides phrase alternatives using attributes of probablistic language models not surfaced by chatbots, and gives you a variety of tunable linguistic probes or search procedures. Phraselette also allows you to constrain text generation using a number of 'poetic' constraint procedures.
@@ -139,22 +138,23 @@ export default function Landing({ onReady }) {
         </p>
       </header>
 
-      <div className="landing-actions">
-        <button className="big-button" disabled={!device || loading} onClick={begin}>
-          {loading ? 'Loading…' : hasSaved ? 'Continue' : 'Begin'}
-        </button>
-        {device ? (
-          <div className="budget-line">
-            <span>{formatMB(uniqueMB)} to download once{CARDS.every((c) => { const m = findModel(c, choices[c.id]); return m.bundled || cachedIds.has(m.id); }) ? ' (already cached)' : ''}</span>
-            <span aria-hidden="true">·</span>
-            <span>≈ {formatMB(estMB)}{memInfo.deviceGB ? ` / ${memInfo.deviceGB} GB` : ''} memory while running</span>
-            <span aria-hidden="true">·</span>
-            <span className={`device-inline ${device.device === 'wasm' ? 'cpu' : ''}`}><span className="dot" /> {device.label}{device.device === 'webgpu' && !device.fp16 ? ' (no fp16)' : ''}</span>
-          </div>
-        ) : (
-          <div className="budget-line">detecting hardware…</div>
-        )}
-        {error && <div className="landing-error">{error}</div>}
+      {/* how to use, with Begin / Continue beside it */}
+      <div className="landing-row">
+        <section className="howto" aria-label="how to use">
+          <div className="howto-title">How to use</div>
+          <ol className="landing-steps">
+            <li><span><b>Write</b> in the editor.</span></li>
+            <li><span><b>Highlight a phrase</b>, press <b>Search</b>.</span></li>
+            <li><span><b>Click a rephrasing</b> to swap it in. Add constraints to steer the next search.</span></li>
+          </ol>
+        </section>
+        <div className="landing-actions">
+          <button className="big-button" disabled={!device || loading} onClick={begin}>
+            {loading ? 'Loading…' : hasSaved ? 'Continue' : 'Begin'}
+          </button>
+          {!device && <div className="budget-line">detecting hardware…</div>}
+          {error && <div className="landing-error">{error}</div>}
+        </div>
       </div>
 
       {device && (
@@ -162,7 +162,7 @@ export default function Landing({ onReady }) {
           <div className="models-panel-head">
             <div>
               <div className="models-panel-title">Models</div>
-              <div className="models-panel-note">Phraselette uses small language models that each run in your browser. If you are on a system without a GPU or smaller RAM, you may want to choose a smaller model.</div> 
+              <div className="models-panel-note">Phraselette runs small language models inside your browser, so nothing you write leaves your machine. The models are downloaded once, on Begin, and kept in the browser's cache. If you are on a system without a GPU or with less RAM, choose a smaller model.</div>
               {/*  {BENCHMARK_NOTE} used to be here but it is obviously not meant to be in the main description of Phraselette */}
             </div>
             <div className="presets compact">
@@ -173,6 +173,11 @@ export default function Landing({ onReady }) {
               ))}
             </div>
           </div>
+          <div className="models-stats" aria-label="what this selection costs">
+            <span className="models-stat" title="Model files fetched the first time, then kept in the browser's cache."><span className="models-stat-label">download</span>{formatMB(uniqueMB)}{CARDS.every((c) => { const m = findModel(c, choices[c.id]); return m.bundled || cachedIds.has(m.id); }) ? ' · cached' : ''}</span>
+            <span className="models-stat" title="Rough memory the models take while running, against what this device reports."><span className="models-stat-label">memory</span>≈ {formatMB(estMB)}{memInfo.deviceGB ? ` of ${memInfo.deviceGB} GB` : ''}</span>
+            <span className={`models-stat device-inline ${device.device === 'wasm' ? 'cpu' : ''}`} title="Where the models run."><span className="models-stat-label">runs on</span><span className="dot" /> {device.label}{device.device === 'webgpu' && !device.fp16 ? ' (no fp16)' : ''}</span>
+          </div>
           <div className="model-rows">
             {CARDS.map((card, i) => (
               <ModelRow key={card.id} card={card} color={cardColors[i]} choice={choices[card.id]} onChoose={choose}
@@ -181,7 +186,7 @@ export default function Landing({ onReady }) {
           </div>
           <details className="cached" onToggle={(e) => e.currentTarget.open && refreshCache()}>
             <summary title="Model files this browser has stored so they are not downloaded again (Cache Storage). Deleting only frees disk space; the model re-downloads next time it is chosen.">
-              Cached models{cached.length ? ` · ${formatMB(cachedMB)}` : ' · none yet'}
+              <span aria-hidden="true">💾</span> Cached models{cached.length ? ` · ${cached.length} · ${formatMB(cachedMB)}` : ' · none yet'}
             </summary>
             {cached.length > 0 ? (
               <ul className="cached-list">
@@ -206,15 +211,6 @@ export default function Landing({ onReady }) {
           )}
         </section>
       )}
-
-      <section className="howto" aria-label="how to use">
-        <div className="howto-title">How to use it</div>
-        <ol className="landing-steps">
-          <li><b>Write</b> a poem with the text editor.</li>
-          <li><b>Highlight a phrase</b> and press <b>Search</b></li>
-          <li><b>Sift the rephrasings.</b> Click one to swap it into the text. Lock a constraint, such as the part of speech, word count, or a sound, to steer the next search.</li>
-        </ol>
-      </section>
 
       <div className="landing-disclaimer">
         Phraselette 2.0 · re-vibecoded by Fable 5.1 from the DIS ’25 paper and the original study build.

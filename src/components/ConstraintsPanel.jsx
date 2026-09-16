@@ -1,21 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePopoverPosition } from './usePopover.js';
 import { ConstraintView } from './ConstraintViews.jsx';
 import {
   makePosConstraint, makeSoundConstraint, makeLengthConstraint, makeProbConstraint,
-  makeRhymeConstraint, makeSyllableConstraint, makeStressConstraint, makeLettersConstraint, makeCharsConstraint,
+  makeSyllableConstraint, makeStressConstraint, makeLettersConstraint, makeCharsConstraint,
   makeSemanticConstraint, cloneConstraint, sameConstraint,
 } from '../core/constraints.js';
 import { wellStyles, FEATURE_LABELS } from '../core/wells.js';
 
-/** Which well's colors a constraint kind borrows, so the two stay visually related. */
-const KIND_WELL = { pos: 'words', length: 'words', letters: 'words', chars: 'words', sound: 'sound', rhyme: 'sound', syllables: 'sound', stress: 'sound', prob: 'context', semantic: 'dictionary' };
+/** Which color family a constraint kind borrows: its well's, so the two stay visually related, or the yellow 'model' family (wells.js EXTRA_FAMILIES). */
+const KIND_WELL = { pos: 'words', length: 'words', letters: 'words', chars: 'words', sound: 'sound', syllables: 'sound', stress: 'sound', prob: 'model', semantic: 'model' };
+
+/** How the "+ Constraint" popover groups the kinds. */
+const KIND_GROUPS = [
+  { title: 'Model', hint: 'what the language models make of it', ids: ['semantic', 'prob'] },
+  { title: 'Words & letters', hint: 'what the rephrasing is made of', ids: ['pos', 'length', 'letters', 'chars'] },
+  { title: 'Sound', hint: 'how it sounds, from the pronouncing dictionary', ids: ['sound', 'syllables', 'stress'] },
+];
 
 const KINDS = [
   { id: 'pos', title: 'Part of speech', desc: 'Rephrasings must contain, start with, end with, or follow a pattern of parts of speech. Starts from the selection\'s own pattern.' },
   { id: 'length', title: 'Word count', desc: 'A minimum and maximum number of words. Starts at the selection\'s length.' },
   { id: 'sound', title: 'Sound', desc: 'Phonemes the rephrasing should contain or start/end with. Starts from the selection\'s pronunciation; type another word to borrow its sound.' },
-  { id: 'rhyme', title: 'Rhyme', desc: 'End on a word that rhymes with a reference word, or echo its vowels (assonance), consonants (consonance) or opening sound (alliteration). Starts from the selection\'s last word.' },
   { id: 'syllables', title: 'Syllables', desc: 'A minimum and maximum number of syllables, counted from the pronouncing dictionary. Starts at exactly the selection\'s count.' },
   { id: 'stress', title: 'Stress pattern', desc: 'A rhythm of stressed and unstressed syllables the rephrasing should follow, contain, or start/end with. Starts from the selection\'s own scansion.' },
   { id: 'letters', title: 'Letters', desc: 'Letters the rephrasing must start with (acrostics), contain, or avoid (lipograms: switch to “must not”). Starts from the selection\'s first letter.' },
@@ -29,7 +36,6 @@ function make(kind, inletId, tokens) {
     case 'pos': return makePosConstraint(inletId, tokens);
     case 'length': return makeLengthConstraint(inletId, tokens);
     case 'sound': return makeSoundConstraint(inletId, tokens);
-    case 'rhyme': return makeRhymeConstraint(inletId, tokens);
     case 'syllables': return makeSyllableConstraint(inletId, tokens);
     case 'stress': return makeStressConstraint(inletId, tokens);
     case 'letters': return makeLettersConstraint(inletId, tokens);
@@ -41,7 +47,10 @@ function make(kind, inletId, tokens) {
 }
 
 /**
- * "+ Constraint" button with its chooser popover; lives next to "+ Add well".
+ * "+ Constraint" button with its chooser popover; sits in the inspector's
+ * constraints section. The popover is portalled to the body because the
+ * inspector's backdrop filter would otherwise trap a fixed element inside its
+ * scroll box.
  * `others` lists the other inlets that carry constraints ([{ id, text, constraints }])
  * so the same constraints can be reapplied to this inlet in one click.
  */
@@ -77,29 +86,34 @@ export function AddConstraint({ inlet, inletTokens, constraints = [], others = [
     <div className="add-well">
       <button
         ref={btnRef}
-        className={`add-well-button ${open ? 'open' : ''}`}
+        className={`add-well-button add-constraint-button ${open ? 'open' : ''}`}
         disabled={!inlet}
         title={inlet ? 'constrain the rephrasings for this inlet' : 'select a phrase and search first'}
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="dialog"
       >
-        <span aria-hidden="true">＋</span> Constraint
+        <span className="plus" aria-hidden="true">＋</span> Constraint
       </button>
-      {open && inlet && (
+      {open && inlet && createPortal(
         <div ref={popRef} className="popover glass creamy" style={pos ?? undefined} role="dialog" aria-label="Add a constraint">
           <div className="popover-head"><span className="popover-title">Constrain the rephrasings by</span></div>
-          <div className="well-choices">
-            {KINDS.map((k) => {
-              const st = wellStyles(KIND_WELL[k.id], true);
-              return (
-                <button key={k.id} className="well-choice" style={{ '--well': st.color, '--well-deep': st.textColor, '--well-glass': st.solid }} onClick={() => add(k.id)}>
-                  <span className="well-choice-title">{k.title}</span>
-                  <span className="well-choice-desc">{k.desc}</span>
-                </button>
-              );
-            })}
-          </div>
+          {KIND_GROUPS.map((group) => (
+            <div key={group.title} className="popover-group">
+              <div className="popover-group-title">{group.title}<span className="popover-group-hint">{group.hint}</span></div>
+              <div className="well-choices constraint-choices">
+                {group.ids.map((id) => KINDS.find((k) => k.id === id)).filter(Boolean).map((k) => {
+                  const st = wellStyles(KIND_WELL[k.id], true);
+                  return (
+                    <button key={k.id} className="well-choice" style={{ '--well': st.color, '--well-deep': st.textColor, '--well-glass': st.solid }} onClick={() => add(k.id)}>
+                      <span className="well-choice-title">{k.title}</span>
+                      <span className="well-choice-desc">{k.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
           {reusable.length > 0 && (
             <>
               <div className="popover-subhead">or reuse a constraint from another inlet</div>
@@ -125,7 +139,8 @@ export function AddConstraint({ inlet, inletTokens, constraints = [], others = [
               </div>
             </>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -141,10 +156,6 @@ export function constraintSummary(c) {
   if (c.kind === 'prob') return `probability ${fmt(c.min)} → ${fmt(c.max)}`;
   if (c.kind === 'semantic') return `meaning ${c.mode} “${c.reference || '?'}”`;
   const not = c.negate ? 'not ' : '';
-  if (c.kind === 'rhyme') {
-    const negated = { 'rhymes with': 'does not rhyme with', 'assonance with': 'no assonance with', 'consonance with': 'no consonance with', 'alliterates with': 'does not alliterate with' };
-    return `${c.negate ? negated[c.mode] : c.mode} “${c.reference || '?'}”`;
-  }
   if (c.kind === 'stress') return `stress · ${not}${c.mode} ${c.target.map((x) => (x === '1' ? 'ˈ' : '˘')).join('') || '∅'}`;
   if (c.kind === 'letters') return `letters · ${not}${c.mode} ${c.target.join('') || '∅'}`;
   return `${FEATURE_LABELS[c.kind]} · ${not}${c.mode} ${c.target.join(' ') || '∅'}`;

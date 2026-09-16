@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { MODES, RHYME_MODES, SEMANTIC_MODES, SEMANTIC_CUTOFF, phonesOfTokens, referenceSound, semanticSimilarity } from '../core/constraints.js';
+import { MODES, SEMANTIC_MODES, SEMANTIC_CUTOFF, semanticSimilarity } from '../core/constraints.js';
 import { embeddingsLoaded } from '../models/catalog.js';
-import { tagWithWink, attachPhones } from '../lang/tagger.js';
+import SequenceEditor from './SequenceEditor.jsx';
 import { logProbColor, humanLog } from '../lib/colors.js';
 
 function Wrapper({ styles, onDelete, children }) {
@@ -23,71 +23,17 @@ function NegateSelect({ constraint, styles, onPatch }) {
   );
 }
 
-/** POS, sound, stress or letters: a mode select plus an editable list of categories. */
+/** POS, sound, stress or letters: must / must not, a mode, and the target sequence in a tag-style editor (SequenceEditor). */
 export function CategoryConstraintView({ constraint, styles, onPatch, onDelete }) {
-  const setTarget = (target) => onPatch({ target });
-  const [ref, setRef] = useState(constraint.reference ?? '');
-  const isSound = constraint.kind === 'sound';
-  const labelFor = (r) => constraint.labels?.[r] ?? r;
-  const defaultItem = constraint.range[isSound ? 0 : constraint.kind === 'pos' ? 7 : 0];
-
-  const useReference = () => {
-    const toks = attachPhones(tagWithWink(ref));
-    const target = phonesOfTokens(toks);
-    onPatch({ target, reference: ref });
-  };
-
   return (
     <Wrapper styles={styles} onDelete={onDelete}>
-      {isSound && (
-        <form className="constraint-ref" onSubmit={(e) => { e.preventDefault(); useReference(); }}>
-          <input style={styles.button} placeholder="type a word to borrow its sound…" value={ref} onChange={(e) => setRef(e.target.value)} />
-          <button type="submit" style={styles.button}>›</button>
-        </form>
-      )}
       <div className="constraint-line">
         <NegateSelect constraint={constraint} styles={styles} onPatch={onPatch} />
         <select style={styles.button} value={constraint.mode} onChange={(e) => onPatch({ mode: e.target.value })}>
           {MODES.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
-        <div className="constraint-targets">
-          {constraint.target.map((v, i) => (
-            <span className="constraint-target" key={i}>
-              <select style={styles.button} value={v} onChange={(e) => setTarget(constraint.target.map((x, j) => (j === i ? e.target.value : x)))}>
-                {constraint.range.map((r) => <option key={r} value={r}>{labelFor(r)}</option>)}
-              </select>
-              <button className="mini-delete" onClick={() => setTarget(constraint.target.filter((_, j) => j !== i))}>×</button>
-            </span>
-          ))}
-        </div>
-        <button style={styles.button} title="add" onClick={() => setTarget([...constraint.target, defaultItem])}>＋</button>
-        <button style={styles.button} title="remove last" onClick={() => setTarget(constraint.target.slice(0, -1))}>−</button>
       </div>
-    </Wrapper>
-  );
-}
-
-/** Rhyme: a reference word, a mode (rhyme / assonance / consonance / alliteration) and the sound it resolves to. */
-export function RhymeConstraintView({ constraint, styles, onPatch, onDelete }) {
-  const [ref, setRef] = useState(constraint.reference ?? '');
-  const useReference = () => onPatch({ reference: ref.trim(), sound: referenceSound(ref) });
-  const snd = constraint.sound;
-  const shown = snd
-    ? (constraint.mode === 'rhymes with' ? snd.rhymingPart[0] : snd.phonemes[0])
-    : (constraint.reference ? 'no pronunciation known for this word' : 'type a word');
-  return (
-    <Wrapper styles={styles} onDelete={onDelete}>
-      <div className="constraint-line">
-        <NegateSelect constraint={constraint} styles={styles} onPatch={onPatch} />
-        <select style={styles.button} value={constraint.mode} onChange={(e) => onPatch({ mode: e.target.value })}>
-          {RHYME_MODES.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
-        <form className="constraint-ref" onSubmit={(e) => { e.preventDefault(); useReference(); }}>
-          <input style={styles.button} placeholder="a word to rhyme with…" value={ref} onChange={(e) => setRef(e.target.value)} onBlur={useReference} />
-          <button type="submit" style={styles.button}>›</button>
-        </form>
-      </div>
-      <div className="constraint-line"><span className="text constraint-hint">{shown}</span></div>
+      <SequenceEditor kind={constraint.kind} range={constraint.range} labels={constraint.labels} target={constraint.target} onChange={(target) => onPatch({ target })} styles={styles} />
     </Wrapper>
   );
 }
@@ -301,7 +247,6 @@ export function LogHistogram({ data, min, max, onChange, readOnly = false }) {
 export function ConstraintView(props) {
   const { constraint } = props;
   if (['pos', 'sound', 'stress', 'letters'].includes(constraint.kind)) return <CategoryConstraintView {...props} />;
-  if (constraint.kind === 'rhyme') return <RhymeConstraintView {...props} />;
   if (['length', 'syllables', 'chars'].includes(constraint.kind)) return <RangeConstraintView {...props} />;
   if (constraint.kind === 'prob') return <HistogramConstraintView {...props} />;
   if (constraint.kind === 'semantic') return <SemanticConstraintView {...props} />;

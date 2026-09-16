@@ -4,16 +4,28 @@ import { randomRole } from '../lang/roles.js';
 import { uid } from './tokens.js';
 import { TEMPLATES } from '../models/prompts.js';
 
-export const WELL_TYPES = ['words', 'context', 'sieve', 'sound', 'thesaurus', 'reader', 'dictionary'];
+// 'words' is no longer a well: its part-of-speech view and editor coloring live in the top bar (InletHeader).
+// Its definition stays for the color family the word constraints borrow and for the tagged token row.
+export const WELL_TYPES = ['sieve', 'context', 'thesaurus', 'reader', 'dictionary', 'sound'];
+
+/** Pseudo highlight id: the editor colored by part of speech, toggled from the top bar rather than a well. */
+export const POS_HIGHLIGHT = 'pos';
 const palette = rainbowColors(7, 0.45); // fixed at the original six wells + aggregate so adding a type does not recolor the others
 
 /** Wells that search the probabilities model directly (the sieve is the context well with constraints applied while searching). */
 export const CONTEXT_LIKE = new Set(['context', 'sieve']);
 
+/** How the "+ Add well" popover groups the types. */
+export const WELL_GROUPS = [
+  { title: 'Language-model search', hint: 'rephrasings from the probabilities model', types: ['sieve', 'context'] },
+  { title: 'Role wells', hint: 'a chat model playing a role you describe', types: ['thesaurus', 'dictionary', 'reader'] },
+  { title: 'Views', hint: 'see the phrase through a lens; they do not search', types: ['sound'] },
+];
+
 export const WELL_DEFS = {
   words: {
     title: 'words',
-    description: 'Part of speech and word count: view them, lock them as constraints. Always on.',
+    description: 'Part of speech and word count (shown in the top bar; not a well).',
     features: ['pos', 'length'],
     canSearch: false,
     roles: false,
@@ -23,7 +35,7 @@ export const WELL_DEFS = {
   },
   context: {
     title: 'context',
-    description: 'What a language model expects here. With a context-fill model, words that fit both sides of the inlet; otherwise the likeliest continuations of the preceding text, with a histogram of their probabilities and a probability range constraint.',
+    description: '(legacy) A plain language model\'s likeliest words here, with a probability histogram. The sieve does this with constraints.',
     features: ['prob'],
     canSearch: true,
     roles: false,
@@ -32,7 +44,7 @@ export const WELL_DEFS = {
   },
   sieve: {
     title: 'sieve',
-    description: 'The context well with the constraints applied while it searches, not only afterwards: letters (starts with, must not contain), sounds (starts with, exactly, must not contain) and the probability window prune tokens as the model proposes them, so a wide search reaches words the plain context well never surfaces. The well lists which of the inlet\'s constraints it can apply; the rest sift the results.',
+    description: 'Context search with constraints applied as it searches: letters, sounds and probability cut or steer the model toward rarer words.',
     features: ['prob'],
     canSearch: true,
     roles: false,
@@ -41,7 +53,7 @@ export const WELL_DEFS = {
   },
   sound: {
     title: 'sound',
-    description: 'Phonemes (ARPAbet) of each word, and constraints over sounds: start with a K, rhyme with the end of the selection, contain a given cluster.',
+    description: 'The phonemes (ARPAbet) of each word; home of the sound, syllable and stress constraints.',
     features: ['sound'],
     canSearch: false,
     roles: false,
@@ -50,7 +62,7 @@ export const WELL_DEFS = {
   },
   thesaurus: {
     title: 'thesaurus',
-    description: "A stylistic thesaurus. Describe the kind you want in plain text: 'a wizard's spellbook', 'a thesaurus of meaningless words'.",
+    description: "A stylistic thesaurus you describe in plain text: 'a wizard's spellbook', 'a thesaurus of meaningless words'.",
     features: [],
     canSearch: true,
     roles: true,
@@ -91,8 +103,8 @@ export const SEARCH_DEFAULTS = {
     fast: { k: 24 },
   },
   sieve: { // wider than the context well: the gate cuts the space first, the width then spreads over what is left
-    beam: { beams: 48, groups: 12, diversity: 1.0, lengthPenalty: 1.0, noRepeat: 2 },
-    fast: { k: 48 },
+    beam: { beams: 48, groups: 12, diversity: 1.0, lengthPenalty: 1.0, noRepeat: 2, steer: 2.0 },
+    fast: { k: 48, steer: 2.0 },
   },
   thesaurus: {
     beam: { beams: 4, groups: 4, perBeam: 4, diversity: 1.0, lengthPenalty: 1.0, tokensPerEntry: 15 },
@@ -118,7 +130,7 @@ export function searchSettings(well) {
   return p;
 }
 
-export const FEATURE_LABELS = { pos: 'part of speech', length: 'word count', sound: 'sound', prob: 'probability', rhyme: 'rhyme', syllables: 'syllables', stress: 'stress', letters: 'letters', chars: 'characters', semantic: 'semantic similarity' };
+export const FEATURE_LABELS = { pos: 'part of speech', length: 'word count', sound: 'sound', prob: 'probability', syllables: 'syllables', stress: 'stress', letters: 'letters', chars: 'characters', semantic: 'semantic similarity' };
 
 export function makeWell(type) {
   const def = WELL_DEFS[type];
@@ -133,9 +145,12 @@ export function makeWell(type) {
   };
 }
 
-/** A well type's family color, or the shade-th sibling of it (see familyShade). */
+/** Color families that are not wells: the model constraints (probability, semantic similarity) wear yellow. */
+export const EXTRA_FAMILIES = { model: '#ffe680' };
+
+/** A well type's (or extra family's) color, or the shade-th sibling of it (see familyShade). */
 export function wellColor(type, shade = 0) {
-  return familyShade(WELL_DEFS[type]?.color ?? AGGREGATE_COLOR, shade);
+  return familyShade(WELL_DEFS[type]?.color ?? EXTRA_FAMILIES[type] ?? AGGREGATE_COLOR, shade);
 }
 
 /** Style bundle for a well's panels and buttons. */

@@ -71,3 +71,52 @@ export const PHONE_EXAMPLES = {
   SH: '(sh)y', T: '(t)ie', TH: '(th)igh', V: '(v)ie', W: '(w)ise', Y: '(y)acht', Z: '(z)oo', ZH: 'plea(s)ure',
 };
 export const explainPhone = (p) => (PHONE_EXAMPLES[p] ? `${p} as in ${PHONE_EXAMPLES[p]}` : p);
+
+/**
+ * Three ways of writing each sound, shown stacked on the constraint tiles:
+ * the ARPAbet symbol (the key), its IPA value, and the respelling used by
+ * Wikipedia's "Pronunciation respelling for English" with that page's example
+ * word. CMUdict does not separate the vowels of "lot" and "father" (both AA) or
+ * of "strut" and "comma" (both AH), so those tiles give the stressed member.
+ */
+export const PHONE_DETAILS = {
+  AA: { ipa: 'ɑ', respell: 'ah', example: 'father' },
+  AE: { ipa: 'æ', respell: 'a', example: 'trap' },
+  AH: { ipa: 'ʌ', respell: 'u', example: 'strut' },
+  AO: { ipa: 'ɔ', respell: 'aw', example: 'thought' },
+  AW: { ipa: 'aʊ', respell: 'ow', example: 'mouth' },
+  AY: { ipa: 'aɪ', respell: 'eye', example: 'price' },
+  EH: { ipa: 'ɛ', respell: 'e', example: 'dress' },
+  ER: { ipa: 'ɜr', respell: 'ur', example: 'nurse' },
+  EY: { ipa: 'eɪ', respell: 'ay', example: 'face' },
+  IH: { ipa: 'ɪ', respell: 'i', example: 'kit' },
+  IY: { ipa: 'i', respell: 'ee', example: 'fleece' },
+  OW: { ipa: 'oʊ', respell: 'oh', example: 'goat' },
+  OY: { ipa: 'ɔɪ', respell: 'oy', example: 'choice' },
+  UH: { ipa: 'ʊ', respell: 'uu', example: 'foot' },
+  UW: { ipa: 'u', respell: 'oo', example: 'goose' },
+  B: { ipa: 'b', respell: 'b', example: 'buy' },
+  CH: { ipa: 'tʃ', respell: 'ch', example: 'church' },
+  D: { ipa: 'd', respell: 'd', example: 'dye' },
+  DH: { ipa: 'ð', respell: 'dh', example: 'thy' },
+  F: { ipa: 'f', respell: 'f', example: 'fight' },
+  G: { ipa: 'ɡ', respell: 'g', example: 'guy' },
+  HH: { ipa: 'h', respell: 'h', example: 'high' },
+  JH: { ipa: 'dʒ', respell: 'j', example: 'jive' },
+  K: { ipa: 'k', respell: 'k', example: 'kite' },
+  L: { ipa: 'l', respell: 'l', example: 'lie' },
+  M: { ipa: 'm', respell: 'm', example: 'my' },
+  N: { ipa: 'n', respell: 'n', example: 'nigh' },
+  NG: { ipa: 'ŋ', respell: 'ng', example: 'sing' },
+  P: { ipa: 'p', respell: 'p', example: 'pie' },
+  R: { ipa: 'r', respell: 'r', example: 'rye' },
+  S: { ipa: 's', respell: 's', example: 'sigh' },
+  SH: { ipa: 'ʃ', respell: 'sh', example: 'shy' },
+  T: { ipa: 't', respell: 't', example: 'tie' },
+  TH: { ipa: 'θ', respell: 'th', example: 'thigh' },
+  V: { ipa: 'v', respell: 'v', example: 'vie' },
+  W: { ipa: 'w', respell: 'w', example: 'wye' },
+  Y: { ipa: 'j', respell: 'y', example: 'yes' },
+  Z: { ipa: 'z', respell: 'z', example: 'zoo' },
+  ZH: { ipa: 'ʒ', respell: 'zh', example: 'vision' },
+};

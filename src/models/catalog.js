@@ -249,7 +249,7 @@ export const CARDS = [
     slots: ['pos'],
     blurb: 'Tags nouns, verbs and friends.',
     usedFor: [
-      { name: 'Words well', desc: 'shows each word\'s part of speech and colors the editor by it' },
+      { name: 'Part-of-speech tags', desc: 'shown under the phrase in the top bar, with a toggle that colors the editor by them' },
       { name: 'Constraints', desc: 'lock a part-of-speech or stress pattern that rephrasings must follow' },
     ],
     defaultModel: 'wink',
@@ -374,6 +374,9 @@ export function modelLabelFor(session, wellType) {
 }
 
 /** Short "benchmark 52" label for dropdowns, or null when no comparable score is published. */
+/** Benchmark symbol (a dial) used wherever a score is shown; see BENCHMARK_NOTE for what the score means. */
+export const BENCH_SYMBOL = '◐';
+
 export function benchLabel(model) {
-  return model.bench ? `benchmark ${Math.round(model.bench.score)}` : null;
+  return model.bench ? `${BENCH_SYMBOL} ${Math.round(model.bench.score)}` : null;
 }
