@@ -194,7 +194,7 @@ export default function WellView({ well, inlet, inletTokens, constraints, insigh
   const open = !well.collapsed;
   const modelLabel = modelLabelFor(session, well.type);
   const ctxLike = CONTEXT_LIKE.has(well.type);
-  const bidirectional = ctxLike && taskFor(session, 'context') === 'fill-mask';
+  const bidirectional = ctxLike && taskFor(session, well.type === 'sieve' ? 'sieve' : 'context') === 'fill-mask';
   const [showPrompt, setShowPrompt] = useState(false);
 
   const text = insight?.text;

@@ -6,7 +6,9 @@ import { loadCard } from '../models/session.js';
 import { loadSettings, saveSettings } from '../state/settings.js';
 import { rainbowColors } from '../lib/colors.js';
 
-const cardColors = rainbowColors(CARDS.length, 0.35);
+/** Cards offered on the page; hidden ones (part of speech) keep their default and still load with the rest. */
+const VISIBLE_CARDS = CARDS.filter((c) => !c.hidden);
+const cardColors = rainbowColors(VISIBLE_CARDS.length, 0.35);
 
 /** [[groupLabel|null, models[]], …] preserving order. */
 function groupModels(models) {
@@ -179,7 +181,7 @@ export default function Landing({ onReady }) {
             <span className={`models-stat device-inline ${device.device === 'wasm' ? 'cpu' : ''}`} title="Where the models run."><span className="models-stat-label">runs on</span><span className="dot" /> {device.label}{device.device === 'webgpu' && !device.fp16 ? ' (no fp16)' : ''}</span>
           </div>
           <div className="model-rows">
-            {CARDS.map((card, i) => (
+            {VISIBLE_CARDS.map((card, i) => (
               <ModelRow key={card.id} card={card} color={cardColors[i]} choice={choices[card.id]} onChoose={choose}
                 progress={progress[card.id]} loaded={!!loaded[card.id]} disabled={loading} device={device} cachedIds={cachedIds} />
             ))}

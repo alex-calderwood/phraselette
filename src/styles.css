@@ -240,10 +240,11 @@ select {
 /* --- workspace ---------------------------------------------------------- */
 .workspace { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 .columns { flex: 1; min-height: 0; display: flex; gap: 0; }
-.left { flex: 0 0 50%; max-width: 50%; display: flex; flex-direction: column; padding: 8px; gap: 6px; min-height: 0; }
+.left { flex: 0 0 50%; max-width: 50%; display: flex; flex-direction: column; padding: 8px; gap: 8px; min-height: 0; }
 .right { flex: 0 0 50%; max-width: 50%; display: flex; flex-direction: column; padding: 8px 8px 8px 0; gap: 8px; min-height: 0; }
-.editor-controls { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
-.editor-controls .status { flex: 1; font-size: var(--font-xs); color: var(--muted-text); padding-left: 4px; }
+/* above the editor, the same height as the well strip opposite, so the editor and the inspector share top and bottom edges */
+.editor-controls { order: -1; min-height: 30px; display: flex; gap: 6px; align-items: center; justify-content: flex-start; }
+.editor-controls .status { flex: 1; order: 1; font-size: var(--font-xs); color: var(--muted-text); padding-left: 4px; text-align: right; }
 
 /* editor: textarea over a coloured mirror */
 .editor-shell {
@@ -493,7 +494,7 @@ select {
 @keyframes fab-in { from { opacity: 0; transform: translateY(4px) scale(0.97); } to { opacity: 1; transform: none; } }
 
 /* --- well strip + add-well popover --------------------------------------- */
-.well-strip { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 0 0 auto; position: relative; }
+.well-strip { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 0 0 auto; min-height: 30px; position: relative; }
 
 .add-well { position: relative; }
 /* the two "+" buttons: the Search button's glass pill, smaller and tinted (lavender for wells, teal for constraints).

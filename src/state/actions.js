@@ -296,6 +296,7 @@ export function createActions(dispatch, getState, session) {
         const depth = Math.max(1, Math.min(25, Math.floor(targetWords * 4 / 3 + 1)));
         const after = getState().text.slice(inlet.end);
         const p = track(request('search', {
+          slot: well.type === 'sieve' ? 'sieve' : 'context', // the sieve has its own (left-to-right) model slot
           prefix, depth, window: 256,
           // diverse beam search (beam.js) by default; 'fast' is the top-K-then-greedy loop in lm.js
           mode: ss.mode, k: ss.mode === 'beam' ? ss.beams : ss.k, numBeamGroups: ss.groups, diversityPenalty: ss.diversity, lengthPenalty: ss.lengthPenalty, noRepeatNgramSize: ss.noRepeat,

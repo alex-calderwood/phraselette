@@ -211,6 +211,19 @@ export const POS_MODELS = [
  */
 export const CARDS = [
   {
+    id: 'sieve',
+    title: 'Sieve',
+    emoji: '⧖',
+    kind: 'causal',
+    models: CAUSAL_MODELS, // left-to-right only: the sieve gates tokens as they are proposed, which a fill-mask model does not do
+    slots: ['sieve'],
+    blurb: 'A left-to-right language model whose next-token choices the sieve well cuts and steers by your constraints. Choosing the same model as Probabilities loads it once.',
+    usedFor: [
+      { name: 'Sieve well', desc: 'constrained search for rephrasings: letters, sounds and probability applied while the model proposes tokens' },
+    ],
+    defaultModel: 'Xenova/gpt2',
+  },
+  {
     id: 'probabilities',
     title: 'Probabilities',
     emoji: '∿',
@@ -219,7 +232,7 @@ export const CARDS = [
     slots: ['context'],
     blurb: 'A plain language model that says how likely each word is. Bidirectional models judge a word by the text on both sides of it; left-to-right models see only what comes before.',
     usedFor: [
-      { name: 'Context well', desc: 'rephrasings for the inlet: words that fit both sides (bidirectional) or the likeliest continuations of the preceding text (left-to-right), with a histogram of their probabilities' },
+      { name: 'Context well (legacy)', desc: 'rephrasings for the inlet: words that fit both sides (bidirectional) or the likeliest continuations of the preceding text (left-to-right), with a histogram of their probabilities' },
       { name: 'Probability coloring', desc: 'tints every word in the editor by how expected it was' },
       { name: 'Scoring', desc: 'ranks the thesaurus and reader suggestions by how well they fit' },
     ],
@@ -245,6 +258,7 @@ export const CARDS = [
     title: 'Part of speech',
     emoji: '∴',
     kind: 'pos',
+    hidden: true, // not offered on the landing page: the bundled wink-nlp tagger is always used; the slot and its code paths stay
     models: POS_MODELS,
     slots: ['pos'],
     blurb: 'Tags nouns, verbs and friends.',
@@ -299,20 +313,20 @@ export const PRESETS = [
   {
     id: 'light',
     label: 'Light',
-    hint: 'ALBERT + SmolLM2-135M + MiniLM, about 250 MB',
-    cards: { probabilities: 'Xenova/albert-base-v2', instruct: 'HuggingFaceTB/SmolLM2-135M-Instruct', pos: 'wink', embeddings: 'Xenova/all-MiniLM-L6-v2' },
+    hint: 'GPT-2 + ALBERT + SmolLM2-135M + MiniLM, about 750 MB',
+    cards: { sieve: 'Xenova/gpt2', probabilities: 'Xenova/albert-base-v2', instruct: 'HuggingFaceTB/SmolLM2-135M-Instruct', pos: 'wink', embeddings: 'Xenova/all-MiniLM-L6-v2' },
   },
   {
     id: 'recommended',
     label: 'Recommended',
-    hint: 'DistilBERT + Qwen2.5-0.5B + MiniLM, about 700 MB',
-    cards: { probabilities: 'Xenova/distilbert-base-cased', instruct: 'onnx-community/Qwen2.5-0.5B-Instruct', pos: 'wink', embeddings: 'Xenova/all-MiniLM-L6-v2' },
+    hint: 'GPT-2 + DistilBERT + Qwen2.5-0.5B + MiniLM, about 1.2 GB',
+    cards: { sieve: 'Xenova/gpt2', probabilities: 'Xenova/distilbert-base-cased', instruct: 'onnx-community/Qwen2.5-0.5B-Instruct', pos: 'wink', embeddings: 'Xenova/all-MiniLM-L6-v2' },
   },
   {
     id: 'rich',
     label: 'Rich',
-    hint: 'RoBERTa + Gemma 3 1B + BGE small, about 1.6 GB, needs a real GPU',
-    cards: { probabilities: 'Xenova/roberta-base', instruct: 'onnx-community/gemma-3-1b-it-ONNX', pos: 'wink', embeddings: 'Xenova/bge-small-en-v1.5' },
+    hint: 'Qwen3-0.6B + RoBERTa + Gemma 3 1B + BGE small, about 2.5 GB, needs a real GPU',
+    cards: { sieve: 'onnx-community/Qwen3-0.6B-ONNX', probabilities: 'Xenova/roberta-base', instruct: 'onnx-community/gemma-3-1b-it-ONNX', pos: 'wink', embeddings: 'Xenova/bge-small-en-v1.5' },
   },
 ];
 
@@ -365,7 +379,8 @@ export function modelLabelFor(session, wellType) {
     return `${model.name} · ${dtype} · ${session.device.device}`;
   };
   switch (wellType) {
-    case 'context': case 'sieve': return label('context');
+    case 'context': return label('context');
+    case 'sieve': return label('sieve');
     case 'thesaurus': case 'reader': case 'dictionary': return label(wellType);
     case 'words': return label('pos');
     case 'sound': return 'CMU Pronouncing Dictionary';
