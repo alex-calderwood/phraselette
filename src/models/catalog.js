@@ -170,6 +170,23 @@ export const MASKED_MODELS = [
   { id: 'Xenova/roberta-base', bench: mnli(87.6), name: 'RoBERTa base · 125M', note: 'Strongest of the small masked models.', params: 125e6, dtype: maskedDtype, size: { fp32: 500, q8: 125 }, task: 'fill-mask', group: 'Bidirectional (reads both sides of a word)' },
 ];
 
+/**
+ * Sentence-embedding models for the semantic similarity constraint. Benchmark:
+ * MTEB English average (semantic similarity, retrieval, clustering and so on),
+ * from the MTEB leaderboard and the model cards, looked up September 2026.
+ * `pooling` is how the encoder's token states become one vector (embed.js).
+ */
+const mteb = (score) => ({ name: 'MTEB', score, note: 'MTEB English average, from the leaderboard or the model card', about: 'MTEB: a suite of embedding tasks (semantic similarity, retrieval, clustering); average score, higher is better.' });
+const embedDtype = { webgpu: 'fp32', webgpuNoF16: 'fp32', wasm: 'q8' };
+export const EMBEDDING_MODELS = [
+  { id: 'none', name: 'None', note: 'Nothing to download; the semantic similarity constraint will be unavailable.', size: { none: 0 }, bundled: true },
+  { id: 'Xenova/all-MiniLM-L6-v2', name: 'MiniLM-L6 · 23M', note: 'Tiny and quick; the usual first choice.', bench: mteb(56.3), params: 23e6, dtype: embedDtype, size: { fp32: 90, q8: 23 }, task: 'embed', pooling: 'mean', group: 'Sentence embeddings', recommended: true },
+  { id: 'Xenova/bge-small-en-v1.5', name: 'BGE small · 33M', note: 'Sharper sense of meaning for its size.', bench: mteb(62.2), params: 33e6, dtype: embedDtype, size: { fp32: 133, q8: 34 }, task: 'embed', pooling: 'cls', group: 'Sentence embeddings' },
+  { id: 'Xenova/gte-small', name: 'GTE small · 33M', note: 'Comparable to BGE small.', bench: mteb(61.4), params: 33e6, dtype: embedDtype, size: { fp32: 133, q8: 34 }, task: 'embed', pooling: 'mean', group: 'Sentence embeddings' },
+  { id: 'Xenova/all-mpnet-base-v2', name: 'MPNet base · 110M', note: 'The classic sentence-transformers model; slower.', bench: mteb(57.8), params: 110e6, dtype: embedDtype, size: { fp32: 438, q8: 110 }, task: 'embed', pooling: 'mean', group: 'Sentence embeddings' },
+  { id: 'Xenova/bge-base-en-v1.5', name: 'BGE base · 110M', note: 'Strongest here; heavier download.', bench: mteb(63.6), params: 110e6, dtype: embedDtype, size: { fp32: 436, q8: 110 }, task: 'embed', pooling: 'cls', group: 'Sentence embeddings' },
+];
+
 export const POS_MODELS = [
   {
     id: 'wink',
@@ -237,6 +254,19 @@ export const CARDS = [
     ],
     defaultModel: 'wink',
   },
+  {
+    id: 'embeddings',
+    title: 'Semantic similarity',
+    emoji: '≈',
+    kind: 'embed',
+    models: EMBEDDING_MODELS,
+    slots: ['embed'],
+    blurb: 'A sentence-embedding model turns a phrase into a vector, so two phrases can be compared by meaning rather than wording.',
+    usedFor: [
+      { name: 'Semantic similarity constraint', desc: 'keep rephrasings close to, or far from, the meaning of a phrase you type' },
+    ],
+    defaultModel: 'Xenova/all-MiniLM-L6-v2',
+  },
 ];
 
 // kept for code that iterates worker slots
@@ -269,20 +299,20 @@ export const PRESETS = [
   {
     id: 'light',
     label: 'Light',
-    hint: 'ALBERT + SmolLM2-135M, about 200 MB',
-    cards: { probabilities: 'Xenova/albert-base-v2', instruct: 'HuggingFaceTB/SmolLM2-135M-Instruct', pos: 'wink' },
+    hint: 'ALBERT + SmolLM2-135M + MiniLM, about 250 MB',
+    cards: { probabilities: 'Xenova/albert-base-v2', instruct: 'HuggingFaceTB/SmolLM2-135M-Instruct', pos: 'wink', embeddings: 'Xenova/all-MiniLM-L6-v2' },
   },
   {
     id: 'recommended',
     label: 'Recommended',
-    hint: 'DistilBERT + Qwen2.5-0.5B, about 650 MB',
-    cards: { probabilities: 'Xenova/distilbert-base-cased', instruct: 'onnx-community/Qwen2.5-0.5B-Instruct', pos: 'wink' },
+    hint: 'DistilBERT + Qwen2.5-0.5B + MiniLM, about 700 MB',
+    cards: { probabilities: 'Xenova/distilbert-base-cased', instruct: 'onnx-community/Qwen2.5-0.5B-Instruct', pos: 'wink', embeddings: 'Xenova/all-MiniLM-L6-v2' },
   },
   {
     id: 'rich',
     label: 'Rich',
-    hint: 'RoBERTa + Gemma 3 1B, about 1.5 GB, needs a real GPU',
-    cards: { probabilities: 'Xenova/roberta-base', instruct: 'onnx-community/gemma-3-1b-it-ONNX', pos: 'wink' },
+    hint: 'RoBERTa + Gemma 3 1B + BGE small, about 1.6 GB, needs a real GPU',
+    cards: { probabilities: 'Xenova/roberta-base', instruct: 'onnx-community/gemma-3-1b-it-ONNX', pos: 'wink', embeddings: 'Xenova/bge-small-en-v1.5' },
   },
 ];
 
@@ -309,9 +339,12 @@ export function deviceMemoryInfo() {
   return info;
 }
 
-export const ALL_MODELS = [...CAUSAL_MODELS, ...MASKED_MODELS, ...INSTRUCT_MODELS, ...POS_MODELS];
+export const ALL_MODELS = [...CAUSAL_MODELS, ...MASKED_MODELS, ...INSTRUCT_MODELS, ...POS_MODELS, ...EMBEDDING_MODELS];
 
-/** The worker task behind a slot for this session ('causal' | 'fill-mask' | 'instruct' | 'pos'). */
+/** Whether the session loaded a sentence-embedding model (the semantic similarity constraint needs one). */
+export const embeddingsLoaded = (session) => !!session?.slots?.embed && session.slots.embed !== 'none';
+
+/** The worker task behind a slot for this session ('causal' | 'fill-mask' | 'instruct' | 'pos' | 'embed'). */
 export function taskFor(session, slot) {
   const id = session?.slots?.[slot];
   const model = ALL_MODELS.find((m) => m.id === id);
@@ -332,7 +365,7 @@ export function modelLabelFor(session, wellType) {
     return `${model.name} · ${dtype} · ${session.device.device}`;
   };
   switch (wellType) {
-    case 'context': return label('context');
+    case 'context': case 'sieve': return label('context');
     case 'thesaurus': case 'reader': case 'dictionary': return label(wellType);
     case 'words': return label('pos');
     case 'sound': return 'CMU Pronouncing Dictionary';

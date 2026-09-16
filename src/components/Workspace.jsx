@@ -79,6 +79,11 @@ export default function Workspace({ session, onChangeModels }) {
   const inletTokens = range ? tokensIn(state.tokens, range.start, range.end) : [];
   const rangeText = range ? state.text.slice(range.start, range.end).replace(/^[ \t]+/, '') : '';
   const cons = inlet ? inletConstraints(state, inlet.id) : [];
+  // constraints set on the other inlets, offered for reuse in the "+ Constraint" popover
+  const otherCons = useMemo(() => state.inlets
+    .filter((i) => i.id !== inlet?.id)
+    .map((i) => ({ id: i.id, text: state.text.slice(i.start, i.end).trim(), constraints: inletConstraints(state, i.id) }))
+    .filter((o) => o.constraints.length), [state.inlets, state.constraints, state.text, inlet?.id]);
   const setTooltip = useCallback((t) => dispatch({ type: 'tooltip', tooltip: t }), []);
 
   /** Search: make an inlet from the selection (or the word under the caret) if there is none, then run every well. */
@@ -179,6 +184,7 @@ export default function Workspace({ session, onChangeModels }) {
             inlet={inlet}
             inletTokens={inletTokens}
             constraints={cons}
+            otherConstraints={otherCons}
             onAddConstraint={actions.addConstraint}
             onRemoveConstraint={actions.removeConstraint}
           />

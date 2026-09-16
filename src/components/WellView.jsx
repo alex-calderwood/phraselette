@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { searchSettings, SEARCH_DEFAULTS, WELL_DEFS, VIEW_WELLS, wellStyles } from '../core/wells.js';
+import { searchSettings, SEARCH_DEFAULTS, WELL_DEFS, VIEW_WELLS, CONTEXT_LIKE, wellStyles } from '../core/wells.js';
 import { randomRole } from '../lang/roles.js';
 import { parseBullets, TEMPLATES, TEMPLATE_LABELS } from '../models/prompts.js';
 import { TokenRow, SequenceChip } from './TokenRange.jsx';
@@ -8,6 +8,8 @@ import Results from './Results.jsx';
 import { hoverProps } from './Tooltip.jsx';
 import { modelLabelFor, taskFor } from '../models/catalog.js';
 import { ROLE_GUIDE } from './AddWell.jsx';
+import { constraintSummary } from './ConstraintsPanel.jsx';
+import { gateApplies } from '../core/constraints.js';
 
 /** Render <i>…</i> from the model and bold the headword when an entry starts with it. */
 function entry(text, headword) {
@@ -118,25 +120,26 @@ function searchFields(well, actions) {
     { key: 'diversity', label: 'beam diversity', value: ss.diversity, min: 0, max: 5, step: 0.1, hint: 'How strongly later groups are pushed away from tokens earlier groups picked at the same step (log-probability subtracted per prior use). 0 turns it off.', onChange: set('diversity') },
   ];
   const examples = { key: 'examples', type: 'checkbox', label: 'include 2 shot examples', value: well.examples !== false, hint: 'Send the two worked user/assistant exchanges before the request. Off sends only the system prompt and the request.', onChange: (v) => actions.patchWell(well.id, { examples: v }) };
+  const notes = { key: 'notes', type: 'checkbox', label: 'notes on the thesaurus first', value: well.notes !== false, hint: 'Before the entries, ask the model to think freely about the thesaurus for a few sentences; the notes are shown in the request (and in the examples). Off drops the notes lines from every prompt.', onChange: (v) => actions.patchWell(well.id, { notes: v }) };
   let fields;
   let note;
-  if (well.type === 'context' && ss.mode === 'beam') {
+  if (CONTEXT_LIKE.has(well.type) && ss.mode === 'beam') {
     fields = [...beamKnobs, { key: 'noRepeat', label: 'no-repeat n-gram', value: ss.noRepeat, min: 0, max: 4, hint: 'A word n-gram already generated in a beam may not recur (2 was the original build\'s setting; 0 turns it off).', onChange: set('noRepeat') }];
     note = `${ss.beams} rephrasings`;
-  } else if (well.type === 'context') {
+  } else if (CONTEXT_LIKE.has(well.type)) {
     fields = [{ key: 'k', label: 'continuations', value: ss.k, min: 1, max: 64, hint: 'Top-K first tokens, each continued greedily.', onChange: set('k') }];
     note = `${ss.k} rephrasings`;
   } else if (ss.mode === 'beam') {
     fields = [...beamKnobs,
       { key: 'perBeam', label: 'entries per beam', value: ss.perBeam, min: 1, max: 12, hint: 'Each beam writes this many entries in a row, seeing its own earlier ones.', onChange: set('perBeam') },
-      examples];
+      notes, examples];
     note = `up to ${ss.beams * ss.perBeam} entries`;
   } else {
     fields = [
       { key: 'temperature', label: 'temperature', value: ss.temperature, min: 0, max: 2, step: 0.1, hint: 'Sampling temperature; 0 is greedy. The original build used 1.0.', onChange: set('temperature') },
       { key: 'topP', label: 'top-p', value: ss.topP, min: 0.05, max: 1, step: 0.05, hint: 'Nucleus sampling: only the smallest set of tokens whose probabilities sum to p are sampled. 1 = off.', onChange: set('topP') },
       { key: 'maxNewTokens', label: 'max tokens', value: ss.maxNewTokens, min: 16, max: 1024, step: 16, hint: 'Length cap on the whole reply.', onChange: set('maxNewTokens') },
-      examples,
+      notes, examples,
     ];
   }
   const changed = Object.keys(well.params?.[ss.mode] ?? {}).filter((k) => Number.isFinite(well.params[ss.mode][k]) && well.params[ss.mode][k] !== SEARCH_DEFAULTS[well.type]?.[ss.mode]?.[k]);
@@ -144,12 +147,46 @@ function searchFields(well, actions) {
   return { fields, note, title };
 }
 
+/**
+ * The sieve's account of the inlet's constraints: which it applies while
+ * searching and which only sift afterwards, plus (after a run) how much of the
+ * vocabulary the gate let through at the first token.
+ */
+function GateNote({ constraints, gate, bidirectional }) {
+  if (bidirectional) return <div className="gate-note">A context-fill model is loaded; the sieve cannot gate its candidates yet, so this well behaves like the context well.</div>;
+  const applied = constraints.filter(gateApplies);
+  const sifted = constraints.filter((c) => !gateApplies(c));
+  const st = gate?.stats;
+  return (
+    <div className="gate-note">
+      <div className="gate-line">
+        <span className="gate-label">while searching</span>
+        {applied.length
+          ? applied.map((c) => <span key={c.id} className="gate-chip on">{constraintSummary(c)}</span>)
+          : <span className="gate-none">nothing yet · letters (starts with, must not contain), sounds (starts with, exactly, must not contain) and the probability window can be applied here</span>}
+      </div>
+      {sifted.length > 0 && (
+        <div className="gate-line">
+          <span className="gate-label">sifting afterwards</span>
+          {sifted.map((c) => <span key={c.id} className="gate-chip">{constraintSummary(c)}</span>)}
+        </div>
+      )}
+      {st && (
+        <div className="gate-line gate-stats">
+          first token: {st.allowed.toLocaleString()} of {st.vocab.toLocaleString()} tokens allowed ({(100 * st.allowed / st.vocab).toFixed(1)}% of the vocabulary, {(100 * st.mass).toFixed(1)}% of the probability)
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function WellView({ well, inlet, inletTokens, constraints, insight, searching, actions, setTooltip, highlighted, session, colorBy = 'origin', dragProps = {}, dropProps = {}, dropIndicator = null, isDragging = false }) {
   const def = WELL_DEFS[well.type];
   const st = wellStyles(well.type, true, well.shade);
   const open = !well.collapsed;
   const modelLabel = modelLabelFor(session, well.type);
-  const bidirectional = well.type === 'context' && taskFor(session, 'context') === 'fill-mask';
+  const ctxLike = CONTEXT_LIKE.has(well.type);
+  const bidirectional = ctxLike && taskFor(session, 'context') === 'fill-mask';
   const [showPrompt, setShowPrompt] = useState(false);
 
   const text = insight?.text;
@@ -166,16 +203,16 @@ export default function WellView({ well, inlet, inletTokens, constraints, insigh
       ...(promptEdited ? [{ label: 'reset prompt to original', onClick: () => actions.patchWell(well.id, { templates: { ...TEMPLATES[well.type] } }) }] : []),
       { divider: true },
     ] : []),
-    ...((well.type === 'context' && !bidirectional) || well.type === 'thesaurus' ? [
+    ...((ctxLike && !bidirectional) || well.type === 'thesaurus' ? [
       // 'beam' (diverse beam search, beam.js) is the default; the alternative is lm.js fast search or plain sampling
-      { label: searchSettings(well).mode === 'beam' ? (well.type === 'context' ? 'use fast search instead' : 'use sampling instead') : 'use beam search instead',
-        onClick: () => actions.patchWell(well.id, { search: searchSettings(well).mode === 'beam' ? (well.type === 'context' ? 'fast' : 'sample') : 'beam' }) },
+      { label: searchSettings(well).mode === 'beam' ? (ctxLike ? 'use fast search instead' : 'use sampling instead') : 'use beam search instead',
+        onClick: () => actions.patchWell(well.id, { search: searchSettings(well).mode === 'beam' ? (ctxLike ? 'fast' : 'sample') : 'beam' }) },
       searchFields(well, actions),
       ...(well.params?.[searchSettings(well).mode] && Object.keys(well.params[searchSettings(well).mode]).length
         ? [{ label: 'reset search settings', onClick: () => actions.patchWell(well.id, { params: { ...well.params, [searchSettings(well).mode]: {} } }) }] : []),
       { divider: true },
     ] : []),
-    ...(modelLabel ? [{ static: true, label: `${modelLabel}${(well.type === 'context' && !bidirectional) || well.type === 'thesaurus' ? ` · ${searchSettings(well).mode === 'beam' ? 'beam search' : well.type === 'context' ? 'fast search' : 'sampling'}` : ''}` }, { divider: true }] : []),
+    ...(modelLabel ? [{ static: true, label: `${modelLabel}${(ctxLike && !bidirectional) || well.type === 'thesaurus' ? ` · ${searchSettings(well).mode === 'beam' ? 'beam search' : ctxLike ? 'fast search' : 'sampling'}` : ''}` }, { divider: true }] : []),
     ...(!def.undestroyable ? [{ label: 'close well', danger: true, onClick: () => actions.removeWell(well.id) }] : []),
   ];
 
@@ -215,7 +252,7 @@ export default function WellView({ well, inlet, inletTokens, constraints, insigh
       {!open && (
         <div className="well-summary" onClick={() => actions.patchWell(well.id, { collapsed: false })}>
           {results?.all?.length
-            ? results.all.map((s) => <SequenceChip key={s.id} seq={s} wellType={well.type} onClick={(seq) => actions.swap(inlet, seq)} setTooltip={setTooltip} colorBy={colorBy} />)
+            ? results.all.map((s) => <SequenceChip key={s.id} seq={s} wellType={well.type} onClick={(seq) => actions.swap(inlet, seq)} setTooltip={setTooltip} colorBy={colorBy} constraints={constraints} />)
             : <span className="well-empty">{inlet ? (def.canSearch ? 'not run yet' : '') : 'no phrase selected'}</span>}
         </div>
       )}
@@ -227,13 +264,20 @@ export default function WellView({ well, inlet, inletTokens, constraints, insigh
 
           {showPrompt && def.roles && well.templates && (
             <div className="prompt-editor">
-              <div className="prompt-help">Placeholders: {'{{description}}'} role · {'{{selection}}'} inlet · {'{{context}}'} passage with ⟦inlet⟧ · {'{{advice}}'} constraints · {'{{rules}}'} entry-format rules{well.type === 'reader' ? ' · {{feedback}} the reader\'s comments' : ''}</div>
+              <div className="prompt-help">Placeholders: {'{{description}}'} role · {'{{selection}}'} inlet · {'{{context}}'} passage with ⟦inlet⟧ · {'{{advice}}'} constraints · {'{{rules}}'} entry-format rules{well.type === 'reader' ? ' · {{feedback}} the reader\'s comments' : ''}{well.type === 'thesaurus' ? ' · {{notes}} the notes on the thesaurus (lines mentioning <notes> are dropped when the notes step is off)' : ''}</div>
               {Object.entries(well.templates).map(([key, tpl]) => (
                 <label key={key} className="prompt-field">
                   <span>{TEMPLATE_LABELS[key] ?? key}</span>
                   <textarea rows={6} value={tpl} onChange={(e) => actions.patchWell(well.id, { templates: { ...well.templates, [key]: e.target.value } })} />
                 </label>
               ))}
+              {/* the thesaurus's free notes about itself, written before the entries (part of the prompt, so shown with it) */}
+              {well.type === 'thesaurus' && (insight?.notes || insight?.notesStreaming) && (
+                <section className="well-section">
+                  <div className="well-section-title">notes on the thesaurus</div>
+                  <p className={`well-notes ${insight?.notesStreaming ? 'streaming-text' : ''}`}>{insight?.notes || '…'}</p>
+                </section>
+              )}
               {insight?.prompt && (
                 <details className="raw-output"><summary>last prompt sent</summary><pre className="streaming">{insight.prompt}</pre></details>
               )}
@@ -258,7 +302,8 @@ export default function WellView({ well, inlet, inletTokens, constraints, insigh
           )}
 
           {inletTokens.length > 0 && <TokenRow tokens={inletTokens} wellType={well.type} />}
-          {well.type === 'context' && inlet && insight?.histogram && (
+          {well.type === 'sieve' && inlet && <GateNote constraints={constraints} gate={insight?.gate} bidirectional={bidirectional} />}
+          {ctxLike && inlet && insight?.histogram && (
             <div className="insight-histogram" title="log-probability of every candidate the model weighed while searching">
               <LogHistogram data={insight.histogram} min={probRange(constraints)[0]} max={probRange(constraints)[1]} onChange={() => {}} readOnly />
               <div className="insight-histogram-label">what the model considered likely here (log-probability, left = unlikely){bidirectional ? ', reading both sides' : ''}</div>

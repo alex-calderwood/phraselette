@@ -2,19 +2,20 @@ import React from 'react';
 import { SequenceChip } from './TokenRange.jsx';
 import { constraintSummary } from './ConstraintsPanel.jsx';
 
-function Group({ label, seqs, wellType, onPick, setTooltip, colorBy }) {
+function Group({ label, seqs, wellType, onPick, setTooltip, colorBy, constraints }) {
   if (!seqs?.length) return null;
   return (
     <div className="result-group">
       <div className="sequence-row">
-        {seqs.map((s) => <SequenceChip key={s.id} seq={s} wellType={wellType} onClick={onPick} setTooltip={setTooltip} colorBy={colorBy} />)}
+        {seqs.map((s) => <SequenceChip key={s.id} seq={s} wellType={wellType} onClick={onPick} setTooltip={setTooltip} colorBy={colorBy} constraints={constraints} />)}
       </div>
       <div className="subtitle result-caption">{label}</div>
     </div>
   );
 }
 
-const matches = (seq, c) => (seq.scores?.[c.id] ?? 0) >= (c.threshold ?? 1);
+/** Pass/fail as decided by the constraint itself (see evaluateConstraint), not a cut on the score. */
+const matches = (seq, c) => seq.satisfied?.[c.id] ?? false;
 const plural = (n) => `${n} rephrasing${n === 1 ? '' : 's'}`;
 
 /**
@@ -58,7 +59,7 @@ export default function Results({ results, searching, constraints = [], wellType
   const groups = groupByConstraints(all, constraints);
   return (
     <div className="results">
-      {groups.map((g) => <Group key={g.label} label={g.label} seqs={g.seqs} wellType={wellType} onPick={onPick} setTooltip={setTooltip} colorBy={colorBy} />)}
+      {groups.map((g) => <Group key={g.label} label={g.label} seqs={g.seqs} wellType={wellType} onPick={onPick} setTooltip={setTooltip} colorBy={colorBy} constraints={constraints} />)}
     </div>
   );
 }

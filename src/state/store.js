@@ -3,6 +3,7 @@ import { WELL_TYPES, WELL_DEFS, makeWell } from '../core/wells.js';
 import { diffTexts, shiftRanges, findExact, findEnclosing } from '../core/inlets.js';
 import { uid } from '../core/tokens.js';
 import { resolveConstraints } from '../core/constraints.js';
+import { CONTEXT_LIKE } from '../core/wells.js';
 
 export const TEXT_KEY = 'phraselette.text.v1';
 
@@ -141,7 +142,7 @@ function recompute(state, inletId) {
     if (!w.active) continue;
     const ins = insights[w.id]?.[inletId];
     if (!ins?.sequences) continue;
-    const results = resolveConstraints(ins.sequences, cons, w.type === 'context' ? 'logProbMean' : 'total');
+    const results = resolveConstraints(ins.sequences, cons, CONTEXT_LIKE.has(w.type) ? 'logProbMean' : 'total');
     insights[w.id] = { ...insights[w.id], [inletId]: { ...ins, results } };
     all.push(...ins.sequences);
   }

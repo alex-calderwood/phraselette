@@ -2,21 +2,25 @@
 // function takes the dispatch + a getState accessor and talks to the worker.
 import { request, cancel } from '../models/client.js';
 import { ensureModels } from '../models/session.js';
+import { embeddingsLoaded } from '../models/catalog.js';
 import { tagWithWink, tagSuffix, attachPhones } from '../lang/tagger.js';
 import { loadPhones } from '../lang/phones.js';
 import { ptbToUpos } from '../lang/pos.js';
 import { makeToken, makeSequence, numWords, isWordToken, uid } from '../core/tokens.js';
-import { constraintAdvice, maxWordsAllowed } from '../core/constraints.js';
-import { searchSettings, WELL_DEFS, makeWell } from '../core/wells.js';
-import { thesaurusMessages, readerMessages, readerRevisionsMessages, dictionaryMessages, parseEntries, ENTRY_PREFIX, BULLET_PREFIX } from '../models/prompts.js';
+import { constraintAdvice, maxWordsAllowed, generationGate } from '../core/constraints.js';
+import { searchSettings, WELL_DEFS, CONTEXT_LIKE, makeWell } from '../core/wells.js';
+import { thesaurusMessages, thesaurusNotesMessages, readerMessages, readerRevisionsMessages, dictionaryMessages, parseEntries, parseNotes, ENTRY_PREFIX, NOTES_PREFIX, NOTES_SUFFIX, BULLET_PREFIX } from '../models/prompts.js';
 import { inletConstraints, activeWells, tokensIn } from './store.js';
 
+/** Length cap on the thesaurus's notes about itself (a few sentences). */
+const NOTES_TOKENS = 120;
 const STOPLIST = new Set(['_', '~', '-', '', '.', ',']);
 const HALTLIST = ['�', '」', '<|endoftext'];
 
 export function createActions(dispatch, getState, session) {
   const usesBertPos = session.slots.pos && session.slots.pos !== 'wink';
   const hasContext = !!session.slots.context;
+  const hasEmbed = embeddingsLoaded(session);
   let tagTimer = null;
   let probTimer = null;
   let probRequest = null;
@@ -157,6 +161,17 @@ export function createActions(dispatch, getState, session) {
     })).filter((s) => !badSequence(s));
   }
 
+  /**
+   * Whether `seqs` are still what the well shows for this inlet: the same sequence
+   * objects in the same order. Scoring and embedding both finish asynchronously and
+   * each republishes a shallow copy of the list, so identity of the array itself
+   * would make whichever finishes second throw its work away.
+   */
+  function stillCurrent(inlet, well, seqs) {
+    const cur = getState().insights[well.id]?.[inlet.id]?.sequences;
+    return !!cur && cur.length === seqs.length && cur.every((s, i) => s === seqs[i]);
+  }
+
   /** Score sequences with the probability model (if loaded) and re-resolve; the UI already shows them unscored. */
   async function scoreSequences(inlet, well, seqs, maxWords) {
     if (!hasContext || !seqs.length) return;
@@ -169,13 +184,55 @@ export function createActions(dispatch, getState, session) {
         seq.tokens = wordTokensFor(prefix, seq.text, r.tokens, maxWords);
         finishSequence(seq);
       });
-      const cur = getState().insights[well.id]?.[inlet.id];
-      if (cur?.sequences === seqs) {
+      if (stillCurrent(inlet, well, seqs)) {
         dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { sequences: [...seqs] } });
         reresolve(inlet.id);
       }
     } catch (e) {
       if (!/cancel/i.test(String(e.message))) console.warn('scoring failed', e);
+    }
+  }
+
+  /**
+   * Attach a sentence embedding to each sequence that lacks one (if an embedding
+   * model is loaded) and re-resolve, so a semantic similarity constraint can judge
+   * them. Cheap enough to run for every result; until it lands the constraint
+   * treats the sequence as not yet judged.
+   */
+  async function embedSequences(inlet, well, seqs) {
+    if (!hasEmbed) return;
+    const todo = seqs.filter((s) => !s.embedding);
+    if (!todo.length) return;
+    try {
+      const { vectors } = await request('embed', { texts: todo.map((s) => s.text.trim()) });
+      todo.forEach((s, i) => { s.embedding = vectors[i]; });
+      if (stillCurrent(inlet, well, seqs)) dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { sequences: [...seqs] } });
+    } catch (e) {
+      if (!/cancel/i.test(String(e.message))) console.warn('embedding failed', e);
+    }
+  }
+
+  /** Embed whatever every active well already shows for an inlet (for a semantic constraint added after the search). */
+  function embedInletSequences(inletId) {
+    const st = getState();
+    const inlet = st.inlets.find((i) => i.id === inletId);
+    if (!inlet) return;
+    for (const w of activeWells(st)) {
+      const seqs = st.insights[w.id]?.[inletId]?.sequences;
+      if (seqs?.length) embedSequences(inlet, w, seqs);
+    }
+  }
+
+  /** Embed a semantic constraint's reference phrase and store the vector on it (dropped if the reference changed meanwhile). */
+  async function embedReference(c) {
+    const text = (c.reference ?? '').trim();
+    if (!hasEmbed || !text) return;
+    try {
+      const { vectors } = await request('embed', { texts: [text] });
+      const cur = getState().constraints.find((x) => x.id === c.id);
+      if (cur && (cur.reference ?? '').trim() === text) dispatch({ type: 'patchConstraint', id: c.id, patch: { vector: vectors[0] } });
+    } catch (e) {
+      if (!/cancel/i.test(String(e.message))) console.warn('embedding failed', e);
     }
   }
 
@@ -230,8 +287,10 @@ export function createActions(dispatch, getState, session) {
       dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { prompt: prev ? `${prev}\n\n────────\n\n${d.prompt}` : d.prompt } });
     };
     try {
-      if (well.type === 'context') {
+      if (CONTEXT_LIKE.has(well.type)) {
         const ss = searchSettings(well);
+        // the sieve applies what it can of the constraints inside the search (models/gate.js)
+        const gate = well.type === 'sieve' ? generationGate(cons) : null;
         const selWords = Math.max(1, numWords(tokensIn(getState().tokens, inlet.start, inlet.end)));
         const targetWords = maxWords != null ? Math.min(maxWords, selWords) : selWords;
         const depth = Math.max(1, Math.min(25, Math.floor(targetWords * 4 / 3 + 1)));
@@ -242,10 +301,11 @@ export function createActions(dispatch, getState, session) {
           mode: ss.mode, k: ss.mode === 'beam' ? ss.beams : ss.k, numBeamGroups: ss.groups, diversityPenalty: ss.diversity, lengthPenalty: ss.lengthPenalty, noRepeatNgramSize: ss.noRepeat,
           // used by bidirectional models: what follows the inlet, its leading space, how many words to fill
           after, leading: leadingFor(inlet), nWords: targetWords, capitalize: /^[A-Z]/.test(selection),
+          gate,
         }, {
           onPartial: (d) => d.progress && dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { progress: d.progress } }),
         }));
-        const { sequences, histogram } = await p;
+        const { sequences, histogram, gateStats = null } = await p;
         const leading = leadingFor(inlet);
         const seqs = dedupe(sequences.map((s) => {
           // sub-token offsets relative to the candidate text
@@ -258,11 +318,23 @@ export function createActions(dispatch, getState, session) {
           const tokens = wordTokensFor(prefix, text, subs, maxWords ?? targetWords);
           return finishSequence(makeSequence(tokens, text, well.type, well.id, { originShade: well.shade ?? 0 }));
         })).filter((s) => !badSequence(s));
-        dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { sequences: seqs, histogram, progress: null } });
+        dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { sequences: seqs, histogram, progress: null, gate: gate ? { ...gate, stats: gateStats } : null } });
+        embedSequences(inlet, well, seqs);
       } else if (well.type === 'thesaurus') {
-        const messages = thesaurusMessages({ description: well.role, selection, advice, templates: well.templates, examples: well.examples !== false });
-        let text;
         const ss = searchSettings(well);
+        // First (unless the well turns it off) the model muses about the thesaurus alone: a short
+        // sampled reply, cut at the closing tag. Those notes then sit in the entry request.
+        let notes = null;
+        dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { notes: null, notesStreaming: false } });
+        if (well.notes !== false) {
+          const { text: raw } = await track(request('chat', { slot: 'thesaurus', messages: thesaurusNotesMessages({ description: well.role, templates: well.templates }), maxNewTokens: NOTES_TOKENS, temperature: 1.0, doSample: true, assistantPrefix: NOTES_PREFIX, stopAt: NOTES_SUFFIX }, {
+            onPartial: showPrompt((d) => d.text && dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { notes: parseNotes(d.text), notesStreaming: true } })),
+          }));
+          notes = parseNotes(raw) || null;
+          dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { notes, notesStreaming: false } });
+        }
+        const messages = thesaurusMessages({ description: well.role, selection, advice, notes, templates: well.templates, examples: well.examples !== false });
+        let text;
         if (ss.mode === 'beam') {
           // diverse beam search over the reply: each beam writes several entries in a row (seeing its
           // own earlier ones), the groups keep the beams apart, and every beam's entries are collected
@@ -271,12 +343,12 @@ export function createActions(dispatch, getState, session) {
             onPartial: showPrompt((d) => {
               if (d.progress) dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { progress: d.progress } });
               if (d.text) stream(d);
-            }),
+            }, notes != null),
           }));
           text = texts.join('\n\n');
         } else {
           ({ text } = await track(request('chat', { slot: 'thesaurus', messages, maxNewTokens: ss.maxNewTokens, temperature: ss.temperature, topP: ss.topP, doSample: ss.temperature > 0, assistantPrefix: ENTRY_PREFIX }, {
-            onPartial: showPrompt(streamEntries(inlet, well, selection, maxWords)),
+            onPartial: showPrompt(streamEntries(inlet, well, selection, maxWords), notes != null),
           })));
         }
         const entries = parseEntries(text, selection);
@@ -284,6 +356,7 @@ export function createActions(dispatch, getState, session) {
         dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { sequences: seqs, streaming: null, raw: text, progress: null } });
         reresolve(inlet.id);
         scoreSequences(inlet, well, seqs, maxWords);
+        embedSequences(inlet, well, seqs);
       } else if (well.type === 'reader') {
         const context = markedContextFor(inlet);
         const { text: feedback } = await track(request('chat', { slot: 'reader', messages: readerMessages({ description: well.role, context, selection, templates: well.templates }), maxNewTokens: 260, temperature: 1.0, assistantPrefix: BULLET_PREFIX }, {
@@ -298,6 +371,7 @@ export function createActions(dispatch, getState, session) {
         dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { sequences: seqs, streaming: null, raw: rev } });
         reresolve(inlet.id);
         scoreSequences(inlet, well, seqs, maxWords);
+        embedSequences(inlet, well, seqs);
       } else if (well.type === 'dictionary') {
         const { text } = await track(request('chat', { slot: 'dictionary', messages: dictionaryMessages({ description: well.role, selection, templates: well.templates }), maxNewTokens: 260, temperature: 1.0, assistantPrefix: BULLET_PREFIX }, {
           onPartial: showPrompt((d) => dispatch({ type: 'insight', wellId: well.id, inletId: inlet.id, insight: { streaming: d.text } })),
@@ -369,9 +443,19 @@ export function createActions(dispatch, getState, session) {
       for (const [key, rid] of running) if (key.startsWith(id + ':')) cancel(rid);
       dispatch({ type: 'deleteInlet', id });
     },
-    addConstraint(c) { dispatch({ type: 'addConstraint', constraint: c }); reresolve(c.inletId); },
+    addConstraint(c) {
+      dispatch({ type: 'addConstraint', constraint: c });
+      reresolve(c.inletId);
+      if (c.kind === 'semantic') { embedReference(c); embedInletSequences(c.inletId); }
+    },
     removeConstraint(c) { dispatch({ type: 'removeConstraint', id: c.id }); reresolve(c.inletId); },
-    patchConstraint(c, patch) { dispatch({ type: 'patchConstraint', id: c.id, patch }); reresolve(c.inletId); },
+    patchConstraint(c, patch) {
+      // a new reference phrase invalidates the stored vector until it has been embedded again
+      const rephrased = c.kind === 'semantic' && 'reference' in patch && patch.reference !== c.reference;
+      dispatch({ type: 'patchConstraint', id: c.id, patch: rephrased ? { ...patch, vector: null } : patch });
+      reresolve(c.inletId);
+      if (rephrased) embedReference({ ...c, ...patch });
+    },
     runWells,
     runWell,
     setTooltip(tooltip) { dispatch({ type: 'tooltip', tooltip }); },

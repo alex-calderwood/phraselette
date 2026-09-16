@@ -12,6 +12,7 @@
 // no_repeat_ngram_size=2 rule is applied. Delete this file once upstream
 // ships beam search.
 import { Tensor, ones, log_softmax } from '@huggingface/transformers';
+import { makeGate } from './gate.js';
 import {
   encode, prefixIds, offsetsFor, ensureMasks, topKIndices, logitsRow, disposeOutputs, assertFinite, expandCache,
   makeHistogram, histogramAdd, histogramFinish,
@@ -138,7 +139,7 @@ export async function reorderCache(cache, indices) {
 export async function beamSearch(inst, {
   ids, numBeams = 12, numBeamGroups = numBeams, diversityPenalty = 1.0, lengthPenalty = 1.0, earlyStopping = false,
   maxNewTokens = 8, numReturn = numBeams, noRepeatNgramSize = 2, allowedFirst = null, stopWhen = null, eosIds = new Set(), haltOnTagTokens = true,
-  checkCancel, onProgress, onText,
+  gate = null, checkCancel, onProgress, onText,
 }) {
   const { tokenizer, model } = inst;
   const masks = ensureMasks(inst);
@@ -185,7 +186,8 @@ export async function beamSearch(inst, {
         if (beam.sum <= NEG / 2 && !first) continue; // dead beam: can never win
         const lp = lpFor(off + bi);
         const banned = bannedFor(beam.ids);
-        const allowed = (i) => !banned.has(i) && (!first || !allowedFirst || allowedFirst(i));
+        const pass = gate ? gate.forBeam(beam.ids) : null; // sieve well: hard mask from the constraints
+        const allowed = (i) => !banned.has(i) && (!first || !allowedFirst || allowedFirst(i)) && (!pass || pass(i, lp[i]));
         // the diversity penalty only lowers tokens earlier groups chose, so the exact
         // penalised top-2gs lies within the raw top-(2gs + |penalised|)
         const top = topKIndices(lp, 2 * gs + prevGroupTokens.size, allowed);
@@ -216,6 +218,7 @@ export async function beamSearch(inst, {
   assertFinite(lastRow, inst);
   const lp0 = log_softmax(lastRow);
   histogramAdd(hist, lp0);
+  const gateStats = gate ? gate.firstStep(lp0, (i) => !masks.halt[i] && (!allowedFirst || allowedFirst(i))) : null;
   step(() => lp0, true);
   onProgress?.({ step: 1, total: maxNewTokens });
   reportText();
@@ -263,7 +266,7 @@ export async function beamSearch(inst, {
 
   const finished = scorers.flatMap((s, g) => s.finalize(beams.slice(g * gs, (g + 1) * gs)));
   finished.sort((a, b) => b.score - a.score);
-  return { hypotheses: finished.slice(0, numReturn), histogram: histogramFinish(hist), firstLogProbs: lp0 };
+  return { hypotheses: finished.slice(0, numReturn), histogram: histogramFinish(hist), firstLogProbs: lp0, gateStats };
 }
 
 /** Turn a hypothesis into the well's sequence shape, dropping trailing special tokens (`isSpecial(id)`); `cutAt(text)` may return a length to truncate to. */
@@ -293,7 +296,7 @@ function hypothesisToSequence(tokenizer, isSpecial, h, cutAt = null) {
  * lm.js searchContinuations so the worker can swap between the two.
  */
 export async function beamContinuations(inst, {
-  prefix, k = 24, depth = 8, window = 256, numBeamGroups = null, diversityPenalty = 1.0, lengthPenalty = 1.0, noRepeatNgramSize = 2, checkCancel, onProgress,
+  prefix, k = 24, depth = 8, window = 256, numBeamGroups = null, diversityPenalty = 1.0, lengthPenalty = 1.0, noRepeatNgramSize = 2, gate = null, checkCancel, onProgress,
 }) {
   const { tokenizer } = inst;
   const masks = ensureMasks(inst);
@@ -304,11 +307,14 @@ export async function beamContinuations(inst, {
   const numBeams = Math.max(1, k);
   // default grouping: beams of four per group (diverse beam search), or one group per beam when k is odd
   const groups = numBeamGroups ?? (numBeams % 4 === 0 ? numBeams / 4 : numBeams % 2 === 0 ? numBeams / 2 : numBeams);
-  const { hypotheses, histogram } = await beamSearch(inst, {
+  const g = makeGate(inst, gate);
+  const { hypotheses, histogram, gateStats } = await beamSearch(inst, {
     ids, numBeams, numBeamGroups: groups, diversityPenalty, lengthPenalty, noRepeatNgramSize, maxNewTokens: depth, numReturn: numBeams,
-    allowedFirst: (i) => !endsWithSpace || masks.startsWithSpace[i], checkCancel, onProgress,
+    allowedFirst: (i) => !endsWithSpace || masks.startsWithSpace[i], gate: g, checkCancel, onProgress,
   });
-  const sequences = hypotheses.map((h) => {
+  // hypotheses cut off mid-word (or short of a letter prefix) by the depth limit do not meet the gate: drop them
+  const kept = g ? hypotheses.filter((h) => g.accepts(h.ids)) : hypotheses;
+  const sequences = kept.map((h) => {
     const seq = hypothesisToSequence(tokenizer, (id) => !!masks.halt[id], h);
     if (endsWithSpace && seq.tokens.length && seq.tokens[0].text.startsWith(' ')) {
       seq.tokens[0] = { ...seq.tokens[0], text: seq.tokens[0].text.slice(1) };
@@ -316,7 +322,7 @@ export async function beamContinuations(inst, {
     }
     return seq;
   }).filter((s) => s.text.trim());
-  return { sequences, histogram, endsWithSpace };
+  return { sequences, histogram, endsWithSpace, gateStats };
 }
 
 /**

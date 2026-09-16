@@ -9,11 +9,12 @@ import { TextStreamer, InterruptableStoppingCriteria } from '@huggingface/transf
  * @param {string|null} [o.assistantPrefix]  fixed start of the reply (e.g. "<entry>"); included in the returned text
  * @param {(text:string)=>void} [o.onText]   called with the accumulated text as it streams
  * @param {(prompt:string)=>void} [o.onPrompt] called once with the exact text the model is given (chat template applied, prefix appended)
+ * @param {string|null} [o.stopAt]           stop generating once the reply contains this string (e.g. "</notes>"); the text is cut there
  * @returns {Promise<{text:string, stopper:InterruptableStoppingCriteria}>}
  */
 export async function chatGenerate(inst, {
   messages, maxNewTokens = 300, temperature = 1.0, doSample = true, topP = 1.0,
-  repetitionPenalty = 1.0, noRepeatNgramSize = 0, assistantPrefix = null, onText, onPrompt, onStopper,
+  repetitionPenalty = 1.0, noRepeatNgramSize = 0, assistantPrefix = null, stopAt = null, onText, onPrompt, onStopper,
 }) {
   const { tokenizer, model } = inst;
   // Render the conversation with the model's own chat template and start the
@@ -25,10 +26,16 @@ export async function chatGenerate(inst, {
   const stopper = new InterruptableStoppingCriteria();
   onStopper?.(stopper);
   let text = assistantPrefix ?? '';
+  let stopped = false;
   const streamer = new TextStreamer(tokenizer, {
     skip_prompt: true,
     skip_special_tokens: true,
-    callback_function: (piece) => { text += piece; onText?.(text); },
+    callback_function: (piece) => {
+      if (stopped) return;
+      text += piece;
+      if (stopAt && text.includes(stopAt)) { text = text.slice(0, text.indexOf(stopAt) + stopAt.length); stopped = true; stopper.interrupt(); }
+      onText?.(text);
+    },
   });
   await model.generate({
     ...inputs,

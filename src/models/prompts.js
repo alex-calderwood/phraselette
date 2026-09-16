@@ -14,6 +14,7 @@ const wordRules = (advice) =>
  * Editable prompt templates, one set per role well. Placeholders:
  * {{description}} the role text · {{selection}} the inlet · {{context}} surrounding text with the inlet marked ⟦…⟧
  * {{advice}} constraint advice (may be empty) · {{rules}} the entry-format rules · {{feedback}} the reader's comments
+ * {{notes}} the thesaurus's free notes about itself (see thesaurusNotesMessages; the line holding it is dropped when there are none)
  * Text is verbatim from old/front-end/src/server/queries.js unless noted (the thesaurus prompt was revised).
  */
 export const TEMPLATES = {
@@ -22,17 +23,25 @@ export const TEMPLATES = {
     // in the system turn, then user/assistant example turns, then the request.
     // The original queries.js wording is in git history.
     system:
-      `StyleThesaurus (you) provides synonyms that match a given lexicon.\n` +
-      `- Each suggestion on its own line, as <entry>word or phrase</entry>.\n` +
+      `You provide synonyms that match a given lexicon ('thesaurus').\n` +
+      `- Give each suggestion on its own line, as <entry>word or phrase</entry>.\n` +
       `- Preserve the query's part of speech, case, tense, count and definiteness: an adjective phrase stays an adjective phrase, a noun phrase stays a noun phrase.\n` +
       `{{advice}}\n` +
-      `- Nothing but the entries: no preface, no definitions.\n` +
-      `Provide between 10 and 30 synonyms. Each must swap in for the full query inside an existing sentence. Stick to the given lexicon's style and vocabulary: draw each phrase from the vocabulary, imagery and idiom of the lexicon's subject.`,
+      `- Nothing but the thesaurus entries (synonyms): no preface, no definitions.\n` +
+      `- Provide as many synonyms as you can. Each must swap in for the full query inside an existing sentence. Pay close attention to the style of the given thesaurus. Draw each phrase from the vocabulary, imagery and idiom of the lexicon's subject. It important to creatively incorporate the provided style.\n` +
+      `- Let the <notes> on the thesaurus color every entry.`,
+    // Before the entries, the model muses about the thesaurus itself (a short
+    // sampled call, no synonyms), and its notes are shown in the request below.
+    notesSystem:
+      `You are browsing a thesaurus described by a user. Think about it for a moment: What kind of words would you expect to find in there? Muse on the background info that can help to ensure the entries we generate will be stylistically appropriate.  A few loose sentences, in prose. No synonyms yet.`,
+    notesMain:
+      `<thesaurus>{{description}}</thesaurus>`,
     // two-shot demonstration: a verb phrase in a plain-ish lexicon, then a
     // noun phrase in a sharply defined register whose entries are exact
     // synonyms (only the vocabulary changes, never the meaning). Kept short for small models.
     example:
       `<thesaurus>a thesaurus of the sea</thesaurus>\n` +
+      `<notes>Everything here moves the way water moves: it drifts, ebbs, laps, swells. The compiler spent years on deck and hears a tide in every verb.</notes>\n` +
       `<query>walked slowly</query>`,
     exampleReply:
       `<entry>drifted lazily</entry>\n` +
@@ -48,6 +57,7 @@ export const TEMPLATES = {
       `<entry>swam with the tide</entry>`,
     example2:
       `<thesaurus>a Victorian gentleman's thesaurus</thesaurus>\n` +
+      `<notes>Measured, courteous, faintly disapproving; the entries prefer a long Latinate word to a short blunt one. Nothing is ever simply bad, it is ill-advised, imprudent, most regrettable.</notes>\n` +
       `<query>bad idea</query>`,
     exampleReply2:
       `<entry>ill-advised notion</entry>\n` +
@@ -57,6 +67,7 @@ export const TEMPLATES = {
       `<entry>ill-conceived plan</entry>`,
     main:
       `<thesaurus>{{description}}</thesaurus>\n` +
+      `<notes>{{notes}}</notes>\n` +
       `<query>{{selection}}</query>`,
   },
   reader: {
@@ -77,7 +88,7 @@ export const TEMPLATES = {
   },
 };
 
-export const TEMPLATE_LABELS = { system: 'system prompt', example: 'example request', exampleReply: 'example reply', example2: 'second example request', exampleReply2: 'second example reply', main: 'prompt', feedback: 'feedback prompt', revisions: 'revisions prompt' };
+export const TEMPLATE_LABELS = { system: 'system prompt', notesSystem: 'notes prompt (system)', notesMain: 'notes request', example: 'example request', exampleReply: 'example reply', example2: 'second example request', exampleReply2: 'second example reply', main: 'prompt', feedback: 'feedback prompt', revisions: 'revisions prompt' };
 
 /**
  * Fill {{placeholders}}; {{rules}} expands to the entry-format rules with the
@@ -90,12 +101,22 @@ export function renderTemplate(template, vars) {
   return template.replace(/\{\{(rules|advice)\}\}\n/g, '{{$1}}').replace(/\{\{(\w+)\}\}/g, (_, k) => (all[k] ?? ''));
 }
 
-export function thesaurusPrompt({ description, selection, advice, template = TEMPLATES.thesaurus.main }) {
-  return renderTemplate(template, { description, selection, advice });
+// Any line mentioning <notes> (the rule in the system turn, the examples'
+// notes) or holding {{notes}} (the request): removed when the well runs
+// without the notes step.
+const NOTES_LINE = /^.*(?:<notes>|\{\{notes\}\}).*(?:\n|$)/gm;
+const withoutNotes = (text) => text.replace(NOTES_LINE, '').replace(/\n+$/, '');
+
+export function thesaurusPrompt({ description, selection, advice, notes, template = TEMPLATES.thesaurus.main }) {
+  return renderTemplate(notes ? template : withoutNotes(template), { description, selection, advice, notes });
 }
 
-export function thesaurusSystem({ description, advice, template = TEMPLATES.thesaurus.system }) {
-  return renderTemplate(template, { description, advice });
+export function thesaurusNotesPrompt({ description, template = TEMPLATES.thesaurus.notesMain }) {
+  return renderTemplate(template, { description });
+}
+
+export function thesaurusSystem({ description, advice, notes, template = TEMPLATES.thesaurus.system }) {
+  return renderTemplate(notes ? template : withoutNotes(template), { description, advice });
 }
 
 /**
@@ -104,6 +125,17 @@ export function thesaurusSystem({ description, advice, template = TEMPLATES.thes
  * itself stays as it was; only the first characters of the reply are fixed.
  */
 export const ENTRY_PREFIX = '<entry>';
+/** Fixed opening of the thesaurus's notes about itself; generation stops at the closing tag. */
+export const NOTES_PREFIX = '<notes>';
+export const NOTES_SUFFIX = '</notes>';
+
+/** The prose inside <notes>…</notes> (or whatever came before a stray closing/next tag), whitespace collapsed. */
+export function parseNotes(response) {
+  let text = response.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/^\s*<notes>/i, '');
+  const cut = text.search(/<\/notes>|<query>|<entry>|<thesaurus>/i);
+  if (cut >= 0) text = text.slice(0, cut);
+  return text.replace(/<\/?[a-z]+>/gi, '').replace(/\s+/g, ' ').trim();
+}
 
 const limit = (str, maxLength = 40) => (str.length > maxLength ? str.slice(0, maxLength) + '...' : str);
 
@@ -175,16 +207,27 @@ const ENTRIES = (words) => words.map((w) => `<entry>${w}</entry>`).join('\n');
 // its chat template folds the system text into the first user turn.
 export function thesaurusMessages(args) {
   const t = { ...TEMPLATES.thesaurus, ...(args.templates ?? {}) };
+  // without the notes step the examples lose their <notes> lines too, so the request matches their shape
+  const ex = (text) => (args.notes ? text : withoutNotes(text));
   const examples = args.examples === false ? [] : [
-    { role: 'user', content: t.example },
+    { role: 'user', content: ex(t.example) },
     { role: 'assistant', content: t.exampleReply },
-    { role: 'user', content: t.example2 },
+    { role: 'user', content: ex(t.example2) },
     { role: 'assistant', content: t.exampleReply2 },
   ];
   return [
     { role: 'system', content: thesaurusSystem({ ...args, template: t.system }) },
     ...examples,
     { role: 'user', content: thesaurusPrompt({ ...args, template: t.main }) },
+  ];
+}
+
+/** The notes step: a short free musing about the thesaurus alone (no query), asked before the entries. */
+export function thesaurusNotesMessages(args) {
+  const t = { ...TEMPLATES.thesaurus, ...(args.templates ?? {}) };
+  return [
+    { role: 'system', content: t.notesSystem },
+    { role: 'user', content: thesaurusNotesPrompt({ ...args, template: t.notesMain }) },
   ];
 }
 

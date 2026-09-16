@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CONTEXT_LIKE } from '../core/wells.js';
 import WellView from './WellView.jsx';
 import { ConstraintCard } from './ConstraintsPanel.jsx';
 import { hoverProps } from './Tooltip.jsx';
@@ -93,8 +94,10 @@ export default function Inspector({ state, session, inlet, rangeText, hasRange, 
             <ConstraintCard
               key={c.id}
               constraint={c}
-              histogram={wells.filter((w) => w.type === 'context').map((w) => state.insights[w.id]?.[inlet.id]?.histogram).find(Boolean) ?? null}
+              histogram={wells.filter((w) => CONTEXT_LIKE.has(w.type)).map((w) => state.insights[w.id]?.[inlet.id]?.histogram).find(Boolean) ?? null}
               actions={actions}
+              session={session}
+              sequences={state.results[inlet.id]?.all ?? []}
             />
           ))}
         </section>

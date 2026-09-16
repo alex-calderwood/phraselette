@@ -11,7 +11,7 @@ export async function loadCard(card, modelId, device, onProgress) {
   const dtype = dtypeFor(model, device.device, device.fp16);
   const files = {};
   for (const slot of card.slots) {
-    await request('load', { slot, modelId: model.id, task: model.task ?? card.kind, device: device.device, dtype }, {
+    await request('load', { slot, modelId: model.id, task: model.task ?? card.kind, device: device.device, dtype, pooling: model.pooling }, {
       onProgress: (ev) => {
         if (!onProgress) return;
         if (ev.status === 'progress' && ev.total) files[ev.file] = { loaded: ev.loaded, total: ev.total };

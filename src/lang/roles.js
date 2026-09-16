@@ -2,8 +2,9 @@
 export const ROLES = {
   thesaurus: [
     "the Spacefarer's Almanac",
+    "a cookbook",
     'a photography thesaurus',
-    'A Tralfamadorian dictionary. The Tralfamadorians are an alien species that abduct Billy Pilgrim, keep him prisoner, and teach him their philosophy on life. They are green and resemble toilet plungers with eyes. They are fatalists and do not view time linearly: "All moments, past, present and future, always have existed, always will exist."',
+    'A Tralfamadorian dictionary. The Tralfamadorians are an alien species who are fatalists and do not view time linearly: "All moments, past, present and future, always have existed, always will exist."',
     'a precise academic/scientific thesaurus',
     "a romance novel's lexicon",
     "Emily Dickinson's playful lexicon (extremely playful Dickinson thesaurus)",
@@ -14,6 +15,7 @@ export const ROLES = {
     "William Carlos Williams' observations",
     "a Wizard's wacky spellbook",
     "James Gleick's precise scientific thesaurus",
+    "A guide to the revolution",
     'a thesaurus of meaningless words',
     'a thesaurus of metonyms',
     'a thesaurus of homonyms and near homonyms (words having the same spelling or pronunciation but different meanings and origins)',

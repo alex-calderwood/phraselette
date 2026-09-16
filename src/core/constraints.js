@@ -1,7 +1,10 @@
-// Constraints narrow the space of rephrasings a well may return. They are
-// scored 0..1 after generation (all of them) and some also give "advice" to the
-// generators beforehand (word count → search depth; POS/sound → prompt text).
-// Port of old/front-end/src/base/Constraint.js with the same scoring maths.
+// Constraints narrow the space of rephrasings a well may return. After
+// generation each one is evaluated against every sequence and yields two
+// things: whether the sequence satisfies it (used to group results), and a
+// signed score in [-1, 1] (used only to rank them; positive iff satisfied).
+// Some also give "advice" to the generators beforehand (word count → search
+// depth; POS/sound → prompt text). The 0..1 match maths inside `rawScore` is a
+// port of old/front-end/src/base/Constraint.js.
 import { uid, numWords, isWordToken } from './tokens.js';
 import { UPOS_TAGS } from '../lang/pos.js';
 import { ARPABET, VOWELS, explainPhone, soundOut } from '../lang/phones.js';
@@ -15,6 +18,10 @@ export const STRESS_RANGE = ['0', '1'];
 export const STRESS_LABELS = { 0: '˘ unstressed', 1: 'ˈ stressed' };
 /** Kinds that carry a mode + target list (and so can be negated). */
 export const CATEGORY_KINDS = new Set(['pos', 'sound', 'stress', 'letters']);
+/** Semantic similarity modes: which side of the cutoff satisfies the constraint. */
+export const SEMANTIC_MODES = ['close to', 'far from'];
+/** Default cosine-similarity cutoff between "close" and "far". Sentence embeddings rarely go below 0, so 0 itself would pass everything. */
+export const SEMANTIC_CUTOFF = 0.5;
 
 /** Longest contiguous run of `target` found inside `arr`, as a fraction of target length. */
 function contains(arr, target) {
@@ -48,10 +55,12 @@ const MODE_FNS = { contains, exactly, 'starts with': startsWith, 'ends with': en
 /**
  * @typedef {Object} Constraint
  * @property {string} id
- * @property {'pos'|'sound'|'length'|'prob'|'rhyme'|'syllables'|'stress'|'letters'|'chars'} kind
+ * @property {'pos'|'sound'|'length'|'prob'|'rhyme'|'syllables'|'stress'|'letters'|'chars'|'semantic'} kind
  * @property {string} inletId
  * @property {string} label
  * @property {boolean} [negate]   category and rhyme kinds: require the opposite ("does not contain")
+ * @property {number[]|null} [vector]  semantic kind: unit-length embedding of `reference`, filled in asynchronously
+ * @property {number} [cutoff]         semantic kind: cosine similarity at which "close to" turns into "far from"
  */
 
 export function makePosConstraint(inletId, tokens) {
@@ -99,7 +108,28 @@ export function makeLengthConstraint(inletId, tokens) {
   return { id: uid('c'), kind: 'length', inletId, label: 'word count', min: 1, max: n, threshold: 1 };
 }
 
+/**
+ * Semantic similarity to a reference phrase, judged by a sentence-embedding
+ * model; the reference defaults to the selection itself. `vector` is filled in
+ * by actions.js once the reference has been embedded.
+ */
+export function makeSemanticConstraint(inletId, tokens) {
+  const reference = tokens.map((t) => t.text).join('').trim();
+  return { id: uid('c'), kind: 'semantic', inletId, label: 'semantic similarity', mode: 'close to', reference, vector: null, cutoff: SEMANTIC_CUTOFF };
+}
+
 /** Log-probability window; bounds are per-sub-token mean log-probs. */
+/** The same constraint on another inlet (fresh id; a semantic vector is kept since the reference phrase is unchanged). */
+export function cloneConstraint(c, inletId) {
+  return { ...c, id: uid('c'), inletId };
+}
+
+/** True when two constraints ask for the same thing (ignoring which inlet they sit on). */
+export function sameConstraint(a, b) {
+  const strip = ({ id, inletId, vector, ...rest }) => rest;
+  return JSON.stringify(strip(a)) === JSON.stringify(strip(b));
+}
+
 export function makeProbConstraint(inletId) {
   return { id: uid('c'), kind: 'prob', inletId, label: 'probability', min: Math.log(1e-12), max: 0, threshold: 1 };
 }
@@ -215,10 +245,66 @@ function rangeScore(n, min, max) {
   return Math.max(0, n / Math.max(1, min));
 }
 
-/** Score in [0,1]: how well `seq` satisfies `c`. */
-export function scoreConstraint(c, seq) {
+/** Cosine similarity of two vectors (a dot product when both have unit length). */
+export function cosine(a, b) {
+  let dot = 0; let na = 0; let nb = 0;
+  const n = Math.min(a.length, b.length);
+  for (let i = 0; i < n; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  return dot / (Math.sqrt(na * nb) || 1);
+}
+
+/** Cosine similarity between the constraint's reference and the sequence, or null while either embedding is missing. */
+export function semanticSimilarity(c, seq) {
+  if (!c.vector || !seq.embedding) return null;
+  return cosine(c.vector, seq.embedding);
+}
+
+/**
+ * Signed score of the semantic constraint: the similarity mapped piecewise
+ * linearly onto [-1, 1] with 0 at the cutoff (so the slope differs on the two
+ * sides but the sign is right), flipped for "far from". Unlike the other kinds,
+ * pass/fail here *is* the sign of this score. Null when it cannot be judged yet.
+ */
+export function semanticScore(c, seq) {
+  const sim = semanticSimilarity(c, seq);
+  if (sim == null) return null;
+  const cut = c.cutoff ?? SEMANTIC_CUTOFF;
+  const s = sim >= cut ? (sim - cut) / Math.max(1e-6, 1 - cut) : (sim - cut) / Math.max(1e-6, 1 + cut);
+  const signed = c.mode === 'far from' ? -s : s;
+  return Math.max(-1, Math.min(1, signed));
+}
+
+/**
+ * Map a 0..1 match onto the signed [-1, 1] scale so that the sign agrees with
+ * pass/fail: satisfied → (0, 1], not satisfied → [-1, 0). A word that misses
+ * badly ranks below one that nearly matched, and both rank below any that
+ * passed.
+ */
+export function signedScore(match, satisfied) {
+  return satisfied ? match : match - 1;
+}
+
+/**
+ * Evaluate `c` against `seq`.
+ *
+ * `satisfied` is the constraint's own pass/fail rule; for every kind here that
+ * is "the 0..1 match reaches `c.threshold`" (always 1 today), decided without
+ * reference to `score`. `score` is a signed value in [-1, 1] that is positive
+ * iff satisfied and is only ever used to rank sequences. A future kind whose
+ * pass/fail *is* a cut on a graded value computes `score` first and sets
+ * `satisfied = score > 0`; the semantic similarity kind does exactly that.
+ */
+export function evaluateConstraint(c, seq) {
+  if (c.kind === 'semantic') {
+    const score = semanticScore(c, seq);
+    // not judged yet (embeddings pending, or no embedding model loaded): neutral, like unscored probabilities
+    if (score == null) return { satisfied: true, score: 0 };
+    return { satisfied: score > 0, score };
+  }
   const s = rawScore(c, seq);
-  return c.negate ? 1 - s : s;
+  const match = c.negate ? 1 - s : s;
+  const satisfied = match >= (c.threshold ?? 1);
+  return { satisfied, score: signedScore(match, satisfied) };
 }
 
 function rawScore(c, seq) {
@@ -262,8 +348,11 @@ function rawScore(c, seq) {
 }
 
 /**
- * Score every sequence against the inlet's constraints. Returns
- * { accepted, rejected, all } sorted by `sortBy` ('total' | 'logProbMean').
+ * Evaluate every sequence against the inlet's constraints, recording per
+ * constraint `seq.satisfied[c.id]` (pass/fail) and `seq.scores[c.id]` (signed
+ * score in [-1, 1]), plus `seq.total`, the sum of the signed scores in
+ * [-n, n]. Returns { accepted, rejected, all }: accepted sequences satisfy
+ * every constraint; each list is sorted by `sortBy` ('total' | 'logProbMean').
  */
 export function resolveConstraints(sequences, constraints, sortBy = 'total') {
   const accepted = [];
@@ -272,11 +361,13 @@ export function resolveConstraints(sequences, constraints, sortBy = 'total') {
     let total = 0;
     let reject = false;
     seq.scores = {};
+    seq.satisfied = {};
     for (const c of constraints) {
-      const s = scoreConstraint(c, seq);
-      seq.scores[c.id] = s;
-      total += s;
-      if (s < (c.threshold ?? 1)) reject = true;
+      const { score, satisfied } = evaluateConstraint(c, seq);
+      seq.scores[c.id] = score;
+      seq.satisfied[c.id] = satisfied;
+      total += score;
+      if (!satisfied) reject = true;
     }
     seq.total = total;
     (reject ? rejected : accepted).push(seq);
@@ -334,6 +425,55 @@ export function constraintAdvice(constraints) {
   }
   return out;
 }
+
+/**
+ * The part of an inlet's constraints the sieve well can enforce while the model
+ * is still proposing tokens (plain data: it crosses into the worker; see
+ * models/gate.js). Letters "starts with" is checked as a growing prefix; a
+ * negated letters "contains" bans every token holding one of those letters
+ * (stricter than the sift, which only needs one of them missing); the
+ * probability constraint becomes a window on each token's log-probability.
+ * Everything else stays a sift after generation. Null when nothing applies.
+ */
+export function generationGate(constraints) {
+  const letters = [];
+  const sounds = [];
+  let prob = null;
+  for (const c of constraints) {
+    const g = gateFragment(c);
+    if (!g) continue;
+    if (g.kind === 'letters') letters.push(g.rule);
+    else if (g.kind === 'sounds') sounds.push(g.rule);
+    else if (g.kind === 'prob') prob = { min: Math.max(prob?.min ?? -Infinity, g.rule.min), max: Math.min(prob?.max ?? Infinity, g.rule.max) };
+  }
+  if (!letters.length && !sounds.length && !prob) return null;
+  return { letters, sounds, prob };
+}
+
+/**
+ * What the sieve can enforce of one constraint while searching, or null when it
+ * can only sift. Letters: "starts with", or negated "contains" (no target letter
+ * anywhere, which is also what the sift demands). Sounds: "starts with",
+ * "exactly", or negated "contains", checked as each word closes. Probability:
+ * the window, per token.
+ */
+export function gateFragment(c) {
+  if (c.kind === 'letters' && c.target?.length) {
+    if (c.mode === 'starts with' && !c.negate) return { kind: 'letters', rule: { mode: 'starts with', target: [...c.target] } };
+    if (c.mode === 'contains' && c.negate) return { kind: 'letters', rule: { mode: 'avoid', target: [...c.target] } };
+    return null;
+  }
+  if (c.kind === 'sound' && c.target?.length) {
+    if ((c.mode === 'starts with' || c.mode === 'exactly') && !c.negate) return { kind: 'sounds', rule: { mode: c.mode, target: [...c.target] } };
+    if (c.mode === 'contains' && c.negate) return { kind: 'sounds', rule: { mode: 'avoid', target: [...c.target] } };
+    return null;
+  }
+  if (c.kind === 'prob' && Number.isFinite(c.min) && Number.isFinite(c.max)) return { kind: 'prob', rule: { min: c.min, max: c.max } };
+  return null;
+}
+
+/** Can the sieve enforce this constraint while searching (rather than only sift by it)? */
+export const gateApplies = (c) => gateFragment(c) != null;
 
 /** The largest word count any length constraint allows (or null). */
 export function maxWordsAllowed(constraints) {

@@ -4,8 +4,11 @@ import { randomRole } from '../lang/roles.js';
 import { uid } from './tokens.js';
 import { TEMPLATES } from '../models/prompts.js';
 
-export const WELL_TYPES = ['words', 'context', 'sound', 'thesaurus', 'reader', 'dictionary'];
-const palette = rainbowColors(WELL_TYPES.length + 1, 0.45);
+export const WELL_TYPES = ['words', 'context', 'sieve', 'sound', 'thesaurus', 'reader', 'dictionary'];
+const palette = rainbowColors(7, 0.45); // fixed at the original six wells + aggregate so adding a type does not recolor the others
+
+/** Wells that search the probabilities model directly (the sieve is the context well with constraints applied while searching). */
+export const CONTEXT_LIKE = new Set(['context', 'sieve']);
 
 export const WELL_DEFS = {
   words: {
@@ -26,6 +29,15 @@ export const WELL_DEFS = {
     roles: false,
     showItems: ['prob'],
     color: palette[1],
+  },
+  sieve: {
+    title: 'sieve',
+    description: 'The context well with the constraints applied while it searches, not only afterwards: letters (starts with, must not contain), sounds (starts with, exactly, must not contain) and the probability window prune tokens as the model proposes them, so a wide search reaches words the plain context well never surfaces. The well lists which of the inlet\'s constraints it can apply; the rest sift the results.',
+    features: ['prob'],
+    canSearch: true,
+    roles: false,
+    showItems: ['prob'],
+    color: familyShade(palette[1], 2), // the context well's cooler sibling
   },
   sound: {
     title: 'sound',
@@ -78,6 +90,10 @@ export const SEARCH_DEFAULTS = {
     beam: { beams: 24, groups: 6, diversity: 1.0, lengthPenalty: 1.0, noRepeat: 2 },
     fast: { k: 24 },
   },
+  sieve: { // wider than the context well: the gate cuts the space first, the width then spreads over what is left
+    beam: { beams: 48, groups: 12, diversity: 1.0, lengthPenalty: 1.0, noRepeat: 2 },
+    fast: { k: 48 },
+  },
   thesaurus: {
     beam: { beams: 4, groups: 4, perBeam: 4, diversity: 1.0, lengthPenalty: 1.0, tokensPerEntry: 15 },
     sample: { temperature: 1.0, topP: 1.0, maxNewTokens: 320 },
@@ -86,7 +102,7 @@ export const SEARCH_DEFAULTS = {
 
 /** The well's effective search mode and settings, with `groups` forced to divide `beams`. */
 /** Search mode used when the well has not chosen one. */
-export const DEFAULT_SEARCH = { context: 'beam', thesaurus: 'beam' };
+export const DEFAULT_SEARCH = { context: 'beam', sieve: 'beam', thesaurus: 'beam' };
 
 export function searchSettings(well) {
   const modes = SEARCH_DEFAULTS[well.type] ?? {};
@@ -102,7 +118,7 @@ export function searchSettings(well) {
   return p;
 }
 
-export const FEATURE_LABELS = { pos: 'part of speech', length: 'word count', sound: 'sound', prob: 'probability', rhyme: 'rhyme', syllables: 'syllables', stress: 'stress', letters: 'letters', chars: 'characters' };
+export const FEATURE_LABELS = { pos: 'part of speech', length: 'word count', sound: 'sound', prob: 'probability', rhyme: 'rhyme', syllables: 'syllables', stress: 'stress', letters: 'letters', chars: 'characters', semantic: 'semantic similarity' };
 
 export function makeWell(type) {
   const def = WELL_DEFS[type];

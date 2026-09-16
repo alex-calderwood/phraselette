@@ -8,6 +8,7 @@
 // and each row continues greedily. Rows never swap, so no cache reordering.
 // True (diverse) beam search lives in beam.js and reuses the helpers here.
 import { Tensor, ones, log_softmax } from '@huggingface/transformers';
+import { makeGate } from './gate.js';
 
 export const LN_FLOOR = Math.log(1e-12);
 const HIST_MIN = -30;
@@ -169,8 +170,9 @@ export function topKIndices(arr, k, allowed) {
   // simple partial selection: k is small (≤ 64) compared to the vocabulary
   const best = [];
   for (let i = 0; i < arr.length; i++) {
-    if (allowed && !allowed(i)) continue;
     const v = arr[i];
+    if (best.length === k && v <= best[0][0]) continue; // cannot enter the top-k: skip the predicate (the sieve's gate can be costly)
+    if (allowed && !allowed(i)) continue;
     if (best.length < k) {
       best.push([v, i]);
       if (best.length === k) best.sort((a, b) => a[0] - b[0]);
@@ -229,10 +231,11 @@ export async function probsForText(inst, { prefix, text, window = 384, topK = 5,
  * Returns { sequences: [{ tokens: [{text,logProb}], text, logProb }], histogram, firstTokenLogProbs }.
  */
 export async function searchContinuations(inst, {
-  prefix, k = 24, depth = 8, window = 256, topKFirst = null, checkCancel, onProgress,
+  prefix, k = 24, depth = 8, window = 256, topKFirst = null, gate = null, checkCancel, onProgress,
 }) {
   const { tokenizer, model } = inst;
   const masks = ensureMasks(inst);
+  const g = makeGate(inst, gate); // sieve well: hard mask from the constraints
   let text = prefix.replace(/ /g, ' ');
   const endsWithSpace = /\s$/.test(text) && !/\n$/.test(text);
   if (endsWithSpace) text = text.replace(/[ \t]+$/, '');
@@ -257,7 +260,9 @@ export async function searchContinuations(inst, {
   histogramAdd(hist, lp0);
 
   const allowedFirst = (i) => !masks.halt[i] && (!endsWithSpace || masks.startsWithSpace[i]);
-  const firsts = topKIndices(lp0, topKFirst ?? K, allowedFirst);
+  const gateStats = g ? g.firstStep(lp0, allowedFirst) : null;
+  const pass0 = g ? g.forBeam([]) : null;
+  const firsts = topKIndices(lp0, topKFirst ?? K, (i) => allowedFirst(i) && (!pass0 || pass0(i, lp0[i])));
   const rows = firsts.map(([lpv, id]) => ({ ids: [id], logProbs: [lpv], done: false }));
   const R = rows.length;
   onProgress?.({ step: 1, total: depth });
@@ -288,7 +293,8 @@ export async function searchContinuations(inst, {
         const prev = seq[seq.length - 1];
         const banned = new Set();
         for (let j = 0; j + 1 < seq.length; j++) if (seq[j] === prev) banned.add(seq[j + 1]);
-        const best = topKIndices(lp, 1, (i) => !masks.halt[i] && !banned.has(i))[0];
+        const pass = g ? g.forBeam(seq) : null;
+        const best = topKIndices(lp, 1, (i) => !masks.halt[i] && !banned.has(i) && (!pass || pass(i, lp[i])))[0];
         const id = best ? best[1] : prev;
         rows[r].ids.push(id);
         rows[r].logProbs.push(best ? best[0] : LN_FLOOR);
@@ -302,7 +308,7 @@ export async function searchContinuations(inst, {
   }
   await model_inputs.past_key_values?.dispose?.();
 
-  const sequences = rows.map((r) => {
+  const sequences = (g ? rows.filter((r) => g.accepts(r.ids)) : rows).map((r) => {
     let full = tokenizer.decode(r.ids, { skip_special_tokens: true, clean_up_tokenization_spaces: false });
     const offs = offsetsFor(tokenizer, r.ids, full);
     let tokens = r.ids.map((id, i) => ({ text: full.slice(...offs[i]), logProb: r.logProbs[i] }));
@@ -313,7 +319,7 @@ export async function searchContinuations(inst, {
     return { tokens, text: full, logProb: r.logProbs.reduce((a, b) => a + b, 0) };
   });
 
-  return { sequences, histogram: histogramFinish(hist), endsWithSpace };
+  return { sequences, histogram: histogramFinish(hist), endsWithSpace, gateStats };
 }
 
 /**

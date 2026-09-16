@@ -1,11 +1,13 @@
 // Web Worker that owns every model. The main thread talks to it through
-// src/models/client.js. Slots (context, thesaurus, reader, dictionary, pos)
+// src/models/client.js. Slots (context, thesaurus, reader, dictionary, pos, embed)
 // may share a model instance; instances are keyed by model id + dtype + device.
-import { env, AutoTokenizer, AutoModelForCausalLM, AutoModelForTokenClassification, AutoModelForMaskedLM } from '@huggingface/transformers';
+import { env, AutoTokenizer, AutoModel, AutoModelForCausalLM, AutoModelForTokenClassification, AutoModelForMaskedLM } from '@huggingface/transformers';
 import { fillMask, mlmProbsForText, mlmScoreCandidates } from './mlm.js';
 import { chatGenerate } from './chat.js';
 import { probsForText, searchContinuations, scoreCandidates, Cancelled } from './lm.js';
 import { beamContinuations, beamEntries } from './beam.js';
+import { prepareGate } from './gate.js';
+import { embedTexts } from './embed.js';
 
 // Self-hosted ONNX Runtime wasm files (copied by scripts/copy-ort.mjs).
 env.backends.onnx.wasm.wasmPaths = new URL('ort/', self.location.origin + import.meta.env.BASE_URL).href;
@@ -32,14 +34,14 @@ function checkCancel(id) {
 }
 
 const handlers = {
-  async load({ id, slot, modelId, task, device, dtype }) {
+  async load({ id, slot, modelId, task, device, dtype, pooling }) {
     const key = `${modelId}|${dtype}|${device}`;
     if (!instances.has(key)) {
       const progress_callback = (p) => post({ id, type: 'progress', slot, ...p });
       const tokenizer = await AutoTokenizer.from_pretrained(modelId, { progress_callback });
-      const cls = task === 'pos' ? AutoModelForTokenClassification : task === 'fill-mask' ? AutoModelForMaskedLM : AutoModelForCausalLM;
+      const cls = task === 'pos' ? AutoModelForTokenClassification : task === 'fill-mask' ? AutoModelForMaskedLM : task === 'embed' ? AutoModel : AutoModelForCausalLM;
       const model = await cls.from_pretrained(modelId, { device, dtype, progress_callback });
-      instances.set(key, { task, tokenizer, model, modelId, device, dtype });
+      instances.set(key, { task, tokenizer, model, modelId, device, dtype, pooling });
     }
     slotToKey.set(slot, key);
     return { slot, modelId, device, dtype };
@@ -55,6 +57,7 @@ const handlers = {
   async search({ id, slot = 'context', mode = 'fast', ...args }) {
     const inst = instanceFor(slot);
     const fn = inst.task === 'fill-mask' ? fillMask : mode === 'beam' ? beamContinuations : searchContinuations;
+    if (args.gate) await prepareGate(args.gate); // sieve well: the sound rules need the pronunciation dictionary here too
     return fn(inst, {
       ...args,
       checkCancel: () => checkCancel(id),
@@ -95,6 +98,13 @@ const handlers = {
     } finally {
       stoppers.delete(id);
     }
+  },
+
+  // --- sentence embeddings ------------------------------------------------
+  /** One unit-length vector per text, for the semantic similarity constraint; see embed.js. */
+  async embed({ slot = 'embed', texts }) {
+    const inst = instanceFor(slot);
+    return { vectors: await embedTexts(inst, texts) };
   },
 
   // --- transformer POS tagger ---------------------------------------------
@@ -157,11 +167,11 @@ const handlers = {
 };
 
 // Scheduling: one model task runs at a time (ORT sessions are not re-entrant).
-// Short tasks (scoring a handful of candidates, tagging, document probabilities)
+// Short tasks (scoring or embedding a handful of candidates, tagging, document probabilities)
 // jump ahead of queued generations so the UI stays responsive while a long
 // reader or thesaurus request is still producing text.
 const IMMEDIATE = new Set(['cancel', 'status']);
-const HIGH_PRIORITY = new Set(['score', 'probs', 'pos', 'load']);
+const HIGH_PRIORITY = new Set(['score', 'probs', 'pos', 'embed', 'load']);
 const waiting = { high: [], normal: [] };
 let busy = false;
 
