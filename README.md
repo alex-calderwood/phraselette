@@ -10,7 +10,7 @@ Every model runs inside the visitor's browser through [Transformers.js](https://
 
 Phraselette 1.0 was developed with Max Kreminski, John Joon Young Chung, Yuqian Sun, Melissa Roemmele, and Taewook Kim.
 
-Phraselette 2.0 was revibed (rebuilt from a description of the paper and the previous source code) by Claude Fable 5.1 from the paper and the original study build.
+Phraselette 2.0 was revibed (rebuilt from a description of the paper and the previous source code) by Alex with Claude Fable 5.1 - using the paper and the original study build.
 
 "Revibe" borrowed from Revibing Code from Eytan Adar, Yoonjoo Lee, Nina Lei, Q. Vera Liao, Weirui Peng. Reimplementing HCI Artifacts https://arxiv.org/abs/2608.00450
 
